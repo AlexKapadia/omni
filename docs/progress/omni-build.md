@@ -77,7 +77,18 @@ paced dispatches.** Model quality is NOT the economy lever — use Fable for any
 language, landing-page, big, important, or system-wide. Pacing = fewer simultaneous agents,
 never weaker models.
 
+## Test-economy policy (user mandate, 2026-07-06 — binding)
+
+Tests stay rigorous and complete (unit + adversarial, no coverage compromise), but EXECUTION is
+economical: agents run only the tests for code they touched + a fast targeted regression check.
+The FULL suite runs once per milestone gate and on CI push — never re-run green for reassurance.
+
 ## Late-added scope
+
+- **Pre-M3 research (user mandate):** AI-facing memory/retrieval layer over the vault — Obsidian
+  stays the human layer; research hybrid retrieval (FTS5/BM25 + sqlite-vec dense), reranking,
+  GraphRAG/entity indexes, temporal indexes, chunking. Peer-reviewed, docs/research/, evidence-backed
+  recommendation BEFORE M3 is built. Queued: dispatch when an M0 agent slot frees (task #10).
 
 - **M9 Landing page (after M7, user mandate):** scroll-animated aesthetic marketing page with REAL
   product screenshots (never mocks, §4.9.8), fades/motion as you scroll showing the product in use,

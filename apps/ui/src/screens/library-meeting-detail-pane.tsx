@@ -10,6 +10,7 @@
  * meeting). States: loading shimmer, error + retry, ready — none faked.
  */
 import { useCallback, useEffect } from "react";
+import { ApprovalRack } from "../components/approval/approval-rack";
 import { OmniButton } from "../components/button";
 import { SectionLabel } from "../components/section-label";
 import { SkeletonShimmer } from "../components/skeleton-shimmer";
@@ -166,6 +167,13 @@ export function LibraryMeetingDetailPane({
                 {finalizeMessage}
               </p>
             )}
+          </PaneSection>
+
+          <PaneSection label="Suggested Actions">
+            {/* The M4 approval rack, scoped to this meeting's extraction
+                cards. All states are the rack's own honest ones (loading /
+                empty / engine offline / the cards themselves). */}
+            <ApprovalRack meetingId={meetingId} />
           </PaneSection>
 
           <PaneSection label="My Notes">

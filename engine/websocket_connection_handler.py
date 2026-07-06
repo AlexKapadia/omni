@@ -22,6 +22,11 @@ import uuid
 
 from fastapi import WebSocket, WebSocketDisconnect
 
+from engine.approval_cards_gateway import ApprovalCardsGateway
+from engine.approval_command_dispatcher import (
+    APPROVAL_COMMAND_NAMES,
+    dispatch_approval_command,
+)
 from engine.ask.ask_query_command_dispatcher import (
     ASK_COMMAND_NAMES,
     AskAnswerGateway,
@@ -77,6 +82,7 @@ class WebSocketConnectionHandler:
         finalization_service: MeetingFinalizationService | None = None,
         ask_gateway: AskAnswerGateway | None = None,
         dictation_gateway: DictationCommandGateway | None = None,
+        approval_gateway: ApprovalCardsGateway | None = None,
         detection_service: DetectionService | None = None,
         device_lister: DeviceLister | None = None,
     ) -> None:
@@ -92,6 +98,7 @@ class WebSocketConnectionHandler:
         # refuses honestly when its dependency is None — deny by default.
         self._ask_gateway = ask_gateway
         self._dictation_gateway = dictation_gateway
+        self._approval_gateway = approval_gateway
         self._detection_service = detection_service
         self._device_lister = device_lister
         # Multiple tasks write to one socket (heartbeat + replies + broadcast
@@ -210,6 +217,10 @@ class WebSocketConnectionHandler:
         if command.name in DICTATION_COMMAND_NAMES:
             # Additive dictation.begin/end surface (server-layer dispatcher).
             await dispatch_dictation_command(command, self._dictation_gateway, self._send)
+            return
+        if command.name in APPROVAL_COMMAND_NAMES:
+            # Additive cards.list / card.* surface (server-layer dispatcher).
+            await dispatch_approval_command(command, self._approval_gateway, self._send)
             return
         if command.name in DETECTION_COMMAND_NAMES:
             # Additive detection.dismiss surface (engine.detect dispatcher).

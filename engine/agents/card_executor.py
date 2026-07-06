@@ -26,7 +26,7 @@ Security invariants (claude.md §5.6 project bindings):
 
 import json
 import logging
-from collections.abc import Callable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
@@ -85,18 +85,25 @@ async def execute_approved_card(
     vault_root: Path | None,
     router: ProviderRouter | None = None,
     now_iso: Callable[[], str] = _utc_now_iso,
+    on_claimed: Callable[[ApprovalCardRecord], Awaitable[None]] | None = None,
 ) -> CardExecutionReport:
     """Execute one approved card end-to-end. See module docstring.
 
     Raises :class:`CardNotExecutableError` when the card is not claimable
     (never approved, already decided, or lost the race). Every claimed card
     finishes as 'executed' or 'failed' with exactly one audit row.
+    ``on_claimed`` (optional) receives the record right after the claim
+    commits — the DB row IS 'executing' at that point, so the server wiring
+    can broadcast the honest ``card.updated`` for that transition.
     """
     record = await claim_card_for_execution(connection, card_id)
     if record is None:
         existing = await get_card(connection, card_id)
         # fail-closed + exactly-once: whoever did not claim it does nothing.
         raise CardNotExecutableError(card_id, None if existing is None else existing.status)
+    if on_claimed is not None:
+        # Approved->executing just committed; report the true DB state.
+        await on_claimed(record)
 
     mapping: str | None = None
     provider: str | None = None

@@ -20,7 +20,12 @@ const META_TEXT: React.CSSProperties = {
   margin: 0,
 };
 
-export function ApprovalRack() {
+export function ApprovalRack({
+  meetingId,
+}: {
+  /** When set, only this meeting's cards show (the Library detail mount). */
+  readonly meetingId?: string;
+} = {}) {
   const cards = useApprovalCards((state) => state.cards);
   const loaded = useApprovalCards((state) => state.loaded);
   const inFlightIds = useApprovalCards((state) => state.inFlightIds);
@@ -30,7 +35,11 @@ export function ApprovalRack() {
     requestCardsList();
   }, []);
 
-  const visible = cards.filter((card) => card.status !== "dismissed");
+  const visible = cards.filter(
+    (card) =>
+      card.status !== "dismissed" &&
+      (meetingId === undefined || card.meetingId === meetingId),
+  );
 
   return (
     <section aria-label="Approval cards" style={{ display: "flex", flexDirection: "column", gap: 12 }}>

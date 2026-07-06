@@ -11,6 +11,13 @@
  * per-store fail-closed payload parsing second, unknown events ignored
  * (deny by default, no speculative handling).
  */
+import {
+  applyCardsListReply,
+  applyCardUpdated,
+  approvalCardsStore,
+  CARD_UPDATED_EVENT_NAME,
+  type ApprovalCardsStore,
+} from "./approval-cards-store";
 import { setAskQueryTransport } from "./engine-ask-answer-provider";
 import { createEngineAskTransport } from "./engine-ask-transport";
 import {
@@ -45,6 +52,7 @@ export interface IntelligenceStores {
   readonly liveAnswers: LiveAnswersStore;
   readonly detection: MeetingDetectionStore;
   readonly finalize: MeetingFinalizeStore;
+  readonly approvalCards: ApprovalCardsStore;
 }
 
 /**
@@ -56,9 +64,24 @@ export function createIntelligenceFrameListener(
 ): (data: unknown) => void {
   return (data: unknown) => {
     const result = parseInboundMessage(data);
-    if (!result.ok || result.envelope.kind !== "event") return; // fail closed
+    if (!result.ok) return; // fail closed
+    if (result.envelope.kind === "reply") {
+      // The store fires cards.list without id bookkeeping (send-and-listen);
+      // its ok-reply is the ONLY reply on this surface carrying a `cards`
+      // array, so route by that shape. Parsing stays fail-closed per card
+      // inside applyCardsListReply.
+      const replyPayload = result.envelope.payload;
+      if (result.envelope.name === "ok" && Array.isArray(replyPayload["cards"])) {
+        applyCardsListReply(stores.approvalCards, replyPayload);
+      }
+      return;
+    }
+    if (result.envelope.kind !== "event") return;
     const { name, payload } = result.envelope;
-    if (name === ANSWERS_HIT_EVENT_NAME) {
+    if (name === CARD_UPDATED_EVENT_NAME) {
+      // Status truth for the approval rack (optimistic-free invariant).
+      applyCardUpdated(stores.approvalCards, payload);
+    } else if (name === ANSWERS_HIT_EVENT_NAME) {
       applyAnswersHit(stores.liveAnswers, payload);
     } else if (name === CAPTURE_STARTED_EVENT_NAME) {
       // A fresh meeting: hits belong to one meeting, the suggestion card is
@@ -96,6 +119,7 @@ export function wireLiveIntelligence(
       liveAnswers: liveAnswersStore,
       detection: meetingDetectionStore,
       finalize: meetingFinalizeStore,
+      approvalCards: approvalCardsStore,
     }),
   );
   // Ask goes live: the provider's honest offline rejection now only fires

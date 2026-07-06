@@ -67,6 +67,10 @@ SendFn = Callable[[Envelope], Awaitable[None]]
 # (migrations, ledger connection, real finalizer); an injected fake does no
 # I/O at all, keeping tests hermetic.
 ReleaseFinalizeFn = Callable[[str, bool, int | None], Awaitable[DictationFinalResult]]
+# Post-release hook (M4 seam): receives every final result so recorded
+# dictation intents can become PENDING approval cards. Suggest-only —
+# approval-before-execute is untouched by anything reached through this.
+OnFinalResultFn = Callable[[DictationFinalResult], Awaitable[None]]
 
 
 class DictationCommandGateway:
@@ -97,6 +101,9 @@ class DictationCommandGateway:
         self._release_finalize = (
             release_finalize if release_finalize else self._default_release_finalize
         )
+        # M4 seam, set by the server wiring after construction (None -> no
+        # card building; dictation itself is unaffected either way).
+        self.on_final_result: OnFinalResultFn | None = None
 
     async def _broadcast_partial(self, text: str) -> None:
         await self._hub.broadcast_event(
@@ -164,6 +171,14 @@ class DictationCommandGateway:
             inject_requested,
             self._session.last_flush_ms,  # speed-showcase stamp (spec)
         )
+        if self.on_final_result is not None:
+            try:
+                # M4 seam: a recorded intent may become a pending card. A
+                # hook failure never fails the release — the note/intent
+                # already landed and the user must still get their result.
+                await self.on_final_result(result)
+            except Exception:
+                logger.exception("dictation post-final hook failed")
         await self._hub.broadcast_event(
             DICTATION_FINAL_EVENT_NAME, build_dictation_final_payload(result)
         )

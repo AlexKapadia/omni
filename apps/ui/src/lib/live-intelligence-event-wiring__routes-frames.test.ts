@@ -6,6 +6,7 @@
  * pending finalize, and malformed/unknown/command frames change NOTHING.
  */
 import { describe, expect, it } from "vitest";
+import { createApprovalCardsStore } from "./approval-cards-store";
 import { createIntelligenceFrameListener } from "./live-intelligence-event-wiring";
 import { createLiveAnswersStore } from "./live-answers-store";
 import { createMeetingDetectionStore } from "./meeting-detection-store";
@@ -15,8 +16,14 @@ function makeAll() {
   const liveAnswers = createLiveAnswersStore();
   const detection = createMeetingDetectionStore();
   const finalize = createMeetingFinalizeStore();
-  const listener = createIntelligenceFrameListener({ liveAnswers, detection, finalize });
-  return { liveAnswers, detection, finalize, listener };
+  const approvalCards = createApprovalCardsStore();
+  const listener = createIntelligenceFrameListener({
+    liveAnswers,
+    detection,
+    finalize,
+    approvalCards,
+  });
+  return { liveAnswers, detection, finalize, approvalCards, listener };
 }
 
 function frame(name: string, payload: Record<string, unknown>, kind = "event"): string {
@@ -88,6 +95,34 @@ describe("createIntelligenceFrameListener", () => {
     finalize.setState({ status: "pending", meetingId: "m-2", notePath: null });
     listener(frame("enhance.failed", { meeting_id: "m-2", reason: "no keys" }));
     expect(finalize.getState().status).toBe("failed");
+  });
+
+  it("card.updated events and cards.list ok-replies reach the approval store", () => {
+    const { approvalCards, listener } = makeAll();
+    const card = {
+      id: 7,
+      meeting_id: "m-1",
+      source: "extraction",
+      card_type: "create_event",
+      status: "pending",
+      payload: { title: "Sync" },
+      preview_lines: ["Event: Sync"],
+      created_at: "2026-07-06T12:00:00+00:00",
+      decided_at: null,
+      executed_at: null,
+      error: null,
+      result_summary: null,
+    };
+    // The cards.list reply is an `ok` reply carrying a `cards` array.
+    listener(frame("ok", { cards: [card] }, "reply"));
+    expect(approvalCards.getState().loaded).toBe(true);
+    expect(approvalCards.getState().cards).toHaveLength(1);
+    // A status change arrives exclusively via card.updated (optimistic-free).
+    listener(frame("card.updated", { card: { ...card, status: "approved" } }));
+    expect(approvalCards.getState().cards[0]!.status).toBe("approved");
+    // Other ok replies (no cards array) change nothing.
+    listener(frame("ok", { meetings: [] }, "reply"));
+    expect(approvalCards.getState().cards).toHaveLength(1);
   });
 
   it("malformed frames, commands, and unknown events change NOTHING", () => {

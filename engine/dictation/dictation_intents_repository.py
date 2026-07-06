@@ -73,6 +73,31 @@ async def insert_dictation_intent(
     return int(row_id if row_id is not None else 0)
 
 
+async def get_dictation_intent(
+    connection: aiosqlite.Connection, intent_id: int
+) -> DictationIntentRecord | None:
+    """One intent row by id, or None (M4 card-building seam's read path)."""
+    cursor = await connection.execute(
+        "SELECT id, ts, raw_text, intent_type, fields_json, confidence, provider, model"
+        " FROM dictation_intents WHERE id = ?",
+        (intent_id,),
+    )
+    row = await cursor.fetchone()
+    await cursor.close()
+    if row is None:
+        return None
+    return DictationIntentRecord(
+        id=int(row[0]),
+        ts=str(row[1]),
+        raw_text=str(row[2]),
+        intent_type=str(row[3]),
+        fields_json=str(row[4]),
+        confidence=float(row[5]),
+        provider=None if row[6] is None else str(row[6]),
+        model=None if row[7] is None else str(row[7]),
+    )
+
+
 async def list_dictation_intents(
     connection: aiosqlite.Connection, *, limit: int = 100
 ) -> list[DictationIntentRecord]:

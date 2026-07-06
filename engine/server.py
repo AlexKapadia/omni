@@ -22,13 +22,14 @@ import contextlib
 import logging
 import time
 from collections.abc import AsyncIterator, Callable
-from pathlib import Path
 from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, WebSocket
 
 from engine import ENGINE_VERSION
+from engine.approval_card_build_server_wiring import ApprovalCardBuildWiring
+from engine.approval_cards_gateway import ApprovalCardsGateway
 from engine.ask.ask_query_command_dispatcher import AskAnswerGateway
 from engine.audio.audio_device_listing import list_audio_devices
 from engine.audio.devices_list_command_dispatcher import DeviceLister
@@ -38,68 +39,40 @@ from engine.enhance import MeetingFinalizationService
 from engine.live_answers_spotter_wiring import LiveAnswersSpotterWiring
 from engine.protocol import EventBroadcastHub
 from engine.runtime_settings import LOOPBACK_HOST, EngineSettings, load_engine_settings
+
+# The real, settings-driven service factories live in one module so this
+# file stays pure routing/lifecycle; tests inject fakes through the seams.
+from engine.server_default_service_factories import (
+    default_approval_gateway_factory,
+    default_ask_gateway_factory,
+    default_capture_service_factory,
+    default_card_build_wiring_factory,
+    default_detection_wiring_factory,
+    default_dictation_gateway_factory,
+    default_finalization_service_factory,
+    default_spotter_wiring_factory,
+    default_vault_watchdog_factory,
+)
 from engine.stt.live_capture_service import LiveCaptureService
+from engine.vault_watchdog_server_wiring import VaultWatchdogServerWiring
 from engine.voice import TtsPlaybackStreamer
 from engine.websocket_connection_handler import WebSocketConnectionHandler
 
-# The repo's migrations directory (packaging bundles it next to the engine).
-MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
-
-# A factory (not an instance) so the service is built AFTER settings load,
-# against the hub the app owns. Tests inject fakes through this seam.
+# Factory seams (a factory, not an instance, so services are built AFTER
+# settings load, against the hub the app owns; tests inject fakes here).
+# Ask/dictation/approval are command-driven so they default ON; detection,
+# the spotter, card building, and the vault watchdog run on timers/events,
+# so they are wired ONLY when a factory is passed (production passes the
+# defaults; tests stay hermetic — no background polls or event reactions).
 CaptureServiceFactory = Callable[[EventBroadcastHub], LiveCaptureService]
-
-
-def _default_capture_service_factory(hub: EventBroadcastHub) -> LiveCaptureService:
-    settings = load_engine_settings()  # Raises on bad env — fail closed.
-    return LiveCaptureService(db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR, hub=hub)
-
-
-# Same factory seam as capture: built AFTER settings load, tests inject fakes.
 FinalizationServiceFactory = Callable[[EventBroadcastHub], MeetingFinalizationService]
-
-
-def _default_finalization_service_factory(hub: EventBroadcastHub) -> MeetingFinalizationService:
-    settings = load_engine_settings()  # Raises on bad env — fail closed.
-    # Construction is inert (no keys, no I/O): providers/vault resolve per
-    # finalize call, so a missing key refuses that call, never engine boot.
-    return MeetingFinalizationService(
-        db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR, hub=hub
-    )
-
-
-# Reconciliation-pass seams (same style): inert construction, tests inject
-# fakes. Ask + dictation are command-driven so they default ON; detection and
-# the live-answers spotter run on timers/events, so they are wired ONLY when a
-# factory is passed (production passes the defaults below; tests stay hermetic
-# — no background polls, no real-DB event reactions in a default test app).
 AskGatewayFactory = Callable[[], AskAnswerGateway]
 DictationGatewayFactory = Callable[[EventBroadcastHub], DictationCommandGateway]
+ApprovalGatewayFactory = Callable[[EventBroadcastHub], ApprovalCardsGateway]
 DetectionWiringFactory = Callable[[EventBroadcastHub, LiveCaptureService], DetectionServerWiring]
 SpotterWiringFactory = Callable[[EventBroadcastHub], LiveAnswersSpotterWiring]
-
-
-def _default_ask_gateway_factory() -> AskAnswerGateway:
-    settings = load_engine_settings()  # Raises on bad env — fail closed.
-    return AskAnswerGateway(db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
-
-
-def _default_dictation_gateway_factory(hub: EventBroadcastHub) -> DictationCommandGateway:
-    settings = load_engine_settings()  # Raises on bad env — fail closed.
-    return DictationCommandGateway(hub=hub, db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
-
-
-def default_detection_wiring_factory(
-    hub: EventBroadcastHub, capture_service: LiveCaptureService
-) -> DetectionServerWiring:
-    """Real probes (ctypes/winreg) + deny-by-default rules; production only."""
-    return DetectionServerWiring(hub, is_capture_active=lambda: capture_service.is_capturing)
-
-
-def default_spotter_wiring_factory(hub: EventBroadcastHub) -> LiveAnswersSpotterWiring:
-    """Real per-meeting spotter over the settings database; production only."""
-    settings = load_engine_settings()  # Raises on bad env — fail closed.
-    return LiveAnswersSpotterWiring(hub, db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
+CardBuildWiringFactory = Callable[[EventBroadcastHub], ApprovalCardBuildWiring]
+VaultWatchdogFactory = Callable[[], VaultWatchdogServerWiring]
 
 
 def create_app(
@@ -108,9 +81,12 @@ def create_app(
     finalization_service_factory: FinalizationServiceFactory | None = None,
     ask_gateway_factory: AskGatewayFactory | None = None,
     dictation_gateway_factory: DictationGatewayFactory | None = None,
+    approval_gateway_factory: ApprovalGatewayFactory | None = None,
     device_lister: DeviceLister | None = None,
     detection_wiring_factory: DetectionWiringFactory | None = None,
     spotter_wiring_factory: SpotterWiringFactory | None = None,
+    card_build_wiring_factory: CardBuildWiringFactory | None = None,
+    vault_watchdog_factory: VaultWatchdogFactory | None = None,
 ) -> FastAPI:
     """Build the FastAPI app. Factory form keeps tests isolated per-app.
 
@@ -122,17 +98,19 @@ def create_app(
     events, not commands); production passes the module-level defaults.
     """
     event_hub = EventBroadcastHub()
-    factory = capture_service_factory or _default_capture_service_factory
+    factory = capture_service_factory or default_capture_service_factory
     capture_service = factory(event_hub)
     # Naomi voice: relays Cartesia audio to every socket via the same hub.
     # Construction is inert (credentials resolve lazily per utterance).
     voice_streamer = TtsPlaybackStreamer(event_hub)
     # M2 meeting library/finalization: same hub, inert construction.
-    finalization_factory = finalization_service_factory or _default_finalization_service_factory
+    finalization_factory = finalization_service_factory or default_finalization_service_factory
     finalization_service = finalization_factory(event_hub)
-    # M3 ask + M5 dictation: command-driven, inert construction (default ON).
-    ask_gateway = (ask_gateway_factory or _default_ask_gateway_factory)()
-    dictation_gateway = (dictation_gateway_factory or _default_dictation_gateway_factory)(event_hub)
+    # M3 ask + M5 dictation + M4 approval cards: command-driven, inert
+    # construction (default ON).
+    ask_gateway = (ask_gateway_factory or default_ask_gateway_factory)()
+    dictation_gateway = (dictation_gateway_factory or default_dictation_gateway_factory)(event_hub)
+    approval_gateway = (approval_gateway_factory or default_approval_gateway_factory)(event_hub)
     # M6 detection + M3 live answers: event/timer-driven — wired only when a
     # factory is passed (see docstring). The detection wiring feeds off the
     # loopback VAD tap the capture service carries (probabilities only).
@@ -142,6 +120,13 @@ def create_app(
     if detection_wiring is not None:
         capture_service.on_loopback_vad_probability = detection_wiring.feed_vad_sample
     spotter_wiring = spotter_wiring_factory(event_hub) if spotter_wiring_factory else None
+    # M4 card-building seams (event/hook-driven — same wired-only-when-passed
+    # rule): finalization events + the dictation gateway's post-final hook.
+    card_build_wiring = card_build_wiring_factory(event_hub) if card_build_wiring_factory else None
+    if card_build_wiring is not None:
+        dictation_gateway.on_final_result = card_build_wiring.on_dictation_final
+    # M3 live vault watching (OS-event-driven — same rule).
+    vault_watchdog = vault_watchdog_factory() if vault_watchdog_factory else None
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -153,14 +138,25 @@ def create_app(
             preload_task = asyncio.create_task(capture_service.preload_models())
         if detection_wiring is not None:
             detection_wiring.start()  # bot-free detection poll loop
+        if vault_watchdog is not None:
+            vault_watchdog.start()  # live vault reindex (or one honest OFF line)
         yield
         if detection_wiring is not None:
             # Stop the poll loop first: no suggestions during teardown.
             with contextlib.suppress(Exception):
                 await detection_wiring.stop()
+        if vault_watchdog is not None:
+            with contextlib.suppress(Exception):
+                await vault_watchdog.shutdown()
         if spotter_wiring is not None:
             with contextlib.suppress(Exception):
                 await spotter_wiring.shutdown()
+        if card_build_wiring is not None:
+            with contextlib.suppress(Exception):
+                await card_build_wiring.shutdown()
+        # In-flight card executions get a short grace, then cancel.
+        with contextlib.suppress(Exception):
+            await approval_gateway.shutdown()
         if preload_task is not None and not preload_task.done():
             preload_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -189,9 +185,12 @@ def create_app(
     app.state.finalization_service = finalization_service
     app.state.ask_gateway = ask_gateway
     app.state.dictation_gateway = dictation_gateway
+    app.state.approval_gateway = approval_gateway
     app.state.device_lister = device_lister if device_lister is not None else list_audio_devices
     app.state.detection_wiring = detection_wiring
     app.state.spotter_wiring = spotter_wiring
+    app.state.card_build_wiring = card_build_wiring
+    app.state.vault_watchdog = vault_watchdog
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -213,6 +212,7 @@ def create_app(
             finalization_service=state.finalization_service,
             ask_gateway=state.ask_gateway,
             dictation_gateway=state.dictation_gateway,
+            approval_gateway=state.approval_gateway,
             # detection.dismiss needs the service; None → honest refusal.
             detection_service=detection.service if detection is not None else None,
             device_lister=state.device_lister,
@@ -230,11 +230,14 @@ def build_uvicorn_config(settings: EngineSettings) -> uvicorn.Config:
     """
     return uvicorn.Config(
         # Production app: STT preloads at boot, and the event/timer-driven
-        # reconciliation surfaces (M6 detection, M3 live answers) are wired.
+        # reconciliation surfaces (M6 detection, M3 live answers, M4 card
+        # building, live vault watching) are wired.
         app=create_app(
             preload_stt=True,
             detection_wiring_factory=default_detection_wiring_factory,
             spotter_wiring_factory=default_spotter_wiring_factory,
+            card_build_wiring_factory=default_card_build_wiring_factory,
+            vault_watchdog_factory=default_vault_watchdog_factory,
         ),
         # Local-only invariant: loopback constant, never a setting.
         host=LOOPBACK_HOST,

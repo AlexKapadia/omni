@@ -36,11 +36,23 @@ async def latest_extraction_payload_json(
     Newest by (ts, id): id breaks exact-timestamp ties because it is the
     monotonic append order — the later row is always the later pass.
     """
+    row = await latest_extraction_row(connection, meeting_id)
+    return None if row is None else row[1]
+
+
+async def latest_extraction_row(
+    connection: aiosqlite.Connection, meeting_id: str
+) -> tuple[int, str] | None:
+    """``(row_id, payload_json)`` of the newest extraction pass, or None.
+
+    The row id is what M4's card builder records as ``source_row_id`` so a
+    card's provenance traces back to the exact append-only source row.
+    """
     cursor = await connection.execute(
-        "SELECT payload_json FROM extraction_results"
+        "SELECT id, payload_json FROM extraction_results"
         " WHERE meeting_id = ? ORDER BY ts DESC, id DESC LIMIT 1",
         (meeting_id,),
     )
     row = await cursor.fetchone()
     await cursor.close()
-    return None if row is None else str(row[0])
+    return None if row is None else (int(row[0]), str(row[1]))

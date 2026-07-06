@@ -6,12 +6,11 @@
 > actions, tri-provider router (Groq / Gemini / optional Anthropic), NSIS installer, auto-update.
 > Open source on GitHub (AlexKapadia/omni) — no secrets ever committed.
 
-**RESUME HERE →** M0 boot AC in flight (`pnpm tauri dev` background + 18:03 one-shot check —
-green = flip M0 DONE). M1/vault/router/ui-screens DONE+committed. Running lanes: m3-index,
-naomi-build. Next after a lane frees: M2 enhance pipeline (needs router+vault, both DONE) then
-M4/M5/M6. North Star #2: 4 GREEN/2 AMBER — both AMBERs fixed (this edit + stt file split).
-RULE (adopted from review #2): every feature commit flips its ledger row + RESUME HERE in the
-SAME commit.
+**RESUME HERE →** M0 + M1 gates DONE. Running lanes: m3-index, naomi-build. Next when a lane
+frees: M2 enhance pipeline agent (router+vault both DONE — fuse notes+transcript via templates,
+auto-stop, meeting finalization writes the vault note). Then M4 (Google tools; mocks until user
+OAuth creds), M5 dictation, M6 detection, M7 ship, M9 landing page, Naomi full loop.
+RULE: every feature commit flips its ledger row + RESUME HERE in the SAME commit.
 
 ---
 
@@ -55,7 +54,7 @@ SAME commit.
 
 | Gate | Scope | Status |
 |---|---|---|
-| M0 Skeleton | Tauri boots to tray, sidecar spawn+handshake+restart, migrations, CI skeleton | **GREEN except live boot AC (in flight)** |
+| M0 Skeleton | Tauri boots to tray, sidecar spawn+handshake+restart, migrations, CI skeleton | **DONE** (live boot AC: shell spawned engine, WS connected, /health ok, Parakeet on CUDA in sidecar, kill-on-exit verified) |
 | M1 Ears | Dual-stream WASAPI+mic capture, VAD, streaming Parakeet, live Me/Them transcript | **DONE** (live-verified: verbatim loopback transcript, lag 898ms) |
 | M2 Notes | Notepad, auto-stop, enhance pipeline + templates, vault writer (managed markers) | TODO |
 | M3 Brain | Indexer, embeddings, Ask Omni w/ citations, live Answers panel | TODO |

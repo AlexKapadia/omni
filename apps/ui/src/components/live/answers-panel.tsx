@@ -1,29 +1,31 @@
 /**
- * Answers panel (live meeting, floating bottom-right): surfaces an answer
- * when a question is heard in the room. Hits are MOCK today
- * (mock-live-answer-hits.ts, derived from the REAL transcript store); the M3
- * live retrieval tier swaps in behind the same hit shape.
+ * Answers panel (live meeting, floating bottom-right): surfaces the newest
+ * live-answer hit when a question is heard in the room. Hits are REAL — the
+ * M3 live tier (engine/ask/live_answers_spotter.py) emits `answers.hit`
+ * events into live-answers-store.ts; this panel renders the newest hit's top
+ * source verbatim (an exact note excerpt — the live tier never synthesises).
  *
  * Design (components doc §04): open = 340px card, grey-200 border, the float
  * shadow, "panel hit" motion 200ms y +8 -> 0 with the shadow blooming, no
  * bounce. Collapsed = pill with an 8px breathing ring. Reduced motion is
- * honoured via useReducedMotion.
+ * honoured via useReducedMotion. Empty store = honest idle (renders nothing).
  */
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { useState } from "react";
 import { BreathingRing } from "../breathing-ring";
 import { SectionLabel } from "../section-label";
 import { tokenDurationSeconds } from "../../lib/design-token-motion";
-import { deriveMockLiveAnswerHit } from "../../lib/mock-live-answer-hits";
-import { useTranscript } from "../../lib/transcript-store";
+import { useLiveAnswers } from "../../lib/live-answers-store";
 
 export function AnswersPanel() {
-  const segments = useTranscript((s) => s.segments);
+  const hits = useLiveAnswers((s) => s.hits);
   const [collapsed, setCollapsed] = useState(false);
   const reducedMotion = useReducedMotion();
-  const hit = deriveMockLiveAnswerHit(segments);
+  const hit = hits[0] ?? null;
 
-  if (hit === null) return null; // no question heard yet — nothing to float
+  if (hit === null) return null; // no question answered yet — nothing to float
+  const topSource = hit.sources[0];
+  if (topSource === undefined) return null; // store never admits empty hits
 
   const panelSeconds = reducedMotion ? 0 : tokenDurationSeconds("--dur-panel");
 
@@ -43,7 +45,7 @@ export function AnswersPanel() {
         }}
       >
         <BreathingRing size={8} breathing />
-        1 answer · expand
+        {hits.length} answer{hits.length === 1 ? "" : "s"} · expand
       </button>
     );
   }
@@ -68,7 +70,7 @@ export function AnswersPanel() {
         }}
       >
         <div className="flex items-baseline justify-between">
-          <SectionLabel>Answer</SectionLabel>
+          <SectionLabel>From your notes</SectionLabel>
           <button
             type="button"
             onClick={() => setCollapsed(true)}
@@ -82,21 +84,21 @@ export function AnswersPanel() {
           className="m-0 italic text-[var(--grey-400)]"
           style={{ fontSize: 13, lineHeight: "var(--text-transcript-lh)" }}
         >
-          “{hit.questionHeard}”
+          “{hit.question}”
         </p>
         <p
           className="m-0 text-[var(--ink)]"
           style={{ fontSize: "var(--text-body-size)", lineHeight: "var(--text-body-lh)" }}
         >
-          {hit.answerProse.map((span, i) =>
-            span.strong ? <strong key={i}>{span.text}</strong> : <span key={i}>{span.text}</span>,
-          )}
+          {topSource.snippet}
         </p>
         <div
           className="border-t border-[var(--grey-200)] pt-[var(--space-2)] font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
           style={{ fontSize: 11 }}
         >
-          ↳ {hit.sourcePath} · {hit.sourceContext}
+          {/* Exact citation target + the measured spotted->hit span (speed showcase). */}
+          ↳ {topSource.notePath} · L{topSource.lineStart}–{topSource.lineEnd} ·{" "}
+          {hit.spottedToHitMs} ms
         </div>
       </motion.section>
     </AnimatePresence>

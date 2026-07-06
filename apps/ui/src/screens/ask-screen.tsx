@@ -1,12 +1,14 @@
 /**
  * Ask Omni — one question over everything you know: query input, answer with
- * inline citation markers, and exact-source chips (note_path + line range,
- * the M3 §Cite contract).
+ * inline citation markers, exact-source chips (note_path + line range, the
+ * M3 §Cite contract), and the engine-measured latency readout (retrieval /
+ * synthesis / total — speed is a showcase feature).
  *
- * Answers come through the AskAnswerProvider interface (MOCK provider today;
- * the M3 retrieval pipeline swaps in unchanged). States: empty (the page
- * display + privacy line), thinking (shimmer, never a spinner), answered,
- * and error with a retry.
+ * Answers come through the AskAnswerProvider interface. The default is the
+ * REAL engine provider (engine-ask-answer-provider.ts, `ask.query` over the
+ * WS transport); until the transport is wired it rejects honestly and the
+ * error state renders. States: empty (the page display + privacy line),
+ * thinking (shimmer, never a spinner), answered, and error with a retry.
  */
 import { useState, type FormEvent } from "react";
 import { CitationChip } from "../components/citation-chip";
@@ -19,10 +21,10 @@ import {
   useAsk,
   type AskAnswerProvider,
 } from "../lib/ask-store";
-import { createMockAskAnswerProvider } from "../lib/mock-ask-answer-provider";
+import { createEngineAskAnswerProvider } from "../lib/engine-ask-answer-provider";
 
-/** MOCK provider until the M3 retrieval pipeline lands (same interface). */
-const defaultProvider: AskAnswerProvider = createMockAskAnswerProvider();
+/** The real M3 provider; fails closed (honest error state) until wired. */
+const defaultProvider: AskAnswerProvider = createEngineAskAnswerProvider();
 
 function QueryInput({
   provider,
@@ -180,6 +182,17 @@ export function AskScreen({
                 />
               ))}
             </div>
+            {answer.latency !== undefined && (
+              <p
+                aria-label="Answer latency"
+                className="m-0 font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+                style={{ fontSize: 11 }}
+              >
+                {/* Engine-measured, rendered verbatim — speed is a showcase. */}
+                retrieval {answer.latency.retrievalMs} ms · synthesis{" "}
+                {answer.latency.synthesisMs} ms · total {answer.latency.totalMs} ms
+              </p>
+            )}
           </article>
         )}
       </div>

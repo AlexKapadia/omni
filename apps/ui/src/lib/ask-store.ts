@@ -2,14 +2,16 @@
  * Zustand store for Ask Omni: question lifecycle, the answer with its
  * citations, and which source is expanded.
  *
- * Answers arrive through the AskAnswerProvider interface. Today the only
- * implementation is the MOCK provider (mock-ask-answer-provider.ts); the M3
- * retrieval pipeline (hybrid RRF over the vault index, exact file+line
- * citations) implements the same interface and swaps in unchanged.
+ * Answers arrive through the AskAnswerProvider interface. The REAL
+ * implementation (engine-ask-answer-provider.ts) speaks the engine's
+ * `ask.query` command over the WS transport; it parses the M3 pipeline's
+ * reply fail-closed into this shape.
  *
  * Citation shape is pinned by docs/research/m3-retrieval-architecture-
  * recommendation.md §Cite: every chunk carries note_path + line range +
  * heading_path — the UI renders exactly that, never a vague "source".
+ * Latency is the engine-measured breakdown, rendered verbatim under the
+ * answer (speed is a showcase feature — session mandate).
  */
 import { createStore, useStore, type StoreApi } from "zustand";
 
@@ -34,10 +36,19 @@ export interface AskProseSpan {
   readonly citationMarker?: number;
 }
 
+/** Engine-measured spans, ms, exact: total is retrieval + synthesis. */
+export interface AskLatencyBreakdown {
+  readonly retrievalMs: number;
+  readonly synthesisMs: number;
+  readonly totalMs: number;
+}
+
 export interface AskAnswer {
   readonly headline: string;
   readonly prose: readonly AskProseSpan[];
   readonly citations: readonly AskCitation[];
+  /** Present on real engine answers; rendered mono under the answer. */
+  readonly latency?: AskLatencyBreakdown;
 }
 
 /** The swappable answer source. Mock now; M3 retrieval pipeline later. */

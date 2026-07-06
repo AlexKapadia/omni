@@ -4,9 +4,10 @@
  *
  * Transcript, lag and capture lifecycle are LIVE-WIRED to the engine's
  * transcript.partial / transcript.final / capture.* events via
- * transcript-store; only the answers-panel hits are mock (M3). States:
- * idle (pre-capture, honest about an offline engine), starting, live,
- * stopped, and error — no state is faked.
+ * transcript-store; answers-panel hits come from live-answers-store, fed by
+ * the engine's answers.hit events (M3 live tier). States: idle (pre-capture,
+ * honest about an offline engine), starting, live, stopped, and error — no
+ * state is faked.
  */
 import { useEffect, useState } from "react";
 import { OmniButton } from "../components/button";

@@ -111,6 +111,14 @@ The FULL suite runs once per milestone gate and on CI push — never re-run gree
 
 ## Blockers / waiting-on-user
 
+- [ ] **MSVC C++ toolchain needs one elevated click (M0 Rust compile).** The box's VS2019 BuildTools
+  is a skeleton (no cl.exe/link.exe/SDK); silent install requires admin and UAC auto-denies with
+  nobody present. WHEN YOU'RE BACK, run in an elevated PowerShell (one command):
+  `& "$env:LOCALAPPDATA\Temp\claude\C--dev-Omni\1a51eada-e8ae-4bb3-82f1-b9d977816f3d\scratchpad\vs_BuildTools.exe" --passive --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended`
+  (or just approve the UAC prompt if one is waiting). Meanwhile a no-admin portable-MSVC fallback
+  is being attempted; M0 gate = everything green EXCEPT Rust compile verification. M1 (pure
+  Python) proceeds in parallel — it does not need MSVC.
+
 - [ ] GROQ_API_KEY + GEMINI_API_KEY in `.env` (needed from M2)
 - [ ] `/design-login` for design token extraction (workaround: token defaults + TODO(design))
 - [ ] Google OAuth client ID/secret (needed for real M4 AC; mocks until then)

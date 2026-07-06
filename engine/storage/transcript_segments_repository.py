@@ -13,7 +13,42 @@ Security / fidelity invariants:
   CHECK constraint enforces the pinned stream labels.
 """
 
+from dataclasses import dataclass
+
 import aiosqlite
+
+
+@dataclass(frozen=True)
+class TranscriptSegmentRow:
+    """One finalised segment as read back for finalization / the detail view."""
+
+    stream: str  # 'me' | 'them' (DB CHECK constraint)
+    text: str  # verbatim model text (fidelity mandate)
+    t_start: float
+    t_end: float
+
+
+async def list_transcript_segment_rows(
+    connection: aiosqlite.Connection, meeting_id: str
+) -> list[TranscriptSegmentRow]:
+    """All segments of one meeting in spoken order (t_start, then id).
+
+    Read-only companion to the writer above — the M2 finalizer and the
+    ``meeting.get`` command build the transcript view from these rows.
+    """
+    cursor = await connection.execute(
+        "SELECT stream, text, t_start, t_end FROM transcript_segments"
+        " WHERE meeting_id = ? ORDER BY t_start, id",
+        (meeting_id,),
+    )
+    rows = await cursor.fetchall()
+    await cursor.close()
+    return [
+        TranscriptSegmentRow(
+            stream=str(row[0]), text=str(row[1]), t_start=float(row[2]), t_end=float(row[3])
+        )
+        for row in rows
+    ]
 
 
 async def insert_transcript_segment(

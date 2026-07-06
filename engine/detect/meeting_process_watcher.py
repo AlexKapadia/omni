@@ -1,0 +1,205 @@
+"""Meeting-app detection from process names + visible window titles.
+
+Purpose: classify a ``DesktopSnapshot`` (running processes + window titles)
+into ``MeetingAppDetected`` signals — Zoom / Teams / Discord / Slack native
+apps and browser tabs on meet.google.com / zoom.us / teams.microsoft.com /
+whereby / webex. This is how Omni notices a meeting WITHOUT joining anything.
+
+Pipeline position: ``windows_desktop_snapshot_via_ctypes`` (or a test fake)
+-> ``MeetingProcessWatcher.poll_once`` -> ``AutoStartRulesEngine``.
+
+Evidence model (documented contract):
+- ``process`` evidence is WEAK: Zoom/Teams/Discord/Slack all idle in the
+  tray, so a running exe alone proves nothing. Weak signals only matter when
+  the rules engine corroborates them with a mic-in-use signal.
+- ``window_title`` evidence is STRONG(er): an actual meeting-shaped window
+  title ("Zoom Meeting", a Slack huddle window, a Meet tab). Browser-tab
+  matches stay MEDIUM: an open tab is not necessarily a joined call.
+- Process-name matching is EXACT (case-insensitive) on the executable base
+  name — substring matching would make ``teamspeak.exe`` look like Teams.
+- Slack huddle matching REQUIRES the window's owning process to be
+  ``slack.exe`` — "huddle" is an ordinary English word that appears in
+  article titles.
+
+Security/compliance invariants:
+- Observation only: reads a snapshot handed to it; never touches the
+  network, never injects into or joins anything.
+- Fail closed to silence: a snapshot-provider failure yields NO signals
+  (and a recorded ``last_error``) — detection must never crash the engine
+  and must never fabricate a meeting.
+"""
+
+import logging
+from collections.abc import Callable
+
+from engine.detect.detection_signal_types import (
+    SOURCE_BROWSER_MEET,
+    SOURCE_BROWSER_TEAMS,
+    SOURCE_BROWSER_WEBEX,
+    SOURCE_BROWSER_WHEREBY,
+    SOURCE_BROWSER_ZOOM,
+    SOURCE_DISCORD,
+    SOURCE_SLACK,
+    SOURCE_TEAMS,
+    SOURCE_ZOOM,
+    DesktopSnapshot,
+    MeetingAppDetected,
+)
+
+logger = logging.getLogger(__name__)
+
+# Exact executable base names (lower-case) -> (source, weak confidence).
+# WHY exact equality: substring matching turns "teamspeak.exe" into Teams
+# and "zoomit.exe" (Sysinternals) into Zoom — near-misses must not match.
+_PROCESS_SIGNATURES: dict[str, tuple[str, float]] = {
+    "zoom.exe": (SOURCE_ZOOM, 0.3),
+    "ms-teams.exe": (SOURCE_TEAMS, 0.3),
+    "teams.exe": (SOURCE_TEAMS, 0.3),
+    "discord.exe": (SOURCE_DISCORD, 0.3),  # voice state is NOT inferable from the process
+    "slack.exe": (SOURCE_SLACK, 0.2),  # huddles only show via the window title below
+}
+
+# Case-folded substrings of window titles that mark an in-meeting NATIVE app
+# window. Zoom's meeting window is reliably titled "Zoom Meeting"/"Zoom
+# Webinar"; Teams call windows carry "Microsoft Teams" plus a meeting word.
+_ZOOM_TITLE_MARKERS = ("zoom meeting", "zoom webinar")
+_TEAMS_TITLE_MARKER = "microsoft teams"  # NB: NOT a substring of "teams.microsoft.com"
+_TEAMS_MEETING_WORDS = ("meeting", "call", "compact view")
+_SLACK_HUDDLE_MARKER = "huddle"
+
+# Browser-tab title substrings (case-folded) -> source. A tab title normally
+# embeds the page title and often the domain; these are the patterns the
+# product contract names. Medium confidence: an open tab != a joined call.
+_BROWSER_TITLE_SIGNATURES: tuple[tuple[str, str], ...] = (
+    ("meet.google.com", SOURCE_BROWSER_MEET),
+    ("google meet", SOURCE_BROWSER_MEET),
+    ("zoom.us", SOURCE_BROWSER_ZOOM),
+    ("teams.microsoft.com", SOURCE_BROWSER_TEAMS),
+    ("whereby", SOURCE_BROWSER_WHEREBY),
+    ("webex", SOURCE_BROWSER_WEBEX),
+)
+
+_WINDOW_TITLE_CONFIDENCE_ZOOM = 0.9
+_WINDOW_TITLE_CONFIDENCE_TEAMS = 0.75
+_WINDOW_TITLE_CONFIDENCE_SLACK_HUDDLE = 0.85
+_BROWSER_TAB_CONFIDENCE = 0.65
+
+
+def classify_desktop_snapshot(snapshot: DesktopSnapshot) -> tuple[MeetingAppDetected, ...]:
+    """Pure classification: snapshot in, at most one signal per source out.
+
+    Deterministic: for each source the single strongest piece of evidence
+    wins (window title beats process presence). Output order is sorted by
+    source name so repeated identical snapshots yield identical tuples.
+    """
+    pid_to_exe = {p.pid: p.exe_name.casefold() for p in snapshot.processes}
+    best: dict[str, MeetingAppDetected] = {}
+
+    def offer(candidate: MeetingAppDetected) -> None:
+        current = best.get(candidate.source)
+        if current is None or candidate.confidence > current.confidence:
+            best[candidate.source] = candidate
+
+    for proc in snapshot.processes:
+        signature = _PROCESS_SIGNATURES.get(proc.exe_name.casefold())
+        if signature is not None:
+            source, confidence = signature
+            offer(
+                MeetingAppDetected(
+                    source=source,
+                    app=proc.exe_name,
+                    window_title_hint=None,
+                    confidence=confidence,
+                    evidence="process",
+                )
+            )
+
+    for window in snapshot.windows:
+        title_cf = window.title.casefold()
+        owner_exe = pid_to_exe.get(window.pid, "")
+
+        # Zoom's meeting window title is distinctive on its own.
+        if any(marker in title_cf for marker in _ZOOM_TITLE_MARKERS):
+            offer(
+                MeetingAppDetected(
+                    source=SOURCE_ZOOM,
+                    app=owner_exe or "zoom.exe",
+                    window_title_hint=window.title,
+                    confidence=_WINDOW_TITLE_CONFIDENCE_ZOOM,
+                    evidence="window_title",
+                )
+            )
+        # Teams: needs BOTH the app marker and a meeting-shaped word — every
+        # Teams window carries "Microsoft Teams", only calls carry the rest.
+        if _TEAMS_TITLE_MARKER in title_cf and any(
+            word in title_cf for word in _TEAMS_MEETING_WORDS
+        ):
+            offer(
+                MeetingAppDetected(
+                    source=SOURCE_TEAMS,
+                    app=owner_exe or "ms-teams.exe",
+                    window_title_hint=window.title,
+                    confidence=_WINDOW_TITLE_CONFIDENCE_TEAMS,
+                    evidence="window_title",
+                )
+            )
+        # Slack huddle: owner MUST be slack.exe ("huddle" is a common word).
+        if _SLACK_HUDDLE_MARKER in title_cf and owner_exe == "slack.exe":
+            offer(
+                MeetingAppDetected(
+                    source=SOURCE_SLACK,
+                    app="slack.exe",
+                    window_title_hint=window.title,
+                    confidence=_WINDOW_TITLE_CONFIDENCE_SLACK_HUDDLE,
+                    evidence="window_title",
+                )
+            )
+        for marker, source in _BROWSER_TITLE_SIGNATURES:
+            if marker in title_cf:
+                offer(
+                    MeetingAppDetected(
+                        source=source,
+                        app=owner_exe or "browser",
+                        window_title_hint=window.title,
+                        confidence=_BROWSER_TAB_CONFIDENCE,
+                        evidence="window_title",
+                    )
+                )
+
+    return tuple(best[source] for source in sorted(best))
+
+
+class MeetingProcessWatcher:
+    """Polls an injected snapshot provider and classifies each snapshot.
+
+    The provider is injected (ctypes-backed in production, plain fakes in
+    tests) so classification is deterministic and unit tests never touch
+    Windows APIs. The DetectionService drives the poll cadence using
+    ``poll_interval_s`` (default 3s per the product contract).
+    """
+
+    def __init__(
+        self,
+        snapshot_provider: Callable[[], DesktopSnapshot],
+        poll_interval_s: float = 3.0,
+    ) -> None:
+        if poll_interval_s <= 0:
+            raise ValueError("poll_interval_s must be > 0")
+        self._snapshot_provider = snapshot_provider
+        self.poll_interval_s = poll_interval_s
+        self.last_error: str | None = None
+
+    def poll_once(self) -> tuple[MeetingAppDetected, ...]:
+        """One poll: snapshot -> signals. Fails closed to NO signals."""
+        try:
+            snapshot = self._snapshot_provider()
+        except Exception as exc:  # fail closed: never crash, never fabricate
+            first_failure = self.last_error is None
+            self.last_error = f"{type(exc).__name__}: {exc}"
+            # WHY first-failure-only at WARNING: this runs every ~3s and a
+            # persistent failure would otherwise flood the audit-relevant log.
+            log = logger.warning if first_failure else logger.debug
+            log("desktop snapshot failed; meeting detection degraded: %s", self.last_error)
+            return ()
+        self.last_error = None
+        return classify_desktop_snapshot(snapshot)

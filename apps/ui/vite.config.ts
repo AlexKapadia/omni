@@ -7,6 +7,18 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
 
+  // Two windows, two entries: the main app and the M5 dictation pill
+  // overlay (src-tauri loads pill.html into the "pill" window).
+  build: {
+    rollupOptions: {
+      // Relative to the config root; plain strings keep node typings out.
+      input: {
+        main: "./index.html",
+        pill: "./pill.html",
+      },
+    },
+  },
+
   // Tauri expects a fixed dev port (see src-tauri/tauri.conf.json devUrl).
   // strictPort fails fast instead of silently moving — the shell would
   // otherwise load a blank window pointing at the wrong port.

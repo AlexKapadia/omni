@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "dictation-pill",
+  "description": "Least-privilege capability for the dictation pill overlay (M5). Core defaults (event listen for hold-pressed/released) plus hide only — the pill dismisses itself after showing a result; it is shown exclusively by the Rust shortcut handler (deny by default).",
+  "windows": ["pill"],
+  "permissions": ["core:default", "core:window:allow-hide"]
+}

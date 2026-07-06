@@ -2,6 +2,7 @@
 //! the Python engine sidecar. The shell is deliberately thin — it never
 //! touches audio, transcripts, or keys; that is the engine's job.
 
+mod dictation_pill_window;
 mod engine_sidecar;
 mod tray;
 
@@ -31,11 +32,11 @@ pub fn run() {
                 .level(log::LevelFilter::Info)
                 .build(),
         )
-        // Registered now so M-later features only add bindings, not plumbing.
-        // No shortcuts are bound in M0.
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .setup(|app| {
             tray::build_tray(app.handle())?;
+            // M5: hold-F9 dictation pill (window + global shortcut binding).
+            dictation_pill_window::setup_dictation_pill(app.handle())?;
             // Start supervising the engine sidecar immediately; the supervisor
             // tolerates the engine being absent (retry loop, never a crash).
             let sidecar = engine_sidecar::EngineSidecar::spawn_supervised();

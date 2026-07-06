@@ -1,0 +1,203 @@
+/*
+ * Dictation pill styles — design §07 exactly, monochrome, tokens.css values
+ * only. The window itself is transparent; the pill and popover are the only
+ * painted surfaces (float shadow is "the only shadow").
+ */
+
+html,
+body,
+#pill-root {
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  overflow: hidden;
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+}
+
+.pill-stage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding-top: 8px; /* room for the shadow above the pill */
+  user-select: none;
+}
+
+/* --- The pill row: border #EDEDED · radius 999 · padding 10px 18px · gap 14px --- */
+.pill {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  padding: 10px 18px;
+  background: var(--canvas);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-pill);
+  box-shadow: var(--shadow-float);
+}
+
+.pill-timer {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--ink);
+  min-width: 40px;
+  text-align: center;
+}
+
+.pill-timer--idle {
+  color: var(--grey-400); /* idle: 00:00 in #A3A3A3 */
+}
+
+/* Mode chip: mono 11 caps. Idle NOTE is ghost #D4D4D4; listening is ink. */
+.pill-mode-chip {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: var(--label-ls);
+  text-transform: uppercase;
+  color: var(--ink);
+  padding: 3px 10px;
+}
+
+.pill-mode-chip--idle {
+  color: var(--grey-300);
+}
+
+/* Command parsed: chip inverts — background #0A0A0A, white, radius 999. */
+.pill-mode-chip--command {
+  background: var(--ink);
+  color: var(--canvas);
+  border-radius: var(--radius-pill);
+}
+
+/* Idle hint: breathing dot + "Hold F9" (the only permanent animation). */
+.pill-idle-hint {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--grey-400);
+  white-space: nowrap;
+}
+
+.pill-idle-dot {
+  width: 10px;
+  height: 10px;
+  border: 2.5px solid var(--ink);
+  border-radius: 50%;
+  box-sizing: border-box;
+  animation: omniBreathe 2.4s ease-in-out infinite;
+}
+
+/* Command-mode mono echo of the live transcript under the pill. */
+.pill-echo {
+  margin-top: 10px;
+  max-width: 380px;
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--grey-600);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* --- Result popover: 320 wide · mt 12 · radius 12 · float shadow · p 18 --- */
+.pill-popover {
+  width: 320px;
+  box-sizing: border-box;
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 18px;
+  background: var(--canvas);
+  border: 1px solid var(--grey-200);
+  border-radius: var(--radius-card);
+  box-shadow: var(--shadow-float);
+  /* "popover rises 8px / 200ms" */
+  animation: pillPopoverRise var(--dur-panel) var(--ease-out);
+}
+
+@keyframes pillPopoverRise {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.pill-popover-label {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  font-weight: 500;
+  letter-spacing: var(--label-ls);
+  text-transform: uppercase;
+  color: var(--grey-400);
+}
+
+.pill-popover-quote {
+  font-size: 13px;
+  font-style: italic;
+  color: var(--grey-400);
+}
+
+.pill-popover-title {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--ink);
+}
+
+.pill-popover-detail {
+  font-family: var(--font-mono);
+  font-size: 12px;
+  color: var(--grey-600);
+  overflow-wrap: anywhere;
+}
+
+.pill-popover-buttons {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+
+/* Primary-small button (approval-card scale). */
+.pill-button-primary {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--canvas);
+  background: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-pill);
+  padding: 6px 14px;
+  cursor: pointer;
+  text-decoration: none;
+  transition: opacity var(--dur-micro) var(--ease-out);
+}
+
+.pill-button-primary:hover {
+  opacity: 0.85;
+}
+
+.pill-button-ghost {
+  font-size: 13px;
+  color: var(--grey-400);
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-control);
+  padding: 6px 10px;
+  cursor: pointer;
+  transition: color var(--dur-micro) var(--ease-out);
+}
+
+.pill-button-ghost:hover {
+  color: var(--ink);
+}
+
+/* Error strip: same card language, honest plain voice. */
+.pill-error-reason {
+  font-size: 13px;
+  color: var(--grey-600);
+}

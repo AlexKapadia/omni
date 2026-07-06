@@ -116,7 +116,9 @@ RULE: every feature commit flips its ledger row + RESUME HERE in the SAME commit
 | naomi-build | fluid visual + Cartesia voice foundation per brief | apps/ui/src/naomi, engine/voice | DONE — 135 UI + 65 engine tests, live Cartesia TTFA 469–610ms (cold-connect dominated; persistent socket = loop TODO), committed |
 | m2-enhance | enhance pipeline, templates, extraction, finalization, auto-stop | engine/enhance, server wiring, UI meetings swap | RUNNING |
 | m6-detect | process/window watch, mic-in-use, VAD trigger, rules engine | engine/detect, tests | DONE on wip branch — predecessor's code fully validated, 120 tests green (verified), live Edge/Meet detection fired t=3s, idle apps correctly sub-threshold. Server wiring deferred (interface in agent return + module docstrings). Merges to main with the branch. |
-| m3-ask | Ask-Omni answer service + live answers spotter | engine/ask, ask-screen/stores | RUNNING |
+| m3-ask | Ask-Omni answer service + live answers spotter | engine/ask, ask-screen/stores | DONE — 26 py + 33 ts tests, live smoke: verified citations, honest no-answer, structured path 1.0s. Wiring deferred (spec in engine/ask/__init__). Committed 1c0e05d. |
+| m5-dictation | hotkey + pill + note/command modes (original scope) | src-tauri, src/pill, engine/dictation | DONE — 98 py + 95 ts tests, live: real intent JSON 800ms, real Inbox note w/ Groq title. Wispr-Flow-raise seams left clean. Wiring deferred (dictation_protocol_names.py). |
+| slow-provider-cancel test | orchestrator: pin wait_for cancellation at budget (m3-ask flag) | tests/test_router__slow_provider… | DONE — proves a hanging provider is cancelled at timeout_seconds; the observed 12.1s was multi-attempt wall time (legitimate). |
 | north-star #2 | read-only alignment review | (read-only) | DONE — 4 GREEN / 2 AMBER (stt file split + this tracker fix) |
 
 ## Pacing policy (user mandate, revised 2026-07-06 — binding)

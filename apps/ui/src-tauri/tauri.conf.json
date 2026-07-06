@@ -2,7 +2,7 @@
   "$schema": "https://schema.tauri.app/config/2",
   "productName": "Omni",
   "version": "0.1.0",
-  "identifier": "app.omni.desktop",
+  "identifier": "com.omni.app",
   "build": {
     "beforeDevCommand": "pnpm dev",
     "devUrl": "http://localhost:1420",
@@ -26,12 +26,41 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis"],
+    "targets": ["nsis", "msi"],
+    "publisher": "Omni",
+    "copyright": "MIT License",
+    "shortDescription": "Local-first meeting intelligence",
+    "longDescription": "Omni: local-first, bot-free meeting intelligence for Windows. On-device transcription, enhanced notes into your Obsidian vault, approval-carded actions, zero telemetry.",
+    "licenseFile": "../../../LICENSE",
+    "createUpdaterArtifacts": true,
     "icon": [
       "icons/32x32.png",
       "icons/128x128.png",
       "icons/128x128@2x.png",
       "icons/icon.ico"
-    ]
+    ],
+    "resources": {
+      "../../../packaging/dist/omni-engine": "omni-engine",
+      "../../../packaging/install-stt-runtime.ps1": "stt-runtime/install-stt-runtime.ps1",
+      "../../../packaging/stt-runtime-requirements.txt": "stt-runtime/stt-runtime-requirements.txt"
+    },
+    "windows": {
+      "nsis": {
+        "languages": ["English"],
+        "displayLanguageSelector": false,
+        "installMode": "currentUser"
+      }
+    }
+  },
+  "plugins": {
+    "updater": {
+      "pubkey": "dW50cnVzdGVkIGNvbW1lbnQ6IG1pbmlzaWduIHB1YmxpYyBrZXk6IDVGREYzNDYzMDFBQUY0MDYKUldRRzlLb0JZelRmWDI2TkYveHVzcjN2UENPQWpUT0hNOEtDNFQyeEtERXE3aHZiRGJBSTBWa0EK",
+      "endpoints": [
+        "https://github.com/AlexKapadia/omni/releases/latest/download/latest.json"
+      ],
+      "windows": {
+        "installMode": "passive"
+      }
+    }
   }
 }

@@ -79,12 +79,17 @@ fn resolve_engine_command() -> Command {
             .current_dir(repo_root);
         command
     } else {
-        // Packaged engine binary sits beside the shell exe. If resolution
-        // fails we still return a spawnable-looking command; the retry loop
-        // reports the miss instead of the shell crashing.
+        // Packaged engine (PyInstaller onedir) ships as a bundle resource at
+        // <install dir>/omni-engine/omni-engine.exe, next to the shell exe
+        // (see tauri.conf.json bundle.resources). If resolution fails we
+        // still return a spawnable-looking command; the retry loop reports
+        // the miss instead of the shell crashing.
         let engine_path = std::env::current_exe()
             .ok()
-            .and_then(|exe| exe.parent().map(|dir| dir.join("omni-engine.exe")))
+            .and_then(|exe| {
+                exe.parent()
+                    .map(|dir| dir.join("omni-engine").join("omni-engine.exe"))
+            })
             .unwrap_or_else(|| PathBuf::from("omni-engine.exe"));
         Command::new(engine_path)
     }

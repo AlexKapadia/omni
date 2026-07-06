@@ -1,0 +1,110 @@
+# Release: tag v* -> build the engine sidecar (PyInstaller) + the Tauri
+# bundle (NSIS .exe + .msi) on Windows, then publish a GitHub Release with
+# the installers and the latest.json auto-updater manifest.
+#
+# Required repo secret (see packaging/README.md for setup):
+#   TAURI_SIGNING_PRIVATE_KEY - contents of the updater minisign private key
+#     (generated with `tauri signer generate`; NEVER committed).
+#
+# The release is created as a DRAFT so artifacts can be inspected before
+# publishing; publishing the release is what makes the updater endpoint
+# (releases/latest/download/latest.json) serve it to installed apps.
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write # create the release + upload assets
+
+concurrency:
+  group: release-${{ github.ref }}
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # --- guard: tag must match the app version -----------------------------
+      - name: Verify tag matches tauri.conf.json version
+        shell: pwsh
+        run: |
+          $version = (Get-Content apps/ui/src-tauri/tauri.conf.json | ConvertFrom-Json).version
+          $tag = "${{ github.ref_name }}"
+          if ($tag -ne "v$version") {
+            Write-Error "tag $tag does not match app version v$version - update tauri.conf.json (+ pyproject.toml / version resource) before tagging"
+            exit 1
+          }
+
+      # --- engine sidecar (PyInstaller, lean - no torch/nemo) -----------------
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
+      - name: Sync lean engine dependencies
+        run: uv sync
+
+      - name: Build engine sidecar (PyInstaller onedir)
+        run: uv run --with pyinstaller pyinstaller packaging/omni-engine.spec --noconfirm --distpath packaging/dist --workpath packaging/build
+
+      - name: Smoke-test sidecar boot (GET /health must return 200)
+        shell: pwsh
+        run: |
+          $env:OMNI_ENGINE_PORT = "8791"
+          $env:OMNI_DB_PATH = "$env:RUNNER_TEMP\omni-smoke\omni.db"
+          $env:OMNI_MODELS_DIR = "$env:RUNNER_TEMP\omni-smoke\models"
+          New-Item -ItemType Directory -Force $env:OMNI_MODELS_DIR | Out-Null
+          $p = Start-Process -FilePath "packaging\dist\omni-engine\omni-engine.exe" -PassThru
+          $ok = $false
+          foreach ($i in 1..30) {
+            Start-Sleep -Seconds 2
+            try {
+              $r = Invoke-WebRequest -Uri "http://127.0.0.1:8791/health" -UseBasicParsing -TimeoutSec 5
+              if ($r.StatusCode -eq 200) { Write-Host "health: $($r.Content)"; $ok = $true; break }
+            } catch {}
+          }
+          Stop-Process -Id $p.Id -Force -ErrorAction SilentlyContinue
+          if (-not $ok) { Write-Error "frozen engine never answered /health"; exit 1 }
+
+      # --- UI + Tauri bundle ---------------------------------------------------
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Install Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/ui/pnpm-lock.yaml
+
+      - name: Install Rust (stable)
+        uses: dtolnay/rust-toolchain@stable
+
+      - name: Cache cargo build
+        uses: swatinem/rust-cache@v2
+        with:
+          workspaces: apps/ui/src-tauri
+
+      - name: Install UI dependencies
+        working-directory: apps/ui
+        run: pnpm install --frozen-lockfile
+
+      # Builds NSIS .exe + .msi (+ .sig updater artifacts), creates the
+      # draft release, uploads installers AND the latest.json manifest.
+      - name: Build + publish Tauri bundles
+        uses: tauri-apps/tauri-action@v0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          TAURI_SIGNING_PRIVATE_KEY: ${{ secrets.TAURI_SIGNING_PRIVATE_KEY }}
+          TAURI_SIGNING_PRIVATE_KEY_PASSWORD: ""
+        with:
+          projectPath: apps/ui
+          tagName: ${{ github.ref_name }}
+          releaseName: "Omni ${{ github.ref_name }}"
+          releaseBody: "Omni ${{ github.ref_name }} — see the commit history for changes. Installer: .exe (NSIS, per-user) or .msi. Auto-update picks this release up once published."
+          releaseDraft: true
+          prerelease: false

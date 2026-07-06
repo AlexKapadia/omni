@@ -15,6 +15,7 @@ from engine.dictation.dictation_finalization import DictationReleaseFinalizer
 from engine.dictation.dictation_intent_schema import DictationIntentType
 from engine.dictation.dictation_intents_repository import list_dictation_intents
 from engine.dictation.dictation_mode_splitter import DictationMode
+from engine.dictation.personal_dictionary import PersonalDictionary
 from engine.router.completion_contract import ChatMessage, RoutedCompletion
 from engine.router.router_errors import KillSwitchEngagedError, RouterUnavailableError
 from engine.storage.sqlite_connection import open_sqlite_connection
@@ -56,6 +57,8 @@ def _finalizer(
         vault_root_provider=lambda: vault,
         indexer=None,
         now=lambda: FIXED_NOW,
+        # Hermetic: never read the real %LOCALAPPDATA% dictionary in tests.
+        dictionary=PersonalDictionary(path=vault / "no-dictionary.txt"),
     )
 
 
@@ -77,6 +80,9 @@ async def test_note_is_saved_with_timestamp_title_when_router_unavailable(
     assert note_path.is_file()
     assert verbatim in note_path.read_text(encoding="utf-8")  # words never lost
     assert result.provider is None and result.model is None  # honest provenance
+    # Cleanup fell back too: the RAW text is the body — never blocked on cloud.
+    assert result.cleanup_source == "raw_fallback"
+    assert result.cleaned_text == verbatim
     # The daily line still lands — local features never depend on the cloud.
     daily = (vault / "Daily" / "2026-07-06.md").read_text(encoding="utf-8")
     assert note_path.stem in daily

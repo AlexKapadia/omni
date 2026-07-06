@@ -1,25 +1,27 @@
 /**
- * MOCK initial settings — synthetic devices and ledger rows until the engine
- * settings service (M2+) supplies real device enumeration and the router's
- * real cost/latency ledger.
+ * Initial settings — REAL devices arrive from the engine's `devices.list`
+ * command (engine-devices.ts) after mount; only the LEDGER rows remain
+ * synthetic until the router's real cost/latency ledger is surfaced (M7).
  *
  * Clearly-marked mock per the swappable-data-layer contract: identical shapes
  * to the future engine payloads. The routing table itself is REAL project
- * policy (tri-provider router; transcription/embeddings are on-device only),
- * not mock — only devices and ledger numbers are placeholders. Costs are
- * integer cents (exact arithmetic mandate).
+ * policy (tri-provider router; transcription/embeddings are on-device only) —
+ * only the ledger numbers are placeholders. Costs are integer cents (exact
+ * arithmetic mandate).
  */
 import type { SettingsState } from "./settings-store";
 
 /** The app singleton settings store's initial state. */
 export function buildMockInitialSettings(): SettingsState {
   return {
-    // MOCK: real names arrive from the engine's device enumeration.
-    microphone: "Default microphone",
-    microphoneOptions: ["Default microphone", "Headset microphone", "USB interface"],
+    // Devices start PENDING and honest-empty: the real enumeration lands via
+    // devices.list, or the section says "unavailable" — never invented names.
+    devicesSource: "pending",
+    microphone: "",
+    microphoneOptions: [],
     // Real policy: system audio always follows the Windows default render
     // device via WASAPI loopback — it is informational, not selectable.
-    systemAudioDevice: "Default output (WASAPI loopback)",
+    systemAudioDevice: "",
     pushToTalkKeys: ["Ctrl", "Shift", "Space"],
     activeTemplate: "Meeting notes",
     templateOptions: ["Meeting notes", "1:1", "Interview", "Standup"],

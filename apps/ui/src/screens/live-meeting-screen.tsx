@@ -9,10 +9,12 @@
  * honest about an offline engine), starting, live, stopped, and error — no
  * state is faked.
  */
-import { useEffect, useState } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { OmniButton } from "../components/button";
 import { AnswersPanel } from "../components/live/answers-panel";
 import { CaptureBar } from "../components/live/capture-bar";
+import { FinalizeMeetingPanel } from "../components/live/finalize-meeting-panel";
+import { MeetingDetectedToast } from "../components/live/meeting-detected-toast";
 import { NotepadPane } from "../components/live/notepad-pane";
 import { TranscriptStream } from "../components/live/transcript-stream";
 import { requestCaptureStart } from "../lib/capture-commands";
@@ -36,10 +38,13 @@ function PreCaptureState({
   heading,
   body,
   errorMessage,
+  children,
 }: {
   readonly heading: string;
   readonly body: string;
   readonly errorMessage: string | null;
+  /** Extra flow content (e.g. the finalize panel after a stop). */
+  readonly children?: ReactNode;
 }) {
   const engineStatus = useEngineStatus((s) => s.status);
   const captureStatus = useTranscript((s) => s.captureStatus);
@@ -82,6 +87,7 @@ function PreCaptureState({
             {errorMessage}
           </p>
         )}
+        {children}
       </div>
     </div>
   );
@@ -101,31 +107,41 @@ export function LiveMeetingScreen() {
 
   if (captureStatus === "idle" || captureStatus === "starting") {
     return (
-      <PreCaptureState
-        heading="Live meeting"
-        body="Capture the room and your mic as two labelled streams, transcribed on this device. No bot joins the call and nothing leaves this machine."
-        errorMessage={errorMessage}
-      />
+      <div className="relative h-full">
+        <MeetingDetectedToast />
+        <PreCaptureState
+          heading="Live meeting"
+          body="Capture the room and your mic as two labelled streams, transcribed on this device. No bot joins the call and nothing leaves this machine."
+          errorMessage={errorMessage}
+        />
+      </div>
     );
   }
 
   if (captureStatus === "stopped" || captureStatus === "error") {
     return (
-      <PreCaptureState
-        heading={captureStatus === "error" ? "Capture ended with an error" : "Capture stopped"}
-        body={
-          captureStatus === "error"
-            ? "The engine reported an error and capture ended. Everything transcribed so far is saved on this device."
-            : "The meeting is saved on this device. Enhanced notes arrive with a later milestone."
-        }
-        errorMessage={errorMessage}
-      />
+      <div className="relative h-full">
+        <MeetingDetectedToast />
+        <PreCaptureState
+          heading={captureStatus === "error" ? "Capture ended with an error" : "Capture stopped"}
+          body={
+            captureStatus === "error"
+              ? "The engine reported an error and capture ended. Everything transcribed so far is saved on this device."
+              : "The meeting is saved on this device. Finalize it to fuse your notes with the transcript into the enhanced vault note."
+          }
+          errorMessage={errorMessage}
+        >
+          {/* Finalize needs a real ended meeting; the buffer travels verbatim. */}
+          {meetingId !== null && <FinalizeMeetingPanel meetingId={meetingId} />}
+        </PreCaptureState>
+      </div>
     );
   }
 
   // live / stopping: the full flagship layout.
   return (
     <div className="relative flex h-full min-h-0 flex-col">
+      <MeetingDetectedToast />
       <div className="flex min-h-0 flex-1">
         <NotepadPane meetingTitle="Live meeting" elapsedSeconds={elapsedSeconds} />
         <TranscriptStream />

@@ -28,6 +28,7 @@ class TaskType(StrEnum):
     ASK_SYNTHESIS = "ask_synthesis"
     LONG_CONTEXT_BULK = "long_context_bulk"
     AGENTIC_TOOLS = "agentic_tools"
+    DICTATION_CLEANUP = "dictation_cleanup"
 
 
 class Provider(StrEnum):

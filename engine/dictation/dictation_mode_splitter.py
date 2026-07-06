@@ -38,11 +38,18 @@ _WORD_HYPHENS = "-–—"  # noqa: RUF001 — en dash is a deliberate hyphen var
 
 
 class DictationMode(StrEnum):
-    """The two things a released dictation can be. Values are pinned by the
-    ``dictation.final`` event payload — do not rename."""
+    """What a released dictation can be. Values are pinned by the
+    ``dictation.final`` event payload — do not rename.
+
+    ``split_dictation_mode`` only ever decides NOTE vs COMMAND. INJECT is a
+    UI-requested disposition (external app focused at keydown) that the
+    finalizer honours ONLY when the split says NOTE — the wake word always
+    wins, so "Omni, ..." can never be pasted into a random text field.
+    """
 
     NOTE = "note"
     COMMAND = "command"
+    INJECT = "inject"
 
 
 @dataclass(frozen=True)

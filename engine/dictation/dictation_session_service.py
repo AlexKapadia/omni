@@ -107,6 +107,10 @@ class DictationSessionService:
         # Final segments accumulate as (t_open, words) so ordering is by time.
         self._final_segments: list[tuple[float, list[WordToken]]] = []
         self._latest_partial: list[WordToken] = []
+        # Speed-showcase mandate: wall-clock ms end() spent flushing STT on
+        # the LAST session (release -> verbatim text). Read by the wiring to
+        # stamp dictation.final's flush_ms; None until a session has ended.
+        self.last_flush_ms: int | None = None
 
     @property
     def is_active(self) -> bool:
@@ -146,6 +150,7 @@ class DictationSessionService:
         pipeline = self._pipeline
         if handle is None or pipeline is None:
             raise DictationSessionError("dictation is not running")
+        flush_started = time.monotonic()  # release->text stamp (speed showcase)
         await asyncio.to_thread(handle.close)  # No new audio past this point.
         if self._drain_task is not None:
             self._drain_task.cancel()
@@ -158,6 +163,7 @@ class DictationSessionService:
                 await pipeline.feed(frame)
         await pipeline.finalize()  # Force-closes the gate; emits finals.
         text = self._assemble_verbatim_text()
+        self.last_flush_ms = int((time.monotonic() - flush_started) * 1000)
         self._handle = None
         self._pipeline = None
         self._drain_task = None

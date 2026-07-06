@@ -5,6 +5,7 @@
  * real shapes) and the mock API-key vault; both swap for engine-backed
  * implementations without touching this screen.
  */
+import { useEffect } from "react";
 import { ApiKeysSection } from "../components/settings/api-keys-section";
 import {
   DevicesSection,
@@ -22,6 +23,7 @@ import {
   type ApiKeysStore,
   type ApiKeyVault,
 } from "../lib/api-keys-store";
+import { refreshDevicesIntoSettings } from "../lib/engine-devices";
 import { buildMockInitialSettings } from "../lib/mock-settings-data";
 import { createSettingsStore, type SettingsStore } from "../lib/settings-store";
 
@@ -35,11 +37,19 @@ export function SettingsScreen({
   store = appSettingsStore,
   keysStore = apiKeysStore,
   vault = defaultVault,
+  refreshDevices = refreshDevicesIntoSettings,
 }: {
   readonly store?: SettingsStore;
   readonly keysStore?: ApiKeysStore;
   readonly vault?: ApiKeyVault;
+  /** Injectable for tests; the default asks the engine for real devices. */
+  readonly refreshDevices?: (store: SettingsStore) => Promise<void>;
 }) {
+  // Real device enumeration on mount: devices.list fills the store, or the
+  // Devices card says honestly that the engine is unavailable.
+  useEffect(() => {
+    void refreshDevices(store);
+  }, [store, refreshDevices]);
   return (
     <div className="h-full overflow-y-auto" style={{ padding: "48px 64px 56px" }}>
       <h1

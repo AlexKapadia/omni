@@ -71,6 +71,7 @@ class RouteSpec:
 #   long_context_bulk gemini-flash -> anthropic-if-keyed else gemini-pro
 #   agentic_tools     anthropic-if-keyed else gemini-flash (function calling)
 #                     -> gemini-flash, gemini-pro
+#   dictation_cleanup groq -> gemini-flash            (live dictation, <0.8s)
 # ---------------------------------------------------------------------------
 ROUTING_TABLE: dict[TaskType, RouteSpec] = {
     TaskType.LIVE_EXTRACTION: RouteSpec(
@@ -102,6 +103,14 @@ ROUTING_TABLE: dict[TaskType, RouteSpec] = {
         primary=AnthropicIfKeyedSlot(otherwise=_GEMINI_FLASH),
         fallbacks=(_GEMINI_FLASH, _GEMINI_PRO),
         latency_budget_p95_ms=8_000,  # tool-use turns
+    ),
+    TaskType.DICTATION_CLEANUP: RouteSpec(
+        primary=_GROQ_FAST,
+        fallbacks=(_GEMINI_FLASH,),
+        # Tightest budget in the table: cleanup sits INSIDE the release->text
+        # dictation path (<1.2 s end-to-end), so its slice is 800 ms — a slow
+        # cleanup degrades to raw verbatim rather than delaying the user.
+        latency_budget_p95_ms=800,
     ),
 }
 

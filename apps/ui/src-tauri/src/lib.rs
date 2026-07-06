@@ -2,7 +2,13 @@
 //! the Python engine sidecar. The shell is deliberately thin — it never
 //! touches audio, transcripts, or keys; that is the engine's job.
 
+// Injection modules are `pub` for the live integration test
+// (tests/live_notepad_injection_roundtrip.rs) — the running app reaches them
+// only through the `inject_dictation_text` command.
+pub mod dictation_clipboard_win32;
+pub mod dictation_injection_win32;
 mod dictation_pill_window;
+pub mod dictation_text_injection;
 mod engine_sidecar;
 mod tray;
 
@@ -33,6 +39,10 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        // M5: the pill's paste command (clipboard-swap + SendInput Ctrl+V).
+        .invoke_handler(tauri::generate_handler![
+            dictation_text_injection::inject_dictation_text
+        ])
         .setup(|app| {
             tray::build_tray(app.handle())?;
             // M5: hold-F9 dictation pill (window + global shortcut binding).

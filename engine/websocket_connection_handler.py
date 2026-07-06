@@ -21,19 +21,35 @@ import time
 import uuid
 
 from fastapi import WebSocket, WebSocketDisconnect
-from pydantic import ValidationError
 
+from engine.ask.ask_query_command_dispatcher import (
+    ASK_COMMAND_NAMES,
+    AskAnswerGateway,
+    dispatch_ask_command,
+)
+from engine.audio.devices_list_command_dispatcher import (
+    DEVICES_COMMAND_NAMES,
+    DeviceLister,
+    dispatch_devices_command,
+)
+from engine.capture_command_dispatcher import CAPTURE_COMMAND_NAMES, dispatch_capture_command
+from engine.detect.detection_dismiss_command_dispatcher import (
+    DETECTION_COMMAND_NAMES,
+    dispatch_detection_command,
+)
+from engine.detect.detection_service import DetectionService
+from engine.dictation_command_dispatcher import (
+    DICTATION_COMMAND_NAMES,
+    DictationCommandGateway,
+    dispatch_dictation_command,
+)
 from engine.enhance import (
     MEETING_COMMAND_NAMES,
     MeetingFinalizationService,
     dispatch_meeting_command,
 )
 from engine.protocol import (
-    COMMAND_CAPTURE_START,
-    COMMAND_CAPTURE_STOP,
     PROTOCOL_VERSION,
-    CaptureStartCommandPayload,
-    CaptureStopCommandPayload,
     Envelope,
     EnvelopeKind,
     EventBroadcastHub,
@@ -44,7 +60,7 @@ from engine.protocol import (
     parse_envelope,
 )
 from engine.runtime_settings import HEARTBEAT_INTERVAL_SECONDS
-from engine.stt.live_capture_service import CaptureServiceError, LiveCaptureService
+from engine.stt.live_capture_service import LiveCaptureService
 from engine.voice import NAOMI_COMMAND_NAMES, TtsPlaybackStreamer, dispatch_naomi_command
 
 
@@ -59,6 +75,10 @@ class WebSocketConnectionHandler:
         event_hub: EventBroadcastHub,
         voice_streamer: TtsPlaybackStreamer | None = None,
         finalization_service: MeetingFinalizationService | None = None,
+        ask_gateway: AskAnswerGateway | None = None,
+        dictation_gateway: DictationCommandGateway | None = None,
+        detection_service: DetectionService | None = None,
+        device_lister: DeviceLister | None = None,
     ) -> None:
         self._websocket = websocket
         self._started_monotonic = started_monotonic
@@ -68,6 +88,12 @@ class WebSocketConnectionHandler:
         self._voice_streamer = voice_streamer
         # Optional additive surface: None → meeting.* commands refuse honestly.
         self._finalization_service = finalization_service
+        # Optional additive surfaces (reconciliation pass): each dispatcher
+        # refuses honestly when its dependency is None — deny by default.
+        self._ask_gateway = ask_gateway
+        self._dictation_gateway = dictation_gateway
+        self._detection_service = detection_service
+        self._device_lister = device_lister
         # Multiple tasks write to one socket (heartbeat + replies + broadcast
         # events); the lock serialises sends so frames never interleave.
         self._send_lock = asyncio.Lock()
@@ -162,11 +188,10 @@ class WebSocketConnectionHandler:
                 )
             )
             return
-        if command.name == COMMAND_CAPTURE_START:
-            await self._handle_capture_start(command)
-            return
-        if command.name == COMMAND_CAPTURE_STOP:
-            await self._handle_capture_stop(command)
+        if command.name in CAPTURE_COMMAND_NAMES:
+            # capture.start / capture.stop (engine.capture_command_dispatcher
+            # owns validation and replies; behaviour pinned by the M1 tests).
+            await dispatch_capture_command(command, self._capture_service, self._send)
             return
         if command.name in NAOMI_COMMAND_NAMES:
             # Additive naomi.say / naomi.cancel surface (engine.voice owns
@@ -178,67 +203,28 @@ class WebSocketConnectionHandler:
             # (engine.enhance owns validation, refusal semantics, and replies).
             await dispatch_meeting_command(command, self._finalization_service, self._send)
             return
+        if command.name in ASK_COMMAND_NAMES:
+            # Additive ask.query surface (engine.ask dispatcher owns it).
+            await dispatch_ask_command(command, self._ask_gateway, self._send)
+            return
+        if command.name in DICTATION_COMMAND_NAMES:
+            # Additive dictation.begin/end surface (server-layer dispatcher).
+            await dispatch_dictation_command(command, self._dictation_gateway, self._send)
+            return
+        if command.name in DETECTION_COMMAND_NAMES:
+            # Additive detection.dismiss surface (engine.detect dispatcher).
+            await dispatch_detection_command(command, self._detection_service, self._send)
+            return
+        if command.name in DEVICES_COMMAND_NAMES:
+            # Additive devices.list surface (engine.audio dispatcher).
+            await dispatch_devices_command(command, self._device_lister, self._send)
+            return
         # Deny by default: anything unrecognised is an explicit error.
         await self._send(
             error_reply(
                 command.id,
                 ProtocolErrorCode.UNKNOWN_COMMAND,
                 f"unknown command name: {command.name!r}",
-            )
-        )
-
-    async def _handle_capture_start(self, command: Envelope) -> None:
-        """capture.start → ok {meeting_id} or a structured error reply."""
-        try:
-            # Strict payload validation (extra fields forbidden) — the
-            # command payload is untrusted input like everything inbound.
-            payload = CaptureStartCommandPayload.model_validate(command.payload)
-        except ValidationError:
-            await self._send(
-                error_reply(
-                    command.id,
-                    ProtocolErrorCode.INVALID_PAYLOAD,
-                    "capture.start payload failed validation",
-                )
-            )
-            return
-        try:
-            meeting_id = await self._capture_service.start(payload.title)
-        except CaptureServiceError as exc:
-            # Fail closed with a correlatable, structured reason.
-            await self._send(error_reply(command.id, ProtocolErrorCode.CAPTURE_ERROR, str(exc)))
-            return
-        await self._reply_ok(command.id, {"meeting_id": meeting_id})
-
-    async def _handle_capture_stop(self, command: Envelope) -> None:
-        """capture.stop → ok {meeting_id} or a structured error reply."""
-        try:
-            CaptureStopCommandPayload.model_validate(command.payload)
-        except ValidationError:
-            await self._send(
-                error_reply(
-                    command.id,
-                    ProtocolErrorCode.INVALID_PAYLOAD,
-                    "capture.stop payload failed validation",
-                )
-            )
-            return
-        try:
-            meeting_id = await self._capture_service.stop()
-        except CaptureServiceError as exc:
-            await self._send(error_reply(command.id, ProtocolErrorCode.CAPTURE_ERROR, str(exc)))
-            return
-        await self._reply_ok(command.id, {"meeting_id": meeting_id})
-
-    async def _reply_ok(self, command_id: str, payload: dict[str, object]) -> None:
-        """The standard success reply: name `ok`, id echoing the command."""
-        await self._send(
-            Envelope(
-                v=PROTOCOL_VERSION,
-                kind=EnvelopeKind.REPLY,
-                name="ok",
-                id=command_id,
-                payload=dict(payload),
             )
         )
 

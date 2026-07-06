@@ -58,6 +58,46 @@ describe("dictation.final", () => {
     });
   });
 
+  const validInject = {
+    mode: "inject",
+    text: "um send the report",
+    cleaned_text: "Send the report.",
+    cleanup_source: "model",
+    cleanup_latency_ms: 412,
+    flush_ms: 96,
+  };
+
+  it("accepts a full inject final (cleanup + speed fields)", () => {
+    expect(parseDictationFinalPayload(validInject)).toEqual(validInject);
+  });
+
+  it("accepts a note final carrying cleanup fields", () => {
+    const noteWithCleanup = {
+      ...validNote,
+      cleaned_text: "Buy milk.",
+      cleanup_source: "model",
+      cleanup_latency_ms: 300,
+    };
+    expect(parseDictationFinalPayload(noteWithCleanup)).toEqual(noteWithCleanup);
+  });
+
+  it("accepts latency stamps of exactly 0 ms (boundary)", () => {
+    const parsed = parseDictationFinalPayload({ ...validInject, cleanup_latency_ms: 0 });
+    expect(parsed?.cleanup_latency_ms).toBe(0);
+  });
+
+  it.each([
+    [{ ...validInject, cleaned_text: "" }], // present-but-empty
+    [{ ...validInject, cleaned_text: 7 }],
+    [{ ...validInject, cleanup_source: 1 }],
+    [{ ...validInject, cleanup_latency_ms: "412" }], // stringly-typed number
+    [{ ...validInject, cleanup_latency_ms: -1 }], // negative latency is a lie
+    [{ ...validInject, cleanup_latency_ms: Number.NaN }],
+    [{ ...validInject, flush_ms: Number.POSITIVE_INFINITY }],
+  ])("rejects malformed cleanup/speed fields %j", (payload) => {
+    expect(parseDictationFinalPayload(payload as Record<string, unknown>)).toBeNull();
+  });
+
   it("keeps degraded_reason when present (honest partial failure)", () => {
     const parsed = parseDictationFinalPayload({
       mode: "note",

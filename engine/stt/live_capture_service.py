@@ -47,6 +47,7 @@ from engine.protocol.event_broadcast_hub import EventBroadcastHub
 from engine.storage.meetings_repository import insert_meeting, mark_meeting_ended, utc_now_iso
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
+from engine.stt.loopback_vad_probability_tap import LoopbackVadTap, wrap_vad_with_loopback_tap
 from engine.stt.model_weights_downloader import SILERO_VAD_FILENAME, models_directory
 from engine.stt.parakeet_nemo_transcriber import (
     ParakeetNemoTranscriber,
@@ -111,6 +112,8 @@ class LiveCaptureService:
         self._silence_timeout_s = silence_timeout_s  # None → OMNI_AUTOSTOP_SILENCE_S env knob
         self._stt_ready = False
         self._load_lock = asyncio.Lock()
+        # Additive M6 seam (assigned by the server wiring): THEM-stream only.
+        self.on_loopback_vad_probability: LoopbackVadTap | None = None
         # Per-session state (None while idle).
         self._meeting_id: str | None = None
         self._controller: DualStreamCaptureController | None = None
@@ -247,6 +250,13 @@ class LiveCaptureService:
     def _build_pipeline(self, label: StreamLabel) -> PerStreamTranscriptionPipeline:
         assert self._vad_factory is not None and self._transcriber is not None  # noqa: S101
         transcriber = self._transcriber
+        vad_probability = self._vad_factory()  # Fresh stateful VAD per stream.
+        if label is StreamLabel.THEM:
+            # Additive detection tap on the loopback stream only (M6 wiring):
+            # probabilities, never audio; late-bound; failure-isolated.
+            vad_probability = wrap_vad_with_loopback_tap(
+                vad_probability, lambda: self.on_loopback_vad_probability
+            )
 
         async def transcribe(samples: npt.NDArray[np.float32]) -> list[WordToken]:
             return await asyncio.to_thread(transcriber.transcribe_window, samples)
@@ -264,7 +274,7 @@ class LiveCaptureService:
         return PerStreamTranscriptionPipeline(
             stream=label,
             anchor_monotonic=self._anchor_monotonic,
-            vad_probability=self._vad_factory(),  # Fresh stateful VAD per stream.
+            vad_probability=vad_probability,
             transcribe=transcribe,
             on_partial=on_partial,
             on_final=on_final,

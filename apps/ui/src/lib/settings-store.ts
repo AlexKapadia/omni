@@ -35,7 +35,12 @@ export interface LedgerRow {
   readonly costCents: number;
 }
 
+/** Where the device rows came from: awaiting the engine, real enumeration,
+ *  or honestly unavailable (engine offline / enumeration failed). */
+export type DevicesSource = "pending" | "engine" | "unavailable";
+
 export interface SettingsState {
+  readonly devicesSource: DevicesSource;
   readonly microphone: string;
   readonly microphoneOptions: readonly string[];
   readonly systemAudioDevice: string;
@@ -53,6 +58,35 @@ export type SettingsStore = StoreApi<SettingsState>;
 
 export function createSettingsStore(initial: SettingsState): SettingsStore {
   return createStore<SettingsState>(() => initial);
+}
+
+export interface DeviceListingUpdate {
+  readonly microphone: string;
+  readonly microphoneOptions: readonly string[];
+  readonly systemAudioDevice: string;
+}
+
+/** Real enumeration arrived from the engine: replace the device rows. */
+export function applyDeviceListing(store: SettingsStore, listing: DeviceListingUpdate): void {
+  store.setState((state) => ({
+    devicesSource: "engine",
+    microphoneOptions: listing.microphoneOptions,
+    systemAudioDevice: listing.systemAudioDevice,
+    // Keep a still-present user pick; otherwise follow the engine default.
+    microphone: listing.microphoneOptions.includes(state.microphone)
+      ? state.microphone
+      : listing.microphone,
+  }));
+}
+
+/** The engine could not answer devices.list: say so — never a fake list. */
+export function markDevicesUnavailable(store: SettingsStore): void {
+  store.setState({
+    devicesSource: "unavailable",
+    microphone: "",
+    microphoneOptions: [],
+    systemAudioDevice: "",
+  });
 }
 
 export function setMicrophone(store: SettingsStore, device: string): void {

@@ -69,6 +69,24 @@ body,
   border-radius: var(--radius-pill);
 }
 
+/* Insert armed: outlined ink chip (§07 monochrome — distinct from both the
+ * plain NOTE label and the inverted COMMAND chip). As a <button> it is the
+ * flip-to-note affordance while the key is held. */
+.pill-mode-chip--insert {
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--ink);
+  border-radius: var(--radius-pill);
+  cursor: pointer;
+  transition: background var(--dur-micro) var(--ease-out),
+    color var(--dur-micro) var(--ease-out);
+}
+
+button.pill-mode-chip--insert:hover {
+  background: var(--ink);
+  color: var(--canvas);
+}
+
 /* Idle hint: breathing dot + "Hold F9" (the only permanent animation). */
 .pill-idle-hint {
   display: flex;
@@ -155,6 +173,14 @@ body,
   font-size: 12px;
   color: var(--grey-600);
   overflow-wrap: anywhere;
+}
+
+/* Real measured per-stage latencies (speed-showcase mandate): mono, quiet. */
+.pill-popover-latency {
+  font-family: var(--font-mono);
+  font-size: 11px;
+  letter-spacing: var(--label-ls);
+  color: var(--grey-400);
 }
 
 .pill-popover-buttons {

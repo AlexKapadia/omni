@@ -27,13 +27,14 @@ const NOTE_FINAL: DictationFinalPayload = {
 };
 
 describe("hold / release lifecycle", () => {
-  it("hold starts a fresh listening session", () => {
+  it("hold starts a fresh listening session (note mode by default)", () => {
     const state = run([{ type: "hold-pressed", atMs: 1000 }]);
     expect(state).toEqual({
       phase: "listening",
       startedAtMs: 1000,
       liveText: "",
       commandDetected: false,
+      injectArmed: false, // no eligibility flag -> the safe path: a note
     });
   });
 
@@ -74,6 +75,7 @@ describe("hold / release lifecycle", () => {
         startedAtMs: 99,
         liveText: "",
         commandDetected: false,
+        injectArmed: false,
       });
     }
   });

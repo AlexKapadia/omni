@@ -35,6 +35,9 @@ import {
   transcriptStore,
   type TranscriptStore,
 } from "./transcript-store";
+// Cycle-safe: that module reaches back only for hoisted function exports
+// (sendEngineEnvelope / subscribeToEngineFrames), never eval-time state.
+import { wireLiveIntelligence } from "./live-intelligence-event-wiring";
 
 /**
  * Route one validated inbound frame to the transcript store. Exported as a
@@ -133,6 +136,9 @@ function createTeeSocket(url: string, onFrame: (data: unknown) => void): WebSock
  * Idempotent — safe under React StrictMode double-mount.
  */
 export function startLiveEngineConnection(): void {
+  // Reconciliation surfaces (answers.hit, meeting.detected, enhance.*, the
+  // Ask transport) ride the same socket via the frame fan-out (idempotent).
+  wireLiveIntelligence(subscribeToEngineFrames);
   if (appConnection !== null) {
     appConnection.start();
     return;

@@ -4,8 +4,9 @@
  * to the shared row primitives; the store logic they drive lives (and is
  * tested) in settings-store.ts.
  *
- * Devices are MOCK names today (mock-settings-data.ts) behind the real store
- * shape; hotkey capture is real (records an actual key combination).
+ * Devices are REAL: the engine's devices.list enumeration fills the store
+ * (engine-devices.ts) with honest pending/unavailable states — never mock
+ * names. Hotkey capture is real (records an actual key combination).
  */
 import { useState } from "react";
 import { useStore } from "zustand";
@@ -21,38 +22,64 @@ import {
 const SELECT_CLASS =
   "cursor-pointer border-none bg-transparent font-[family-name:var(--font-mono)] text-[var(--grey-600)]";
 
+function DeviceStateNote({ children }: { readonly children: string }) {
+  return (
+    <span
+      className="font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+      style={{ fontSize: "var(--text-meta-size)" }}
+    >
+      {children}
+    </span>
+  );
+}
+
 export function DevicesSection({ store }: { readonly store: SettingsStore }) {
+  const devicesSource = useStore(store, (s) => s.devicesSource);
   const microphone = useStore(store, (s) => s.microphone);
   const options = useStore(store, (s) => s.microphoneOptions);
   const systemAudio = useStore(store, (s) => s.systemAudioDevice);
   return (
     <SettingsGroupCard label="Devices">
       <SettingsRow title="Microphone" subCaption="your side of the conversation — labelled Me">
-        <select
-          aria-label="Microphone"
-          value={microphone}
-          onChange={(e) => setMicrophone(store, e.target.value)}
-          className={SELECT_CLASS}
-          style={{ fontSize: "var(--text-meta-size)" }}
-        >
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
+        {devicesSource === "engine" ? (
+          <select
+            aria-label="Microphone"
+            value={microphone}
+            onChange={(e) => setMicrophone(store, e.target.value)}
+            className={SELECT_CLASS}
+            style={{ fontSize: "var(--text-meta-size)" }}
+          >
+            {options.map((option) => (
+              <option key={option} value={option}>
+                {option}
+              </option>
+            ))}
+          </select>
+        ) : (
+          <DeviceStateNote>
+            {devicesSource === "pending"
+              ? "reading devices from the engine"
+              : "engine offline — devices unavailable"}
+          </DeviceStateNote>
+        )}
       </SettingsRow>
       <SettingsRow
         title="System audio"
         subCaption="follows the Windows default output — everyone else, labelled Them"
         last
       >
-        <span
-          className="font-[family-name:var(--font-mono)] text-[var(--grey-600)]"
-          style={{ fontSize: "var(--text-meta-size)" }}
-        >
-          {systemAudio}
-        </span>
+        {devicesSource === "engine" ? (
+          <span
+            className="font-[family-name:var(--font-mono)] text-[var(--grey-600)]"
+            style={{ fontSize: "var(--text-meta-size)" }}
+          >
+            {systemAudio}
+          </span>
+        ) : (
+          <DeviceStateNote>
+            {devicesSource === "pending" ? "reading devices from the engine" : "unavailable"}
+          </DeviceStateNote>
+        )}
       </SettingsRow>
     </SettingsGroupCard>
   );

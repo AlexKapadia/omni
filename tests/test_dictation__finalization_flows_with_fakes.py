@@ -21,6 +21,7 @@ from engine.dictation.dictation_finalization import (
 from engine.dictation.dictation_intent_schema import DictationIntentType
 from engine.dictation.dictation_intents_repository import list_dictation_intents
 from engine.dictation.dictation_mode_splitter import DictationMode
+from engine.dictation.personal_dictionary import PersonalDictionary
 from engine.router.completion_contract import (
     ChatMessage,
     Provider,
@@ -91,6 +92,8 @@ def _make_finalizer(
         vault_root_provider=lambda: vault_root,
         indexer=indexer,
         now=lambda: FIXED_NOW,
+        # Hermetic: never read the real %LOCALAPPDATA% dictionary in tests.
+        dictionary=PersonalDictionary(path=vault_root / "no-dictionary.txt"),
     )
 
 
@@ -113,7 +116,13 @@ async def test_note_flow_writes_verbatim_note_indexes_and_logs_daily_line(
 ) -> None:
     vault = tmp_path / "vault"
     vault.mkdir()
-    route = FakeRoute({"live_extraction": json.dumps({"title": "Buy milk"})})
+    cleaned = "Remember to buy milk and maybe eggs."
+    route = FakeRoute(
+        {
+            "live_extraction": json.dumps({"title": "Buy milk"}),
+            "dictation_cleanup": json.dumps({"cleaned": cleaned}),
+        }
+    )
     indexer = FakeIndexer()
     finalizer = _make_finalizer(tmp_db_path, real_migrations_dir, vault, route, indexer)
 
@@ -125,11 +134,16 @@ async def test_note_flow_writes_verbatim_note_indexes_and_logs_daily_line(
     assert result.note_title == "Buy milk"
     assert result.title_source == "model"
     assert result.degraded_reason is None
-    # The note landed in Inbox with the VERBATIM body (fidelity mandate).
+    assert result.cleaned_text == cleaned
+    assert result.cleanup_source == "model"
+    # The note landed in Inbox: CLEANED body + RAW retained byte-identical
+    # (fidelity mandate: raw is ground truth, cleanup is a separate artifact).
     note_path = Path(result.note_path or "")
     assert note_path.parent == vault / "Inbox"
     content = note_path.read_text(encoding="utf-8")
-    assert verbatim in content  # exact, unrewritten
+    assert cleaned in content  # cleaned body
+    assert verbatim in content  # raw retained, exact and unrewritten
+    assert "Raw transcript" in content  # collapsed raw section present
     assert "source: dictation" in content  # honest provenance
     # Indexed incrementally.
     assert indexer.indexed == [note_path]
@@ -145,7 +159,7 @@ async def test_note_flow_with_malformed_title_falls_back_but_saves(
 ) -> None:
     vault = tmp_path / "vault"
     vault.mkdir()
-    route = FakeRoute({"live_extraction": "not json"})
+    route = FakeRoute({"live_extraction": "not json", "dictation_cleanup": "not json"})
     finalizer = _make_finalizer(tmp_db_path, real_migrations_dir, vault, route, None)
 
     result = await finalizer.finalize("thoughts about the offsite")
@@ -153,9 +167,13 @@ async def test_note_flow_with_malformed_title_falls_back_but_saves(
     assert result.title_source == "fallback"
     assert result.note_title == "Dictation 2026-07-06 14.30"
     assert result.note_path is not None and Path(result.note_path).is_file()
+    # Malformed cleanup output -> raw fallback: the words land untouched.
+    assert result.cleanup_source == "raw_fallback"
+    assert result.cleaned_text == "thoughts about the offsite"
     # Index not wired -> honest degradation note, but the note IS saved.
     assert result.degraded_reason is not None
     assert "not yet searchable" in result.degraded_reason
+    assert "cleanup output malformed" in result.degraded_reason
 
 
 async def test_note_flow_indexer_failure_degrades_honestly_note_kept(
@@ -168,13 +186,19 @@ async def test_note_flow_indexer_failure_degrades_honestly_note_kept(
         async def index_changed_files(self, changed_paths: object) -> object:
             raise RuntimeError("sqlite-vec missing")
 
-    route = FakeRoute({"live_extraction": json.dumps({"title": "Offsite"})})
+    route = FakeRoute(
+        {
+            "live_extraction": json.dumps({"title": "Offsite"}),
+            "dictation_cleanup": json.dumps({"cleaned": "Offsite planning ideas."}),
+        }
+    )
     finalizer = DictationReleaseFinalizer(
         route=route,
         intents_connection_factory=_unused_connection_factory,
         vault_root_provider=lambda: vault,
         indexer=ExplodingIndexer(),
         now=lambda: FIXED_NOW,
+        dictionary=PersonalDictionary(path=vault / "no-dictionary.txt"),
     )
     result = await finalizer.finalize("offsite planning ideas")
     assert result.note_path is not None and Path(result.note_path).is_file()

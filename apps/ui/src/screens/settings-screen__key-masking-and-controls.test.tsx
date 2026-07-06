@@ -9,7 +9,11 @@ import { act, cleanup, fireEvent, render, screen } from "@testing-library/react"
 import { SettingsScreen } from "./settings-screen";
 import { createApiKeysStore, type ApiKeysStore } from "../lib/api-keys-store";
 import { buildMockInitialSettings } from "../lib/mock-settings-data";
-import { createSettingsStore, type SettingsStore } from "../lib/settings-store";
+import {
+  applyDeviceListing,
+  createSettingsStore,
+  type SettingsStore,
+} from "../lib/settings-store";
 import { installJsdomMatchMediaShim } from "../test-support/install-jsdom-match-media-shim";
 
 beforeAll(installJsdomMatchMediaShim);
@@ -25,7 +29,16 @@ beforeEach(() => {
 });
 
 function renderScreen(vault = { persistKey: () => Promise.resolve() }) {
-  return render(<SettingsScreen store={settings} keysStore={keys} vault={vault} />);
+  // refreshDevices is injected as a noop: the engine socket does not exist
+  // in jsdom; the real devices flow has its own suite (engine-devices).
+  return render(
+    <SettingsScreen
+      store={settings}
+      keysStore={keys}
+      vault={vault}
+      refreshDevices={() => Promise.resolve()}
+    />,
+  );
 }
 
 describe("API key masking (binding security invariant)", () => {
@@ -112,11 +125,23 @@ describe("ledger", () => {
     expect(screen.getByText(/sample data/)).toBeTruthy();
   });
 
-  it("device select is real: choosing a microphone updates the store", () => {
+  it("device select is real: choosing an engine-enumerated microphone updates the store", () => {
+    // Devices start honest-empty; the select exists only once REAL
+    // enumeration arrives (mock device names are retired).
     renderScreen();
+    expect(screen.queryByLabelText("Microphone")).toBeNull();
+    expect(screen.getAllByText("reading devices from the engine").length).toBeGreaterThan(0);
+    act(() => {
+      applyDeviceListing(settings, {
+        microphone: "Default microphone",
+        microphoneOptions: ["Default microphone", "Headset microphone"],
+        systemAudioDevice: "Speakers (WASAPI loopback)",
+      });
+    });
     fireEvent.change(screen.getByLabelText("Microphone"), {
       target: { value: "Headset microphone" },
     });
     expect(settings.getState().microphone).toBe("Headset microphone");
+    expect(screen.getByText("Speakers (WASAPI loopback)")).toBeTruthy();
   });
 });

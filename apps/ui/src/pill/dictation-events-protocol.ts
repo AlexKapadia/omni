@@ -18,8 +18,12 @@ export const DICTATION_PARTIAL_EVENT_NAME = "dictation.partial";
 export const DICTATION_FINAL_EVENT_NAME = "dictation.final";
 export const DICTATION_ERROR_EVENT_NAME = "dictation.error";
 
-/** Pinned by engine DictationMode — "note" is the safe default path. */
-export type DictationMode = "note" | "command";
+/**
+ * Pinned by engine DictationMode — "note" is the safe default path.
+ * "inject" = UI-requested disposition (external app focused at keydown):
+ * the shell pastes cleaned_text into that app; nothing else is written.
+ */
+export type DictationMode = "note" | "command" | "inject";
 
 /** Pinned by the dictation_intents CHECK constraint. */
 export type DictationIntentType =
@@ -41,12 +45,16 @@ export interface DictationPartialPayload {
 
 export interface DictationFinalPayload {
   readonly mode: DictationMode;
-  readonly text: string; // verbatim transcript (ground truth)
+  readonly text: string; // RAW verbatim transcript (ground truth, always)
   readonly note_path?: string;
   readonly note_title?: string;
   readonly title_source?: string; // "model" | "fallback"
   readonly intent?: DictationIntentPayload; // recorded only — NEVER executed
   readonly degraded_reason?: string; // honest partial-failure note
+  readonly cleaned_text?: string; // faithfulness-guarded cleanup (== raw on fallback)
+  readonly cleanup_source?: string; // "model" | "raw_fallback"
+  readonly cleanup_latency_ms?: number; // real measured ms (speed showcase)
+  readonly flush_ms?: number; // STT flush ms, wiring-measured
 }
 
 export interface DictationErrorPayload {
@@ -95,7 +103,7 @@ export function parseDictationFinalPayload(
   payload: Record<string, unknown>,
 ): DictationFinalPayload | null {
   const { mode, text } = payload;
-  if (mode !== "note" && mode !== "command") return null;
+  if (mode !== "note" && mode !== "command" && mode !== "inject") return null;
   if (typeof text !== "string") return null;
   const result: {
     mode: DictationMode;
@@ -105,13 +113,33 @@ export function parseDictationFinalPayload(
     title_source?: string;
     intent?: DictationIntentPayload;
     degraded_reason?: string;
+    cleaned_text?: string;
+    cleanup_source?: string;
+    cleanup_latency_ms?: number;
+    flush_ms?: number;
   } = { mode, text };
   // Optional fields: absent is fine; PRESENT-but-malformed fails the frame
-  // (a half-valid final could send the user to a note that does not exist).
-  for (const key of ["note_path", "note_title", "title_source", "degraded_reason"] as const) {
+  // (a half-valid final could send the user to a note that does not exist,
+  // or paste the wrong artifact into their focused app).
+  for (const key of [
+    "note_path",
+    "note_title",
+    "title_source",
+    "degraded_reason",
+    "cleaned_text",
+    "cleanup_source",
+  ] as const) {
     const value = payload[key];
     if (value === undefined) continue;
     if (typeof value !== "string" || value.length === 0) return null;
+    result[key] = value;
+  }
+  for (const key of ["cleanup_latency_ms", "flush_ms"] as const) {
+    const value = payload[key];
+    if (value === undefined) continue;
+    // Latency stamps are shown to the user (speed showcase) — a bogus
+    // number would be a lie on the surface, so the frame fails instead.
+    if (typeof value !== "number" || !Number.isFinite(value) || value < 0) return null;
     result[key] = value;
   }
   if (payload["intent"] !== undefined) {

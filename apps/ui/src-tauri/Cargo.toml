@@ -26,3 +26,25 @@ serde_json = "1"
 # yet — updater endpoints/signing are configured at the packaging milestone.
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
+
+# M5 dictation text injection (clipboard-swap + SendInput Ctrl+V) and the
+# keydown foreground-window capture. Raw Win32 bindings, Windows-only.
+[target.'cfg(windows)'.dependencies]
+windows-sys = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_Security",
+    "Win32_System_DataExchange",
+    "Win32_System_Memory",
+    "Win32_System_Threading",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }
+
+# The live Notepad injection round-trip (ignored by default) drives Ctrl+A/C
+# read-back with the same bindings.
+[target.'cfg(windows)'.dev-dependencies]
+windows-sys = { version = "0.52", features = [
+    "Win32_Foundation",
+    "Win32_UI_Input_KeyboardAndMouse",
+    "Win32_UI_WindowsAndMessaging",
+] }

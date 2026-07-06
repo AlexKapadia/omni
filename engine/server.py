@@ -29,7 +29,13 @@ import uvicorn
 from fastapi import FastAPI, WebSocket
 
 from engine import ENGINE_VERSION
+from engine.ask.ask_query_command_dispatcher import AskAnswerGateway
+from engine.audio.audio_device_listing import list_audio_devices
+from engine.audio.devices_list_command_dispatcher import DeviceLister
+from engine.detection_server_wiring import DetectionServerWiring
+from engine.dictation_command_dispatcher import DictationCommandGateway
 from engine.enhance import MeetingFinalizationService
+from engine.live_answers_spotter_wiring import LiveAnswersSpotterWiring
 from engine.protocol import EventBroadcastHub
 from engine.runtime_settings import LOOPBACK_HOST, EngineSettings, load_engine_settings
 from engine.stt.live_capture_service import LiveCaptureService
@@ -62,16 +68,58 @@ def _default_finalization_service_factory(hub: EventBroadcastHub) -> MeetingFina
     )
 
 
+# Reconciliation-pass seams (same style): inert construction, tests inject
+# fakes. Ask + dictation are command-driven so they default ON; detection and
+# the live-answers spotter run on timers/events, so they are wired ONLY when a
+# factory is passed (production passes the defaults below; tests stay hermetic
+# — no background polls, no real-DB event reactions in a default test app).
+AskGatewayFactory = Callable[[], AskAnswerGateway]
+DictationGatewayFactory = Callable[[EventBroadcastHub], DictationCommandGateway]
+DetectionWiringFactory = Callable[[EventBroadcastHub, LiveCaptureService], DetectionServerWiring]
+SpotterWiringFactory = Callable[[EventBroadcastHub], LiveAnswersSpotterWiring]
+
+
+def _default_ask_gateway_factory() -> AskAnswerGateway:
+    settings = load_engine_settings()  # Raises on bad env — fail closed.
+    return AskAnswerGateway(db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
+
+
+def _default_dictation_gateway_factory(hub: EventBroadcastHub) -> DictationCommandGateway:
+    settings = load_engine_settings()  # Raises on bad env — fail closed.
+    return DictationCommandGateway(hub=hub, db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
+
+
+def default_detection_wiring_factory(
+    hub: EventBroadcastHub, capture_service: LiveCaptureService
+) -> DetectionServerWiring:
+    """Real probes (ctypes/winreg) + deny-by-default rules; production only."""
+    return DetectionServerWiring(hub, is_capture_active=lambda: capture_service.is_capturing)
+
+
+def default_spotter_wiring_factory(hub: EventBroadcastHub) -> LiveAnswersSpotterWiring:
+    """Real per-meeting spotter over the settings database; production only."""
+    settings = load_engine_settings()  # Raises on bad env — fail closed.
+    return LiveAnswersSpotterWiring(hub, db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
+
+
 def create_app(
     capture_service_factory: CaptureServiceFactory | None = None,
     preload_stt: bool = False,
     finalization_service_factory: FinalizationServiceFactory | None = None,
+    ask_gateway_factory: AskGatewayFactory | None = None,
+    dictation_gateway_factory: DictationGatewayFactory | None = None,
+    device_lister: DeviceLister | None = None,
+    detection_wiring_factory: DetectionWiringFactory | None = None,
+    spotter_wiring_factory: SpotterWiringFactory | None = None,
 ) -> FastAPI:
     """Build the FastAPI app. Factory form keeps tests isolated per-app.
 
     ``preload_stt`` starts a background model load at boot so the
     heartbeat's ``stt_ready`` flips true before the first capture.start;
     it defaults OFF so tests (and tooling) never trigger multi-GB loads.
+    ``detection_wiring_factory`` / ``spotter_wiring_factory`` default to
+    UNWIRED for the same hermeticity reason (they act on timers/broadcast
+    events, not commands); production passes the module-level defaults.
     """
     event_hub = EventBroadcastHub()
     factory = capture_service_factory or _default_capture_service_factory
@@ -82,16 +130,37 @@ def create_app(
     # M2 meeting library/finalization: same hub, inert construction.
     finalization_factory = finalization_service_factory or _default_finalization_service_factory
     finalization_service = finalization_factory(event_hub)
+    # M3 ask + M5 dictation: command-driven, inert construction (default ON).
+    ask_gateway = (ask_gateway_factory or _default_ask_gateway_factory)()
+    dictation_gateway = (dictation_gateway_factory or _default_dictation_gateway_factory)(event_hub)
+    # M6 detection + M3 live answers: event/timer-driven — wired only when a
+    # factory is passed (see docstring). The detection wiring feeds off the
+    # loopback VAD tap the capture service carries (probabilities only).
+    detection_wiring = (
+        detection_wiring_factory(event_hub, capture_service) if detection_wiring_factory else None
+    )
+    if detection_wiring is not None:
+        capture_service.on_loopback_vad_probability = detection_wiring.feed_vad_sample
+    spotter_wiring = spotter_wiring_factory(event_hub) if spotter_wiring_factory else None
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
-        """Startup: clocks + optional model preload. Shutdown: stop capture."""
+        """Startup: clocks, preload, detection poll. Shutdown: stop everything."""
         app.state.started_monotonic = time.monotonic()
         preload_task: asyncio.Task[None] | None = None
         if preload_stt:
             # Background: heartbeats flow (stt_ready=false) while models load.
             preload_task = asyncio.create_task(capture_service.preload_models())
+        if detection_wiring is not None:
+            detection_wiring.start()  # bot-free detection poll loop
         yield
+        if detection_wiring is not None:
+            # Stop the poll loop first: no suggestions during teardown.
+            with contextlib.suppress(Exception):
+                await detection_wiring.stop()
+        if spotter_wiring is not None:
+            with contextlib.suppress(Exception):
+                await spotter_wiring.shutdown()
         if preload_task is not None and not preload_task.done():
             preload_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -118,6 +187,11 @@ def create_app(
     app.state.capture_service = capture_service
     app.state.voice_streamer = voice_streamer
     app.state.finalization_service = finalization_service
+    app.state.ask_gateway = ask_gateway
+    app.state.dictation_gateway = dictation_gateway
+    app.state.device_lister = device_lister if device_lister is not None else list_audio_devices
+    app.state.detection_wiring = detection_wiring
+    app.state.spotter_wiring = spotter_wiring
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -128,13 +202,20 @@ def create_app(
     async def websocket_endpoint(websocket: WebSocket) -> None:
         """Protocol v1 endpoint: accept, then hand off to the handler."""
         await websocket.accept()
+        state = websocket.app.state
+        detection = state.detection_wiring
         handler = WebSocketConnectionHandler(
             websocket=websocket,
-            started_monotonic=websocket.app.state.started_monotonic,
-            capture_service=websocket.app.state.capture_service,
-            event_hub=websocket.app.state.event_hub,
-            voice_streamer=websocket.app.state.voice_streamer,
-            finalization_service=websocket.app.state.finalization_service,
+            started_monotonic=state.started_monotonic,
+            capture_service=state.capture_service,
+            event_hub=state.event_hub,
+            voice_streamer=state.voice_streamer,
+            finalization_service=state.finalization_service,
+            ask_gateway=state.ask_gateway,
+            dictation_gateway=state.dictation_gateway,
+            # detection.dismiss needs the service; None → honest refusal.
+            detection_service=detection.service if detection is not None else None,
+            device_lister=state.device_lister,
         )
         await handler.run()
 
@@ -148,8 +229,13 @@ def build_uvicorn_config(settings: EngineSettings) -> uvicorn.Config:
     (loopback-only host, env-driven port) without opening a socket.
     """
     return uvicorn.Config(
-        # Production app preloads STT so stt_ready flips true at boot.
-        app=create_app(preload_stt=True),
+        # Production app: STT preloads at boot, and the event/timer-driven
+        # reconciliation surfaces (M6 detection, M3 live answers) are wired.
+        app=create_app(
+            preload_stt=True,
+            detection_wiring_factory=default_detection_wiring_factory,
+            spotter_wiring_factory=default_spotter_wiring_factory,
+        ),
         # Local-only invariant: loopback constant, never a setting.
         host=LOOPBACK_HOST,
         port=settings.engine_port,

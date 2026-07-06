@@ -1,39 +1,43 @@
-"""Release finalization: verbatim text -> recorded intent OR saved note.
+"""Release finalization: verbatim text -> intent, saved note, or injection.
 
 Purpose: everything that happens after the user releases the push-to-talk
 key and the mic session yields its verbatim transcript. One entry point,
 :meth:`DictationReleaseFinalizer.finalize`:
 
-- COMMAND ("Omni,"-prefixed): parse an intent via the router (task
-  ``intent_parsing``, strict schema) and APPEND it to ``dictation_intents``
-  — recorded for M4 approval cards, NEVER executed here. Router down ->
-  the utterance is still recorded as ``unknown`` (deny by default).
-- NOTE (everything else): resolve a short title via the router (task
-  ``live_extraction``), write ``Inbox/{title}.md`` with the VERBATIM text
-  as body, index it incrementally, and append a daily-note log line.
-  Router down -> timestamp-titled note is still saved (fail open for the
-  user's words, closed for actions).
+- COMMAND ("Omni,"-prefixed — always wins): parse an intent via the router
+  (task ``intent_parsing``, strict schema) and APPEND it to
+  ``dictation_intents`` — recorded for M4 approval cards, NEVER executed
+  here. Router down -> the utterance is still recorded as ``unknown``.
+- INJECT (UI-requested: an external app was focused at keydown): clean the
+  raw text (task ``dictation_cleanup``, faithfulness-guarded) and return
+  it for the shell to paste into the focused app. No note is written —
+  the text lands where the user is typing, like a keyboard would.
+- NOTE (the default): clean the text, resolve a short title (task
+  ``live_extraction``), write ``Inbox/{title}.md`` with the CLEANED body
+  and the RAW transcript retained byte-identical, index it, and append a
+  daily-note log line (flow lives in ``dictation_note_flow``).
 
 Pipeline position: composed with ``dictation_session_service`` by the
 server wiring (deferred to reconciliation — see
 ``dictation_protocol_names``).
 
 Security / fidelity invariants:
-- The note body and the persisted raw_text are the verbatim transcript —
-  never rewritten (fidelity mandate).
+- ``text`` is ALWAYS the raw verbatim transcript (ground truth); cleanup
+  produces the SEPARATE ``cleaned_text`` and any cleanup failure degrades
+  to the raw text — the user's words never fail on cloud health.
 - No execution path exists in this module (approval-before-execute).
-- Index/daily-line failures degrade honestly (reported, note kept).
+- The wake word beats the inject hint: a command can never be pasted.
 """
 
 import logging
-from collections.abc import Awaitable, Callable, Iterable
+from collections.abc import Awaitable, Callable
 from dataclasses import dataclass
 from datetime import UTC, datetime
 from pathlib import Path
-from typing import Protocol
 
 import aiosqlite
 
+from engine.dictation.dictation_cleanup import CleanupResult, clean_dictation_text
 from engine.dictation.dictation_intent_schema import (
     DICTATION_INTENT_JSON_SCHEMA,
     INTENT_PARSING_SYSTEM_FRAME,
@@ -43,13 +47,10 @@ from engine.dictation.dictation_intent_schema import (
 )
 from engine.dictation.dictation_intents_repository import insert_dictation_intent
 from engine.dictation.dictation_mode_splitter import DictationMode, split_dictation_mode
-from engine.dictation.dictation_note_titler import (
-    RouteCompletionFn,
-    resolve_dictation_note_title,
-)
+from engine.dictation.dictation_note_flow import NoteIndexerProtocol, persist_dictation_note
+from engine.dictation.dictation_note_titler import RouteCompletionFn
+from engine.dictation.personal_dictionary import PersonalDictionary
 from engine.router.completion_contract import ChatMessage, TaskType
-from engine.vault.daily_note_appender import append_daily_note_line
-from engine.vault.inbox_dictation_writer import create_inbox_dictation_note
 
 logger = logging.getLogger(__name__)
 
@@ -58,24 +59,27 @@ IntentsConnectionFactory = Callable[[], Awaitable[aiosqlite.Connection]]
 VaultRootProvider = Callable[[], Path]
 NowProvider = Callable[[], datetime]
 
-
-class NoteIndexerProtocol(Protocol):
-    """The slice of ``engine.index.VaultIndexerService`` dictation needs.
-
-    A Protocol (not the concrete class) keeps this module decoupled from
-    the index layer's construction and lets tests inject fakes.
-    """
-
-    async def index_changed_files(self, changed_paths: Iterable[Path]) -> object: ...
+__all__ = [
+    "DictationFinalResult",
+    "DictationReleaseFinalizer",
+    "IntentsConnectionFactory",
+    "NoteIndexerProtocol",
+    "NowProvider",
+    "VaultRootProvider",
+]
 
 
 @dataclass(frozen=True)
 class DictationFinalResult:
     """Everything ``dictation.final`` needs, honestly labelled.
 
-    ``degraded_reason`` carries partial failures (index down, daily line
-    refused...) — the primary artifact (note / recorded intent) already
-    succeeded when it is set; total failures raise instead.
+    ``text`` is the raw verbatim transcript (ground truth, always).
+    ``cleaned_text`` / ``cleanup_source`` / ``cleanup_latency_ms`` are the
+    additive cleanup fields: present for NOTE and INJECT modes;
+    ``cleaned_text`` equals the raw text when cleanup fell back (source
+    ``raw_fallback``). ``flush_ms`` is the wiring-measured STT flush time
+    (speed-showcase mandate). ``degraded_reason`` carries partial failures
+    — the primary artifact already succeeded when it is set.
     """
 
     mode: DictationMode
@@ -89,6 +93,10 @@ class DictationFinalResult:
     model: str | None = None
     latency_ms: int | None = None
     degraded_reason: str | None = None
+    cleaned_text: str | None = None
+    cleanup_source: str | None = None
+    cleanup_latency_ms: int | None = None
+    flush_ms: int | None = None
 
 
 class DictationReleaseFinalizer:
@@ -103,6 +111,7 @@ class DictationReleaseFinalizer:
         indexer: NoteIndexerProtocol | None = None,
         daily_folder_name: str | None = None,
         now: NowProvider = lambda: datetime.now().astimezone(),
+        dictionary: PersonalDictionary | None = None,
     ) -> None:
         self._route = route
         self._intents_connection_factory = intents_connection_factory
@@ -110,28 +119,45 @@ class DictationReleaseFinalizer:
         self._indexer = indexer
         self._daily_folder_name = daily_folder_name
         self._now = now
+        # Personal spelling dictionary: fail-open by construction (missing
+        # file / non-Windows env -> empty vocabulary, never an error).
+        self._dictionary = dictionary if dictionary is not None else PersonalDictionary()
 
-    async def finalize(self, verbatim_text: str) -> DictationFinalResult:
-        """Run the released transcript through the mode split and its flow."""
+    async def finalize(
+        self,
+        verbatim_text: str,
+        *,
+        inject_requested: bool = False,
+        flush_ms: int | None = None,
+    ) -> DictationFinalResult:
+        """Run the released transcript through the mode split and its flow.
+
+        ``inject_requested`` is the UI's disposition hint (external app
+        focused at keydown, not flipped to note before release). The wake
+        word is authoritative: COMMAND beats the hint unconditionally.
+        """
         if not verbatim_text.strip():
-            # Release-before-speech: nothing to save, nothing to parse —
-            # say so honestly instead of writing an empty artifact.
+            # Release-before-speech: nothing to save, parse, or paste —
+            # say so honestly instead of producing an empty artifact.
             return DictationFinalResult(
                 mode=DictationMode.NOTE,
                 text=verbatim_text,
                 degraded_reason="no speech captured before release",
+                flush_ms=flush_ms,
             )
         split = split_dictation_mode(verbatim_text)
         if split.mode is DictationMode.COMMAND:
-            return await self._finalize_command(verbatim_text, split.command_body)
-        return await self._finalize_note(verbatim_text)
+            return await self._finalize_command(verbatim_text, split.command_body, flush_ms)
+        if inject_requested:
+            return await self._finalize_inject(verbatim_text, flush_ms)
+        return await self._finalize_note(verbatim_text, flush_ms)
 
     # ------------------------------------------------------------------
     # COMMAND mode: parse + record. Never execute (approval-before-execute).
     # ------------------------------------------------------------------
-    async def _finalize_command(self, verbatim_text: str, command_body: str) -> (
-        DictationFinalResult
-    ):
+    async def _finalize_command(
+        self, verbatim_text: str, command_body: str, flush_ms: int | None
+    ) -> DictationFinalResult:
         provider: str | None = None
         model: str | None = None
         latency_ms: int | None = None
@@ -149,6 +175,7 @@ class DictationReleaseFinalizer:
             provider=provider,
             model=model,
             latency_ms=latency_ms,
+            flush_ms=flush_ms,
         )
 
     async def _parse_intent(
@@ -196,62 +223,67 @@ class DictationReleaseFinalizer:
             await connection.close()
 
     # ------------------------------------------------------------------
-    # NOTE mode: title -> Inbox note -> index -> daily line.
+    # Shared cleanup step (INJECT + NOTE): raw -> cleaned, raw retained.
     # ------------------------------------------------------------------
-    async def _finalize_note(self, verbatim_text: str) -> DictationFinalResult:
-        now = self._now()
-        title = await resolve_dictation_note_title(self._route, verbatim_text, now)
-        vault_root = self._vault_root_provider()  # raises if unconfigured (fail closed)
-        note_path = create_inbox_dictation_note(
-            vault_root,
-            title=title.title,
-            body_markdown=verbatim_text,  # VERBATIM body — fidelity mandate
-            date_iso=now.strftime("%Y-%m-%d"),
+    async def _run_cleanup(self, verbatim_text: str) -> CleanupResult:
+        """Faithfulness-guarded cleanup; NEVER raises (raw fallback inside)."""
+        return await clean_dictation_text(
+            self._route, verbatim_text, self._dictionary.terms()
         )
-        degraded = await self._index_note(note_path)
-        daily_degraded = self._append_daily_line(vault_root, now, note_path)
-        reasons = "; ".join(r for r in (degraded, daily_degraded) if r) or None
+
+    # ------------------------------------------------------------------
+    # INJECT mode: cleaned text for the shell to paste. No note, no action.
+    # ------------------------------------------------------------------
+    async def _finalize_inject(
+        self, verbatim_text: str, flush_ms: int | None
+    ) -> DictationFinalResult:
+        cleanup = await self._run_cleanup(verbatim_text)
+        return DictationFinalResult(
+            mode=DictationMode.INJECT,
+            text=verbatim_text,  # raw retained even though cleaned is pasted
+            provider=cleanup.provider,
+            model=cleanup.model,
+            latency_ms=cleanup.latency_ms,
+            degraded_reason=cleanup.degraded_reason,
+            cleaned_text=cleanup.cleaned_text,
+            cleanup_source=cleanup.source,
+            cleanup_latency_ms=cleanup.latency_ms,
+            flush_ms=flush_ms,
+        )
+
+    # ------------------------------------------------------------------
+    # NOTE mode: cleanup -> title -> Inbox note (raw kept) -> index -> daily.
+    # ------------------------------------------------------------------
+    async def _finalize_note(
+        self, verbatim_text: str, flush_ms: int | None
+    ) -> DictationFinalResult:
+        cleanup = await self._run_cleanup(verbatim_text)
+        now = self._now()
+        vault_root = self._vault_root_provider()  # raises if unconfigured (fail closed)
+        outcome = await persist_dictation_note(
+            route=self._route,
+            vault_root=vault_root,
+            verbatim_text=verbatim_text,
+            body_markdown=cleanup.cleaned_text,
+            now=now,
+            indexer=self._indexer,
+            daily_folder_name=self._daily_folder_name,
+        )
+        reasons = "; ".join(
+            r for r in (cleanup.degraded_reason, outcome.degraded_reason) if r
+        ) or None
         return DictationFinalResult(
             mode=DictationMode.NOTE,
             text=verbatim_text,
-            note_path=str(note_path),
-            note_title=title.title,
-            title_source=title.source,
-            provider=title.provider,
-            model=title.model,
-            latency_ms=title.latency_ms,
+            note_path=outcome.note_path,
+            note_title=outcome.note_title,
+            title_source=outcome.title_source,
+            provider=outcome.provider,
+            model=outcome.model,
+            latency_ms=outcome.latency_ms,
             degraded_reason=reasons,
+            cleaned_text=cleanup.cleaned_text,
+            cleanup_source=cleanup.source,
+            cleanup_latency_ms=cleanup.latency_ms,
+            flush_ms=flush_ms,
         )
-
-    async def _index_note(self, note_path: Path) -> str | None:
-        """Incremental index of the new note; failure degrades honestly."""
-        if self._indexer is None:
-            return "index not wired; note saved but not yet searchable"
-        try:
-            await self._indexer.index_changed_files([note_path])
-        except Exception as exc:
-            logger.exception("dictation note indexing failed; note is saved")
-            return f"indexing failed: {exc}"
-        return None
-
-    def _append_daily_line(
-        self, vault_root: Path, now: datetime, note_path: Path
-    ) -> str | None:
-        """One-line daily log entry; failure degrades honestly."""
-        line = f"- {now.strftime('%H:%M')} dictated [[{note_path.stem}]]"
-        try:
-            if self._daily_folder_name is None:
-                append_daily_note_line(
-                    vault_root, date_iso=now.strftime("%Y-%m-%d"), line=line
-                )
-            else:
-                append_daily_note_line(
-                    vault_root,
-                    date_iso=now.strftime("%Y-%m-%d"),
-                    line=line,
-                    daily_folder_name=self._daily_folder_name,
-                )
-        except Exception as exc:
-            logger.exception("daily-note line append failed; note is saved")
-            return f"daily note line failed: {exc}"
-        return None

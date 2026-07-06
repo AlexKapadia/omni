@@ -1,0 +1,104 @@
+/**
+ * Reconciliation wiring for the "intelligence" event surfaces sharing the
+ * one engine socket: live answers (answers.hit), meeting detection
+ * (meeting.detected / capture.suggest_stop), the finalize flow's enhance.*
+ * progress events, and the Ask screen's real request/reply transport.
+ *
+ * Registered as an additional frame listener by startLiveEngineConnection —
+ * the capture/transcript dispatcher is untouched and its contract intact.
+ *
+ * Security invariant: every frame is untrusted; parseInboundMessage first,
+ * per-store fail-closed payload parsing second, unknown events ignored
+ * (deny by default, no speculative handling).
+ */
+import { setAskQueryTransport } from "./engine-ask-answer-provider";
+import { createEngineAskTransport } from "./engine-ask-transport";
+import {
+  ANSWERS_HIT_EVENT_NAME,
+  applyAnswersHit,
+  clearLiveAnswers,
+  liveAnswersStore,
+  type LiveAnswersStore,
+} from "./live-answers-store";
+import { CAPTURE_STARTED_EVENT_NAME } from "./capture-protocol";
+import {
+  applyCaptureSuggestStop,
+  applyMeetingDetected,
+  CAPTURE_SUGGEST_STOP_EVENT_NAME,
+  clearMeetingDetection,
+  MEETING_DETECTED_EVENT_NAME,
+  meetingDetectionStore,
+  type MeetingDetectionStore,
+} from "./meeting-detection-store";
+import {
+  applyEnhanceFailed,
+  applyEnhanceReady,
+  ENHANCE_FAILED_EVENT_NAME,
+  ENHANCE_READY_EVENT_NAME,
+  meetingFinalizeStore,
+  resetMeetingFinalize,
+  type MeetingFinalizeStore,
+} from "./meeting-finalize-store";
+import { parseInboundMessage } from "./protocol";
+
+export interface IntelligenceStores {
+  readonly liveAnswers: LiveAnswersStore;
+  readonly detection: MeetingDetectionStore;
+  readonly finalize: MeetingFinalizeStore;
+}
+
+/**
+ * Route one raw inbound frame to the intelligence stores. Exported as a
+ * factory so tests drive isolated stores with raw frames.
+ */
+export function createIntelligenceFrameListener(
+  stores: IntelligenceStores,
+): (data: unknown) => void {
+  return (data: unknown) => {
+    const result = parseInboundMessage(data);
+    if (!result.ok || result.envelope.kind !== "event") return; // fail closed
+    const { name, payload } = result.envelope;
+    if (name === ANSWERS_HIT_EVENT_NAME) {
+      applyAnswersHit(stores.liveAnswers, payload);
+    } else if (name === CAPTURE_STARTED_EVENT_NAME) {
+      // A fresh meeting: hits belong to one meeting, the suggestion card is
+      // consumed, and any previous finalize flow is over.
+      clearLiveAnswers(stores.liveAnswers);
+      clearMeetingDetection(stores.detection);
+      resetMeetingFinalize(stores.finalize);
+    } else if (name === MEETING_DETECTED_EVENT_NAME) {
+      applyMeetingDetected(stores.detection, payload);
+    } else if (name === CAPTURE_SUGGEST_STOP_EVENT_NAME) {
+      applyCaptureSuggestStop(stores.detection, payload);
+    } else if (name === ENHANCE_READY_EVENT_NAME) {
+      applyEnhanceReady(stores.finalize, payload);
+    } else if (name === ENHANCE_FAILED_EVENT_NAME) {
+      applyEnhanceFailed(stores.finalize, payload);
+    }
+    // Unknown events are ignored — deny by default, no speculative handling.
+  };
+}
+
+let wired = false;
+
+/**
+ * One-time wiring against the app-singleton stores + the shared socket:
+ * the frame listener above plus the Ask screen's real transport.
+ * Idempotent — safe under React StrictMode double-mount.
+ */
+export function wireLiveIntelligence(
+  subscribeFrames: (listener: (data: unknown) => void) => () => void,
+): void {
+  if (wired) return;
+  wired = true;
+  subscribeFrames(
+    createIntelligenceFrameListener({
+      liveAnswers: liveAnswersStore,
+      detection: meetingDetectionStore,
+      finalize: meetingFinalizeStore,
+    }),
+  );
+  // Ask goes live: the provider's honest offline rejection now only fires
+  // when the socket itself is down, not because nothing was ever wired.
+  setAskQueryTransport(createEngineAskTransport());
+}

@@ -141,6 +141,12 @@ The FULL suite runs once per milestone gate and on CI push — never re-run gree
 
 ## Late-added scope
 
+- **Dictation bar raised (user mandate, 2026-07-06): must beat Wispr Flow.** Added to the M5 lane
+  mid-flight: universal text injection into any focused Windows app (clipboard-swap + SendInput),
+  intelligent cleanup via new router task "dictation_cleanup" (fillers out, self-corrections
+  resolved, meaning never changed, RAW verbatim always retained), release→text <1.2s budget with
+  real measured numbers, personal dictionary file. Router-down → raw verbatim still lands.
+
 - **Pre-M3 research (user mandate):** AI-facing memory/retrieval layer over the vault — Obsidian
   stays the human layer; research hybrid retrieval (FTS5/BM25 + sqlite-vec dense), reranking,
   GraphRAG/entity indexes, temporal indexes, chunking. Peer-reviewed, docs/research/, evidence-backed

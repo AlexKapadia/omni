@@ -30,7 +30,6 @@ from engine.agents.approval_protocol_names import (
     CARD_RETRY_COMMAND_NAME,
     CARDS_LIST_COMMAND_NAME,
 )
-from engine.approval_cards_gateway import ApprovalCardsGateway, CardCommandRefused
 from engine.protocol import (
     PROTOCOL_VERSION,
     Envelope,
@@ -38,6 +37,7 @@ from engine.protocol import (
     ProtocolErrorCode,
     error_reply,
 )
+from engine.wiring.approval_cards_gateway import ApprovalCardsGateway, CardCommandRefused
 
 logger = logging.getLogger(__name__)
 

@@ -32,7 +32,8 @@ from engine.protocol import (
     ProtocolErrorCode,
     error_reply,
 )
-from engine.stt.live_capture_service import CaptureServiceError, LiveCaptureService
+from engine.stt.capture_model_loading import CaptureServiceError
+from engine.stt.live_capture_service import LiveCaptureService
 
 # The commands this dispatcher owns; the handler routes ONLY these here.
 CAPTURE_COMMAND_NAMES = frozenset({COMMAND_CAPTURE_START, COMMAND_CAPTURE_STOP})

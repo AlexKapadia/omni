@@ -28,21 +28,24 @@ import uvicorn
 from fastapi import FastAPI, WebSocket
 
 from engine import ENGINE_VERSION
-from engine.approval_card_build_server_wiring import ApprovalCardBuildWiring
-from engine.approval_cards_gateway import ApprovalCardsGateway
 from engine.ask.ask_query_command_dispatcher import AskAnswerGateway
 from engine.audio.audio_device_listing import list_audio_devices
 from engine.audio.devices_list_command_dispatcher import DeviceLister
-from engine.detection_server_wiring import DetectionServerWiring
-from engine.dictation_command_dispatcher import DictationCommandGateway
 from engine.enhance import MeetingFinalizationService
-from engine.live_answers_spotter_wiring import LiveAnswersSpotterWiring
 from engine.protocol import EventBroadcastHub
 from engine.runtime_settings import LOOPBACK_HOST, EngineSettings, load_engine_settings
+from engine.stt.live_capture_service import LiveCaptureService
+from engine.voice import TtsPlaybackStreamer
+from engine.websocket_connection_handler import WebSocketConnectionHandler
+from engine.wiring.approval_card_build_server_wiring import ApprovalCardBuildWiring
+from engine.wiring.approval_cards_gateway import ApprovalCardsGateway
+from engine.wiring.detection_server_wiring import DetectionServerWiring
+from engine.wiring.dictation_command_dispatcher import DictationCommandGateway
+from engine.wiring.live_answers_spotter_wiring import LiveAnswersSpotterWiring
 
 # The real, settings-driven service factories live in one module so this
 # file stays pure routing/lifecycle; tests inject fakes through the seams.
-from engine.server_default_service_factories import (
+from engine.wiring.server_default_service_factories import (
     default_approval_gateway_factory,
     default_ask_gateway_factory,
     default_capture_service_factory,
@@ -53,10 +56,7 @@ from engine.server_default_service_factories import (
     default_spotter_wiring_factory,
     default_vault_watchdog_factory,
 )
-from engine.stt.live_capture_service import LiveCaptureService
-from engine.vault_watchdog_server_wiring import VaultWatchdogServerWiring
-from engine.voice import TtsPlaybackStreamer
-from engine.websocket_connection_handler import WebSocketConnectionHandler
+from engine.wiring.vault_watchdog_server_wiring import VaultWatchdogServerWiring
 
 # Factory seams (a factory, not an instance, so services are built AFTER
 # settings load, against the hub the app owns; tests inject fakes here).

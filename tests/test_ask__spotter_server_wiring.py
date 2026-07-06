@@ -15,7 +15,6 @@ import aiosqlite
 
 from engine.ask import ANSWERS_HIT_EVENT_NAME
 from engine.ask.ask_answer_contracts import LiveAnswerHit, LiveAnswerSource
-from engine.live_answers_spotter_wiring import HitEmitter, LiveAnswersSpotterWiring
 from engine.protocol import (
     EVENT_CAPTURE_STARTED,
     EVENT_CAPTURE_STOPPED,
@@ -26,6 +25,7 @@ from engine.protocol import (
     build_capture_stopped_payload,
     build_transcript_final_payload,
 )
+from engine.wiring.live_answers_spotter_wiring import HitEmitter, LiveAnswersSpotterWiring
 
 HIT = LiveAnswerHit(
     question="what is the Q3 budget?",

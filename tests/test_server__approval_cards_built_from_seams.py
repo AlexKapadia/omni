@@ -15,14 +15,14 @@ database migrated with the REAL migration files, pinning:
 from pathlib import Path
 from typing import Any
 
-from engine.approval_card_build_server_wiring import ApprovalCardBuildWiring
 from engine.dictation.dictation_finalization import DictationFinalResult
 from engine.dictation.dictation_intent_schema import DictationIntentType, ParsedIntent
 from engine.dictation.dictation_intents_repository import insert_dictation_intent
 from engine.dictation.dictation_mode_splitter import DictationMode
-from engine.dictation_command_dispatcher import DictationCommandGateway
 from engine.protocol import Envelope, EventBroadcastHub
 from engine.storage import apply_migrations, open_sqlite_connection
+from engine.wiring.approval_card_build_server_wiring import ApprovalCardBuildWiring
+from engine.wiring.dictation_command_dispatcher import DictationCommandGateway
 from tests.conftest import REPO_ROOT
 
 MIGRATIONS = REPO_ROOT / "migrations"

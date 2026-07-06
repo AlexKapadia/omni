@@ -22,11 +22,6 @@ import uuid
 
 from fastapi import WebSocket, WebSocketDisconnect
 
-from engine.approval_cards_gateway import ApprovalCardsGateway
-from engine.approval_command_dispatcher import (
-    APPROVAL_COMMAND_NAMES,
-    dispatch_approval_command,
-)
 from engine.ask.ask_query_command_dispatcher import (
     ASK_COMMAND_NAMES,
     AskAnswerGateway,
@@ -37,17 +32,11 @@ from engine.audio.devices_list_command_dispatcher import (
     DeviceLister,
     dispatch_devices_command,
 )
-from engine.capture_command_dispatcher import CAPTURE_COMMAND_NAMES, dispatch_capture_command
 from engine.detect.detection_dismiss_command_dispatcher import (
     DETECTION_COMMAND_NAMES,
     dispatch_detection_command,
 )
 from engine.detect.detection_service import DetectionService
-from engine.dictation_command_dispatcher import (
-    DICTATION_COMMAND_NAMES,
-    DictationCommandGateway,
-    dispatch_dictation_command,
-)
 from engine.enhance import (
     MEETING_COMMAND_NAMES,
     MeetingFinalizationService,
@@ -67,6 +56,17 @@ from engine.protocol import (
 from engine.runtime_settings import HEARTBEAT_INTERVAL_SECONDS
 from engine.stt.live_capture_service import LiveCaptureService
 from engine.voice import NAOMI_COMMAND_NAMES, TtsPlaybackStreamer, dispatch_naomi_command
+from engine.wiring.approval_cards_gateway import ApprovalCardsGateway
+from engine.wiring.approval_command_dispatcher import (
+    APPROVAL_COMMAND_NAMES,
+    dispatch_approval_command,
+)
+from engine.wiring.capture_command_dispatcher import CAPTURE_COMMAND_NAMES, dispatch_capture_command
+from engine.wiring.dictation_command_dispatcher import (
+    DICTATION_COMMAND_NAMES,
+    DictationCommandGateway,
+    dispatch_dictation_command,
+)
 
 
 class WebSocketConnectionHandler:
@@ -196,7 +196,7 @@ class WebSocketConnectionHandler:
             )
             return
         if command.name in CAPTURE_COMMAND_NAMES:
-            # capture.start / capture.stop (engine.capture_command_dispatcher
+            # capture.start / capture.stop (engine.wiring.capture_command_dispatcher
             # owns validation and replies; behaviour pinned by the M1 tests).
             await dispatch_capture_command(command, self._capture_service, self._send)
             return

@@ -20,7 +20,8 @@ import pytest
 from engine.audio.audio_frame_types import StreamLabel
 from engine.audio.dual_stream_capture_controller import CaptureDeviceSpec
 from engine.protocol import Envelope, EventBroadcastHub
-from engine.stt.live_capture_service import CaptureServiceError, LiveCaptureService
+from engine.stt.capture_model_loading import CaptureServiceError
+from engine.stt.live_capture_service import LiveCaptureService
 from engine.stt.parakeet_nemo_transcriber import ParakeetNemoTranscriber
 from engine.stt.word_token_types import WordToken
 

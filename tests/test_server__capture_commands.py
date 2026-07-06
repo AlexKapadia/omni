@@ -15,7 +15,8 @@ from starlette.testclient import TestClient, WebSocketTestSession
 
 from engine.protocol import EventBroadcastHub, build_capture_started_payload
 from engine.server import create_app
-from engine.stt.live_capture_service import CaptureServiceError, LiveCaptureService
+from engine.stt.capture_model_loading import CaptureServiceError
+from engine.stt.live_capture_service import LiveCaptureService
 from tests.conftest import receive_frame
 
 

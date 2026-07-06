@@ -28,7 +28,6 @@ from engine.detect import (
     SustainedLoopbackVadTrigger,
 )
 from engine.detect.detection_dismiss_command_dispatcher import dispatch_detection_command
-from engine.detection_server_wiring import DetectionServerWiring, decision_to_event
 from engine.protocol import (
     EVENT_CAPTURE_DEVICE_CHANGED,
     Envelope,
@@ -38,6 +37,7 @@ from engine.protocol import (
 )
 from engine.server import create_app
 from engine.stt.live_capture_service import LiveCaptureService
+from engine.wiring.detection_server_wiring import DetectionServerWiring, decision_to_event
 from tests.conftest import receive_non_heartbeat_frame
 
 # ------------------------------------------------------ decision mapping

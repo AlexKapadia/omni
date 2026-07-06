@@ -16,18 +16,18 @@ Security invariants:
 
 from pathlib import Path
 
-from engine.approval_card_build_server_wiring import ApprovalCardBuildWiring
-from engine.approval_cards_gateway import ApprovalCardsGateway
 from engine.ask.ask_query_command_dispatcher import AskAnswerGateway
-from engine.detection_server_wiring import DetectionServerWiring
-from engine.dictation_command_dispatcher import DictationCommandGateway
 from engine.enhance import MeetingFinalizationService
-from engine.live_answers_spotter_wiring import LiveAnswersSpotterWiring
 from engine.protocol import EventBroadcastHub
 from engine.runtime_settings import load_engine_settings
 from engine.stt.live_capture_service import LiveCaptureService
 from engine.vault import VaultWriteError, resolve_vault_root
-from engine.vault_watchdog_server_wiring import VaultWatchdogServerWiring
+from engine.wiring.approval_card_build_server_wiring import ApprovalCardBuildWiring
+from engine.wiring.approval_cards_gateway import ApprovalCardsGateway
+from engine.wiring.detection_server_wiring import DetectionServerWiring
+from engine.wiring.dictation_command_dispatcher import DictationCommandGateway
+from engine.wiring.live_answers_spotter_wiring import LiveAnswersSpotterWiring
+from engine.wiring.vault_watchdog_server_wiring import VaultWatchdogServerWiring
 
 # The repo's migrations directory (packaging bundles it next to the engine).
 MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"

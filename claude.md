@@ -373,6 +373,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
     router/                   # provider clients, routing table, cost/latency ledger
     agents/                   # tools, extraction pipeline, executor, audit
     vault/                    # markdown writers, frontmatter, managed markers
+    wiring/                   # server assembly layer: command dispatchers + feature wiring
     server.py                 # FastAPI + WS protocol
   migrations/
   packaging/                  # pyinstaller spec, NSIS config, model manifest

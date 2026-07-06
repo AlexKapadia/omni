@@ -5,7 +5,7 @@ Purpose: wraps a stream's VAD probability callable so every loopback
 detection wiring's ``feed_vad_sample``. Probabilities only, never audio;
 this is the "no new audio path" seam the detection spec mandates.
 Pipeline position: applied by ``engine.stt.live_capture_service`` when it
-builds the THEM pipeline; consumed by ``engine.detection_server_wiring``.
+builds the THEM pipeline; consumed by ``engine.wiring.detection_server_wiring``.
 
 Security / resilience invariants:
 - Nothing but ``(monotonic_ts, probability)`` leaves the wrapper — no

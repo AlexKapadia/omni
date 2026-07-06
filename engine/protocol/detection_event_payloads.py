@@ -5,7 +5,7 @@ Purpose: the pinned wire shapes for bot-free meeting detection —
 and the ``detection.dismiss`` command flowing UI -> engine. The decision
 LOGIC lives in ``engine.detect``; this module is only the wire vocabulary,
 mirroring ``capture_event_payloads``.
-Pipeline position: between ``engine.detection_server_wiring`` (producer /
+Pipeline position: between ``engine.wiring.detection_server_wiring`` (producer /
 dispatcher) and the UI's TypeScript mirror.
 
 Security invariants:

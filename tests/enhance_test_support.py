@@ -4,13 +4,17 @@
 or a typed RouterError) and RECORDS every call, so tests can prove the
 injection-defence posture (untrusted content in ``messages``, never in the
 ``system_frame``) by inspecting exactly what would have gone over the wire.
-``build_finalization_env`` assembles a real SQLite DB (real migrations), a
-real tmp vault, and an event collector around the real finalization service.
-No network anywhere (unit-test discipline)."""
+``make_finalization_service`` assembles the real finalization service around
+a real SQLite DB (real migrations), a real tmp vault, and an event collector;
+``read_meeting_row`` / ``non_index_warnings`` are the shared assertions'
+helpers. No network anywhere (unit-test discipline)."""
 
 from dataclasses import dataclass
 from pathlib import Path
 
+import aiosqlite
+
+from engine.enhance import MeetingFinalizationService
 from engine.protocol import Envelope, EventBroadcastHub
 from engine.router import (
     ChatMessage,
@@ -166,3 +170,55 @@ VALID_ENHANCED_MARKDOWN = (
     "Renewal call with Northwind.\n\n## Summary\nWe agreed the security review "
     "lands by Friday.\n\n## Next Steps\n- I own the security review."
 )
+
+# A fully-successful router script (auto-selection, extraction, enhancement).
+HAPPY_SCRIPT: dict[str, list[str | RouterError]] = {
+    "intent_parsing": ['{"template_id": "sales"}'],
+    "live_extraction": [VALID_EXTRACTION_JSON],
+    "enhanced_notes": [VALID_ENHANCED_MARKDOWN],
+}
+
+# A realistic rough notepad; the typo is deliberate (fidelity: kept verbatim).
+NOTEPAD = "rough notes:\n- ask about SSO\n- reveiw pricing (typo kept!)"
+
+
+def make_finalization_service(
+    tmp_db_path: Path,
+    real_migrations_dir: Path,
+    vault_root: Path,
+    router: ScriptedRouter,
+) -> tuple[MeetingFinalizationService, EventCollector]:
+    """The REAL finalization service on real migrations + a scripted router."""
+    hub = EventBroadcastHub()
+    collector = EventCollector(hub)
+    service = MeetingFinalizationService(
+        db_path=tmp_db_path,
+        migrations_dir=real_migrations_dir,
+        hub=hub,
+        router_factory=lambda _recorder: router,
+        vault_root_resolver=lambda: vault_root,
+    )
+    return service, collector
+
+
+async def read_meeting_row(db_path: Path, meeting_id: str) -> tuple[object, ...]:
+    """(note_path, notes_text, enhanced_notes_md, finalized_at) for one meeting."""
+    connection = await aiosqlite.connect(db_path)
+    try:
+        cursor = await connection.execute(
+            "SELECT note_path, notes_text, enhanced_notes_md, finalized_at"
+            " FROM meetings WHERE id = ?",
+            (meeting_id,),
+        )
+        row = await cursor.fetchone()
+        await cursor.close()
+        assert row is not None
+        return tuple(row)
+    finally:
+        await connection.close()
+
+
+def non_index_warnings(warnings: tuple[str, ...]) -> list[str]:
+    """Indexing is optional-dependency-gated in unit runs; everything else
+    in the warning list is a real defect for these scenarios."""
+    return [w for w in warnings if "indexing unavailable" not in w]

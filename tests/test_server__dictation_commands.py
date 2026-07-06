@@ -22,13 +22,13 @@ from engine.dictation.dictation_session_service import (
     DictationSessionError,
     DictationSessionService,
 )
-from engine.dictation_command_dispatcher import (
-    DictationCommandGateway,
-    dispatch_dictation_command,
-)
 from engine.protocol import Envelope, EnvelopeKind, EventBroadcastHub
 from engine.server import create_app
 from engine.stt.live_capture_service import LiveCaptureService
+from engine.wiring.dictation_command_dispatcher import (
+    DictationCommandGateway,
+    dispatch_dictation_command,
+)
 from tests.conftest import receive_frame
 
 

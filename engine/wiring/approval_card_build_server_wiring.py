@@ -37,7 +37,6 @@ from engine.agents.approval_protocol_names import (
     build_card_updated_payload,
 )
 from engine.agents.dictation_intent_card_builder import build_card_from_dictation_intent
-from engine.approval_tool_registry_with_vault_fallback import build_registry_for_vault_root
 from engine.dictation.dictation_finalization import DictationFinalResult
 from engine.dictation.dictation_intents_repository import get_dictation_intent
 from engine.protocol import (
@@ -51,6 +50,7 @@ from engine.storage.extraction_results_repository import latest_extraction_row
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.vault import VaultWriteError, resolve_vault_root
+from engine.wiring.approval_tool_registry_with_vault_fallback import build_registry_for_vault_root
 
 logger = logging.getLogger(__name__)
 

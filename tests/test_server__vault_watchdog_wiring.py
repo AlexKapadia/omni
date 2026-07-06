@@ -22,7 +22,7 @@ import pytest
 
 from engine.index.index_layer_errors import IndexDependencyMissingError
 from engine.storage import apply_migrations, open_sqlite_connection
-from engine.vault_watchdog_server_wiring import VaultWatchdogServerWiring
+from engine.wiring.vault_watchdog_server_wiring import VaultWatchdogServerWiring
 from tests.conftest import REPO_ROOT
 
 MIGRATIONS = REPO_ROOT / "migrations"
@@ -148,7 +148,7 @@ async def test_no_vault_root_disables_watching_with_an_honest_log_line(
 ) -> None:
     starter = FakeWatcherStarter()
     wiring = make_wiring(tmp_db_path, None, starter)
-    with caplog.at_level(logging.INFO, logger="engine.vault_watchdog_server_wiring"):
+    with caplog.at_level(logging.INFO, logger="engine.wiring.vault_watchdog_server_wiring"):
         wiring.start()
     assert not wiring.is_watching
     assert starter.calls == []  # the starter is never even consulted
@@ -169,7 +169,7 @@ async def test_missing_watchdog_dependency_fails_closed_with_error_log(
         watcher_starter=raising_starter,
         debounce_seconds=0.02,
     )
-    with caplog.at_level(logging.ERROR, logger="engine.vault_watchdog_server_wiring"):
+    with caplog.at_level(logging.ERROR, logger="engine.wiring.vault_watchdog_server_wiring"):
         wiring.start()
     assert not wiring.is_watching  # never pretend watching is active
     assert "watchdog" in caplog.text

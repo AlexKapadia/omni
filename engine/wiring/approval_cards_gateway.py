@@ -7,7 +7,7 @@ lifecycle, the ONLY approve/retry call sites of ``execute_approved_card``,
 and a ``card.updated`` broadcast after EVERY status change (pending clone,
 approved, executing, executed/failed, dismissed).
 Pipeline position: constructed by ``engine.server``'s app factory (inert —
-no keys, no I/O); driven by ``engine.approval_command_dispatcher``.
+no keys, no I/O); driven by ``engine.wiring.approval_command_dispatcher``.
 
 Security invariants:
 - Approval-before-execute: execution is scheduled ONLY from approve/retry,
@@ -42,7 +42,6 @@ from engine.agents.approval_protocol_names import (
 )
 from engine.agents.card_executor import execute_approved_card
 from engine.agents.tool_registry import ToolRegistry
-from engine.approval_tool_registry_with_vault_fallback import build_registry_for_vault_root
 from engine.google.google_session import DpapiGoogleSession, GoogleSession
 from engine.protocol import EventBroadcastHub
 from engine.router import (
@@ -55,6 +54,7 @@ from engine.security import ProviderKeyStore
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.vault import VaultWriteError, resolve_vault_root
+from engine.wiring.approval_tool_registry_with_vault_fallback import build_registry_for_vault_root
 
 logger = logging.getLogger(__name__)
 

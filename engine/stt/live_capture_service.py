@@ -1,10 +1,11 @@
 """Live capture service: owns capture sessions end-to-end.
 
-Purpose: the single owner of the capture lifecycle — loads the STT models
-(readiness for the heartbeat), runs ``capture.start`` / ``capture.stop``,
-pumps audio from the ring buffer into the two per-stream pipelines,
-persists final segments, and broadcasts every capture/transcript event to
-the UI through the broadcast hub.
+Purpose: the single owner of the capture lifecycle — delegates STT model
+loading to ``engine.stt.capture_model_loading`` (readiness for the
+heartbeat), runs ``capture.start`` / ``capture.stop``, pumps audio from the
+ring buffer into the two per-stream pipelines, persists final segments, and
+broadcasts every capture/transcript event to the UI through the broadcast
+hub.
 Pipeline position: the orchestration layer above ``engine.audio`` and the
 per-stream pipelines; invoked by the WebSocket command dispatcher.
 
@@ -47,15 +48,15 @@ from engine.protocol.event_broadcast_hub import EventBroadcastHub
 from engine.storage.meetings_repository import insert_meeting, mark_meeting_ended, utc_now_iso
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
-from engine.stt.loopback_vad_probability_tap import LoopbackVadTap, wrap_vad_with_loopback_tap
-from engine.stt.model_weights_downloader import SILERO_VAD_FILENAME, models_directory
-from engine.stt.parakeet_nemo_transcriber import (
-    ParakeetNemoTranscriber,
-    stt_dependencies_available,
+from engine.stt.capture_model_loading import (
+    CaptureModelLoader,
+    CaptureServiceError,
+    VadFactory,
 )
+from engine.stt.loopback_vad_probability_tap import LoopbackVadTap, wrap_vad_with_loopback_tap
+from engine.stt.parakeet_nemo_transcriber import ParakeetNemoTranscriber
 from engine.stt.per_stream_transcription_pipeline import PerStreamTranscriptionPipeline
 from engine.stt.silence_auto_stop_monitor import spawn_silence_auto_stop_tasks
-from engine.stt.silero_onnx_voice_activity_detector import SileroOnnxVoiceActivityDetector
 from engine.stt.transcript_event_emitter import TranscriptEventEmitter
 from engine.stt.transcription_latency_tracker import STATS_LOG_INTERVAL_S
 from engine.stt.word_token_types import WordToken
@@ -64,13 +65,8 @@ logger = logging.getLogger(__name__)
 
 _DRAIN_INTERVAL_S = 0.05  # Ring-buffer pump cadence: 50 ms keeps latency low.
 
-# Test seams: production defaults are the real hardware/model classes.
-VadFactory = Callable[[], Callable[[npt.NDArray[np.float32]], float]]
+# Test seam: production default is the real threaded Parakeet transcribe.
 TranscribeAsyncFn = Callable[[npt.NDArray[np.float32]], Awaitable[list[WordToken]]]
-
-
-class CaptureServiceError(Exception):
-    """User-visible capture failures (already running, models missing...)."""
 
 
 def _default_backend_factory() -> CaptureBackend:
@@ -106,12 +102,9 @@ class LiveCaptureService:
         self._migrations_dir = migrations_dir
         self._hub = hub
         self._backend_factory = backend_factory
-        self._models_dir = models_dir if models_dir is not None else models_directory()
-        self._transcriber = transcriber
-        self._vad_factory = vad_factory
+        # Model lifecycle lives in its own module (single responsibility).
+        self._models = CaptureModelLoader(models_dir, transcriber, vad_factory)
         self._silence_timeout_s = silence_timeout_s  # None → OMNI_AUTOSTOP_SILENCE_S env knob
-        self._stt_ready = False
-        self._load_lock = asyncio.Lock()
         # Additive M6 seam (assigned by the server wiring): THEM-stream only.
         self.on_loopback_vad_probability: LoopbackVadTap | None = None
         # Per-session state (None while idle).
@@ -126,7 +119,7 @@ class LiveCaptureService:
     @property
     def is_stt_ready(self) -> bool:
         """Heartbeat truth: True only once models are actually loaded."""
-        return self._stt_ready
+        return self._models.is_ready
 
     @property
     def is_capturing(self) -> bool:
@@ -139,7 +132,7 @@ class LiveCaptureService:
         honest — and logs why (fail closed, stay up).
         """
         try:
-            await self._ensure_models_loaded()
+            await self._models.ensure_loaded()
         except Exception:
             logger.exception("STT model preload failed; stt_ready stays false")
 
@@ -147,7 +140,7 @@ class LiveCaptureService:
         """Begin a capture session; returns the new meeting id."""
         if self._meeting_id is not None:
             raise CaptureServiceError("capture is already running")
-        await self._ensure_models_loaded()  # Raises with a clear reason.
+        await self._models.ensure_loaded()  # Raises with a clear reason.
 
         meeting_id = str(uuid.uuid4())
         # Schema first (idempotent), then the session's own connection.
@@ -225,32 +218,11 @@ class LiveCaptureService:
         logger.info("capture stopped: meeting %s (%s)", meeting_id, reason)
         return meeting_id
 
-    async def _ensure_models_loaded(self) -> None:
-        async with self._load_lock:
-            if self._stt_ready:
-                return
-            if self._vad_factory is None:
-                vad_model = self._models_dir / SILERO_VAD_FILENAME
-                if not vad_model.is_file():
-                    raise CaptureServiceError(f"VAD model missing: {vad_model}")
-                self._vad_factory = lambda: SileroOnnxVoiceActivityDetector(vad_model)
-            if self._transcriber is None:
-                if not stt_dependencies_available():
-                    raise CaptureServiceError(
-                        "STT dependencies not installed (uv sync --extra stt)"
-                    )
-                from engine.stt.model_weights_downloader import PARAKEET_FILENAME
-
-                self._transcriber = ParakeetNemoTranscriber(self._models_dir / PARAKEET_FILENAME)
-            if not self._transcriber.is_loaded:
-                # Heavy load off the event loop; heartbeats keep flowing.
-                await asyncio.to_thread(self._transcriber.load)
-            self._stt_ready = True
-
     def _build_pipeline(self, label: StreamLabel) -> PerStreamTranscriptionPipeline:
-        assert self._vad_factory is not None and self._transcriber is not None  # noqa: S101
-        transcriber = self._transcriber
-        vad_probability = self._vad_factory()  # Fresh stateful VAD per stream.
+        vad_factory = self._models.vad_factory
+        transcriber = self._models.transcriber
+        assert vad_factory is not None and transcriber is not None  # noqa: S101
+        vad_probability = vad_factory()  # Fresh stateful VAD per stream.
         if label is StreamLabel.THEM:
             # Additive detection tap on the loopback stream only (M6 wiring):
             # probabilities, never audio; late-bound; failure-isolated.

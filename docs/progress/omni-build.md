@@ -6,11 +6,39 @@
 > actions, tri-provider router (Groq / Gemini / optional Anthropic), NSIS installer, auto-update.
 > Open source on GitHub (AlexKapadia/omni) — no secrets ever committed.
 
-**RESUME HERE →** M0+M1 DONE; M3 index DONE; Naomi visual+voice foundation DONE (full
-conversation loop pends M2/M3 services + persistent Cartesia socket). Running lanes: m2-enhance,
-m6-detect. Next when a lane frees: M3 Ask-Omni service agent (retrieval → router synthesis →
-citations → swap UI mock ask provider + live Answers panel feed), then M4 (mocks until OAuth
-creds), M5 dictation, M7 ship, M9 landing, Naomi loop.
+**RESUME HERE →** ⏸ PAUSED 2026-07-06 ~18:5x (user usage quota; back ~1h45). Main is clean and
+green through the Naomi commit. Three lanes were stopped cleanly mid-flight; their partial work is
+committed UNVERIFIED on branch **wip/paused-lanes-20260706** (pushed).
+
+**RESUME PROTOCOL (do in order):**
+1. `git checkout wip/paused-lanes-20260706` (or merge it into a fresh work branch) — the partial
+   files live there; main stays clean until lanes verify green.
+2. Respawn THREE Fable agents (cap 3), each told: "your lane's earlier agent was stopped mid-run;
+   its partial files are on this branch — read them, keep what is good, finish to the original
+   RETURN spec, verify (ruff/mypy/targeted pytest or vitest), report honestly":
+   - **m2-enhance** (owns engine/enhance, engine/protocol additions, engine/server.py +
+     websocket_connection_handler.py wiring, storage/migrations 0005/0006, UI meetings swap +
+     library detail; binding: fidelity mandate, injection framing, live smoke w/ real keys).
+     Stop-point: core pipeline files on disk; was starting the auto-stop monitor; server wiring
+     NOT started.
+   - **m6-detect** (owns engine/detect + tests; wiring deferred). Stop-point: core + 5 test files
+     on disk; remaining: live Edge title-detection check + final verify + return.
+   - **m5-dictation** (owns apps/ui/src-tauri hotkey+pill window, apps/ui/pill.html + src/pill,
+     engine/dictation, migrations/0006→use 0007 if 0006 taken; wiring deferred; design doc §07
+     pill spec). Stop-point: NO files on disk — respawn with full original scope.
+3. After each lane verifies green: merge/commit to main (ledger row + RESUME HERE flip in the SAME
+   commit), then continue queue: M3 Ask-Omni service → M4 (mocks until OAuth) → M7 ship →
+   M9 landing → Naomi full loop (persistent Cartesia socket, turn orchestrator).
+4. END-PHASE MANDATES (user, 2026-07-06 — tasks #12/#13): populate **evidence/** per §3.10
+   (peer-reviewed stats, PNG+interactive-HTML graphs, aesthetic B&W flow diagrams per component +
+   whole system, analysis-only deps manifest) and make the **README insane** per §4.9.8 — REAL
+   product screenshots of every key screen (incl. Naomi's water), genuinely RECORDED video/GIF
+   (Playwright recordVideo + ffmpeg, never mock/AI-generated), honest captions, judged by a
+   separate evaluator agent that actually VIEWS the images. Both run when the real app is
+   capturable (~M7), before/with M9 landing page.
+5. The §4.8 watchdog cron (every 53 min, session-only) auto-fires this protocol if the session
+   survived; if this is a FRESH session, this file + git + the task list are the whole state —
+   act on this pointer directly. Scheduled one-shot auto-resume set for 20:23 2026-07-06.
 RULE: every feature commit flips its ledger row + RESUME HERE in the SAME commit.
 
 ---

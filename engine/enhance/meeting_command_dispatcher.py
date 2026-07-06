@@ -20,10 +20,8 @@ from collections.abc import Awaitable, Callable
 
 from pydantic import ValidationError
 
-from engine.enhance.meeting_finalization_service import (
-    FinalizeRefusedError,
-    MeetingFinalizationService,
-)
+from engine.enhance.meeting_finalization_result_types import FinalizeRefusedError
+from engine.enhance.meeting_finalization_service import MeetingFinalizationService
 from engine.enhance.meeting_summary_presenter import (
     meeting_detail_payload,
     meeting_summary_payload,

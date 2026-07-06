@@ -43,7 +43,7 @@ class FakeCaptureService(LiveCaptureService):
         )
         return self.running_meeting
 
-    async def stop(self) -> str:
+    async def stop(self, reason: str = "command") -> str:
         if self.running_meeting is None:
             raise CaptureServiceError("capture is not running")
         stopped, self.running_meeting = self.running_meeting, None

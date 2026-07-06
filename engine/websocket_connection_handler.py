@@ -23,6 +23,11 @@ import uuid
 from fastapi import WebSocket, WebSocketDisconnect
 from pydantic import ValidationError
 
+from engine.enhance import (
+    MEETING_COMMAND_NAMES,
+    MeetingFinalizationService,
+    dispatch_meeting_command,
+)
 from engine.protocol import (
     COMMAND_CAPTURE_START,
     COMMAND_CAPTURE_STOP,
@@ -53,6 +58,7 @@ class WebSocketConnectionHandler:
         capture_service: LiveCaptureService,
         event_hub: EventBroadcastHub,
         voice_streamer: TtsPlaybackStreamer | None = None,
+        finalization_service: MeetingFinalizationService | None = None,
     ) -> None:
         self._websocket = websocket
         self._started_monotonic = started_monotonic
@@ -60,6 +66,8 @@ class WebSocketConnectionHandler:
         self._event_hub = event_hub
         # Optional additive surface: None → naomi.* commands refuse honestly.
         self._voice_streamer = voice_streamer
+        # Optional additive surface: None → meeting.* commands refuse honestly.
+        self._finalization_service = finalization_service
         # Multiple tasks write to one socket (heartbeat + replies + broadcast
         # events); the lock serialises sends so frames never interleave.
         self._send_lock = asyncio.Lock()
@@ -164,6 +172,11 @@ class WebSocketConnectionHandler:
             # Additive naomi.say / naomi.cancel surface (engine.voice owns
             # validation, refusal semantics, and replies).
             await dispatch_naomi_command(command, self._voice_streamer, self._send)
+            return
+        if command.name in MEETING_COMMAND_NAMES:
+            # Additive meeting.finalize / meetings.list / meeting.get surface
+            # (engine.enhance owns validation, refusal semantics, and replies).
+            await dispatch_meeting_command(command, self._finalization_service, self._send)
             return
         # Deny by default: anything unrecognised is an explicit error.
         await self._send(

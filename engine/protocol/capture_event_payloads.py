@@ -54,7 +54,7 @@ def build_capture_started_payload(meeting_id: str, reason: str) -> dict[str, Any
 
 
 def build_capture_stopped_payload(meeting_id: str, reason: str) -> dict[str, Any]:
-    """``capture.stopped`` event: ``reason`` is 'command' or 'error'."""
+    """``capture.stopped`` event: ``reason`` is 'command', 'silence', or 'error'."""
     return {"meeting_id": meeting_id, "reason": reason}
 
 

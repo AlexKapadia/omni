@@ -2,10 +2,9 @@
  * Zustand store for the Library screen: the captured-meetings list, its load
  * lifecycle, and the search filter.
  *
- * Data arrives through the MeetingsRepository interface. Today the only
- * implementation is the MOCK generator (mock-meetings-repository.ts); the M2
- * engine-backed repository (SQLite meetings table over WS) implements the
- * same interface and swaps in without touching this store or the screen.
+ * Data arrives through the MeetingsRepository interface — the LIVE engine
+ * repository (meetings-live-repository.ts: SQLite meetings table over the
+ * WS protocol). Tests inject fakes through the same interface.
  */
 import { createStore, useStore, type StoreApi } from "zustand";
 

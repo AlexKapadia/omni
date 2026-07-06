@@ -37,11 +37,11 @@ from engine.enhance.meeting_extraction_pipeline import (
     format_actions_checklist,
     run_meeting_extraction,
 )
-from engine.enhance.meeting_finalization_service import (
+from engine.enhance.meeting_finalization_result_types import (
     FinalizationResult,
     FinalizeRefusedError,
-    MeetingFinalizationService,
 )
+from engine.enhance.meeting_finalization_service import MeetingFinalizationService
 from engine.enhance.note_templates import (
     AUTO_TEMPLATE_ID,
     BUILTIN_TEMPLATES,

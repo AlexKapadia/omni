@@ -13,6 +13,7 @@ note has a matching region, an honest in-note marker.
 """
 
 import logging
+import re
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
@@ -58,6 +59,22 @@ def ledger_recorder_for(connection: aiosqlite.Connection) -> LedgerRecorder:
         await insert_router_ledger_entry(connection, entry)
 
     return record
+
+
+# Frontmatter refuses control characters (fail closed) — titles are user
+# input, so they get a presentation-only cleanup before note creation.
+_TITLE_CONTROL_CHARS = re.compile(r"[\x00-\x1f\x7f]+")
+
+
+def frontmatter_safe_title(title: str) -> str:
+    """Collapse control characters in a meeting title for the vault note.
+
+    Presentation only — the meetings row keeps the original bytes. Without
+    this, a newline-bearing title would make its meeting permanently
+    unfinalizable (the frontmatter codec fails closed on control chars).
+    """
+    cleaned = _TITLE_CONTROL_CHARS.sub(" ", title).strip()
+    return cleaned or "Untitled meeting"
 
 
 def plain_reason(error: object) -> str:

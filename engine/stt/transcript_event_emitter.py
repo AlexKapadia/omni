@@ -49,6 +49,14 @@ class TranscriptEventEmitter:
         self._anchor_monotonic = anchor_monotonic
         self._sequence_counters: dict[str, int] = {}
         self._latency = TranscriptionLatencyTracker()
+        # Speech clock for the silence auto-stop monitor: session start counts
+        # as activity so a fully-silent meeting still times out from t=0.
+        self._last_activity_monotonic = time.monotonic()
+
+    @property
+    def last_activity_monotonic(self) -> float:
+        """Monotonic time of the last emitted speech (or session start)."""
+        return self._last_activity_monotonic
 
     def _next_seq(self, stream: str) -> int:
         self._sequence_counters[stream] = self._sequence_counters.get(stream, 0) + 1
@@ -59,6 +67,7 @@ class TranscriptEventEmitter:
         self._latency.log_summary()
 
     async def emit_partial(self, label: StreamLabel, words: list[WordToken]) -> None:
+        self._last_activity_monotonic = time.monotonic()  # speech resets silence
         await self._hub.broadcast_event(
             EVENT_TRANSCRIPT_PARTIAL,
             build_transcript_partial_payload(
@@ -73,6 +82,7 @@ class TranscriptEventEmitter:
         )
 
     async def emit_final(self, label: StreamLabel, words: list[WordToken]) -> None:
+        self._last_activity_monotonic = time.monotonic()  # speech resets silence
         segment_id = str(uuid.uuid4())
         text = " ".join(w.text for w in words)
         t_start, t_end = words[0].t_start, words[-1].t_end

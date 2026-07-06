@@ -1,11 +1,12 @@
 /**
  * Library — home screen: every captured meeting, newest first, grouped by
- * day, with a search filter that narrows as you type.
+ * day, with a search filter that narrows as you type, and a detail pane
+ * (enhanced notes / my notes / transcript) opened by clicking a row.
  *
- * Data flows from meetings-store through the MeetingsRepository interface
- * (MOCK generator today; the M2 engine repository swaps in unchanged).
- * States: loading (shimmer, never a spinner), error (+ retry), empty, and
- * populated with a separate no-matches state for a live query.
+ * Data flows from meetings-store through the MeetingsRepository interface —
+ * the LIVE engine repository (meetings.list over WS) by default; tests
+ * inject fakes. States: loading (shimmer, never a spinner), error (+ retry),
+ * empty, and populated with a separate no-matches state for a live query.
  */
 import { useEffect, useMemo } from "react";
 import { OmniButton } from "../components/button";
@@ -18,6 +19,16 @@ import {
   formatStartsIn,
 } from "../lib/format-quantities";
 import {
+  meetingsDetailStore,
+  openMeetingDetail,
+  useMeetingsDetail,
+} from "../lib/meetings-detail-store";
+import {
+  createLiveMeetingsRepository,
+  getMeetingDetail,
+  requestMeetingFinalize,
+} from "../lib/meetings-live-repository";
+import {
   filterMeetings,
   loadMeetings,
   meetingsStore,
@@ -26,24 +37,40 @@ import {
   type MeetingsRepository,
   type MeetingSummaryRow,
 } from "../lib/meetings-store";
-import { createMockMeetingsRepository } from "../lib/mock-meetings-repository";
+import {
+  LibraryMeetingDetailPane,
+  type DetailLoader,
+  type MeetingFinalizer,
+} from "./library-meeting-detail-pane";
 
-/** MOCK repository until the M2 engine repository lands (same interface). */
-const defaultRepository: MeetingsRepository = createMockMeetingsRepository();
+/** LIVE engine repository (meetings.list over the WS protocol). */
+const defaultRepository: MeetingsRepository = createLiveMeetingsRepository();
+const defaultDetailLoader: DetailLoader = (id) => getMeetingDetail(id);
+const defaultFinalizer: MeetingFinalizer = (id, notepad) => requestMeetingFinalize(id, notepad);
 
-function MeetingRow({ meeting }: { readonly meeting: MeetingSummaryRow }) {
+function MeetingRow({
+  meeting,
+  onOpen,
+}: {
+  readonly meeting: MeetingSummaryRow;
+  readonly onOpen: (meetingId: string) => void;
+}) {
   const startsIn = formatStartsIn(meeting.startIso);
   const upcoming = startsIn !== null;
   return (
     <li className="list-none">
-      <div
-        className="grid items-baseline border-t border-[var(--grey-200)] hover:bg-[var(--grey-50)]"
+      <button
+        type="button"
+        aria-label={`Open ${meeting.title}`}
+        onClick={() => onOpen(meeting.id)}
+        className="grid w-full cursor-pointer items-baseline border-0 border-t border-solid border-[var(--grey-200)] bg-transparent text-left hover:bg-[var(--grey-50)]"
         // Doc row spec: 88px | 1fr | 120px, gap 24, padding 18px 16px, -16px bleed.
         style={{
           gridTemplateColumns: "88px 1fr 120px",
           gap: "var(--space-6)",
           padding: "18px 16px",
           margin: "0 -16px",
+          width: "calc(100% + 32px)",
           borderRadius: "var(--radius-control)",
         }}
       >
@@ -69,22 +96,27 @@ function MeetingRow({ meeting }: { readonly meeting: MeetingSummaryRow }) {
         >
           {upcoming ? startsIn : formatDurationMin(meeting.durationMin)}
         </span>
-      </div>
+      </button>
     </li>
   );
 }
 
 export function LibraryScreen({
   repository = defaultRepository,
+  detailLoader = defaultDetailLoader,
+  finalizer = defaultFinalizer,
   onStartCapture,
 }: {
   readonly repository?: MeetingsRepository;
+  readonly detailLoader?: DetailLoader;
+  readonly finalizer?: MeetingFinalizer;
   readonly onStartCapture: () => void;
 }) {
   const status = useMeetings((s) => s.status);
   const meetings = useMeetings((s) => s.meetings);
   const query = useMeetings((s) => s.query);
   const errorMessage = useMeetings((s) => s.errorMessage);
+  const selectedId = useMeetingsDetail((s) => s.selectedId);
 
   useEffect(() => {
     // Load once per app session (mount-only by design); the error state's
@@ -108,9 +140,12 @@ export function LibraryScreen({
   }, [visible]);
 
   const capturedMin = meetings.reduce((acc, m) => acc + m.durationMin, 0);
+  const openDetail = (meetingId: string): void =>
+    openMeetingDetail(meetingsDetailStore, meetingId);
 
   return (
-    <div className="h-full overflow-y-auto" style={{ padding: "48px 64px" }}>
+    <div className="flex h-full">
+      <div className="h-full flex-1 overflow-y-auto" style={{ padding: "48px 64px" }}>
       <header className="flex items-start justify-between gap-[var(--space-4)]">
         <div className="flex flex-col gap-[var(--space-2)]">
           <h1
@@ -206,12 +241,22 @@ export function LibraryScreen({
               </div>
               <ul className="m-0 p-0">
                 {rows.map((meeting) => (
-                  <MeetingRow key={meeting.id} meeting={meeting} />
+                  <MeetingRow key={meeting.id} meeting={meeting} onOpen={openDetail} />
                 ))}
               </ul>
             </section>
           ))}
+        </div>
       </div>
+
+      {selectedId !== null && (
+        <LibraryMeetingDetailPane
+          meetingId={selectedId}
+          loadDetail={detailLoader}
+          finalizeMeeting={finalizer}
+          onFinalized={() => void loadMeetings(meetingsStore, repository)}
+        />
+      )}
     </div>
   );
 }

@@ -53,6 +53,7 @@ from engine.stt.parakeet_nemo_transcriber import (
     stt_dependencies_available,
 )
 from engine.stt.per_stream_transcription_pipeline import PerStreamTranscriptionPipeline
+from engine.stt.silence_auto_stop_monitor import spawn_silence_auto_stop_tasks
 from engine.stt.silero_onnx_voice_activity_detector import SileroOnnxVoiceActivityDetector
 from engine.stt.transcript_event_emitter import TranscriptEventEmitter
 from engine.stt.transcription_latency_tracker import STATS_LOG_INTERVAL_S
@@ -98,6 +99,7 @@ class LiveCaptureService:
         models_dir: Path | None = None,
         transcriber: ParakeetNemoTranscriber | None = None,
         vad_factory: VadFactory | None = None,
+        silence_timeout_s: float | None = None,
     ) -> None:
         self._db_path = db_path
         self._migrations_dir = migrations_dir
@@ -106,6 +108,7 @@ class LiveCaptureService:
         self._models_dir = models_dir if models_dir is not None else models_directory()
         self._transcriber = transcriber
         self._vad_factory = vad_factory
+        self._silence_timeout_s = silence_timeout_s  # None → OMNI_AUTOSTOP_SILENCE_S env knob
         self._stt_ready = False
         self._load_lock = asyncio.Lock()
         # Per-session state (None while idle).
@@ -164,7 +167,7 @@ class LiveCaptureService:
         self._connection = connection
         self._controller = controller
         self._meeting_id = meeting_id
-        self._emitter = TranscriptEventEmitter(
+        self._emitter = emitter = TranscriptEventEmitter(
             self._hub, connection, meeting_id, self._anchor_monotonic
         )
         self._pipelines = {
@@ -173,6 +176,10 @@ class LiveCaptureService:
         self._tasks = [
             asyncio.create_task(self._drain_loop(ring_buffer)),
             asyncio.create_task(self._stats_loop()),
+            *spawn_silence_auto_stop_tasks(  # optional: sustained silence ends the session
+                self._silence_timeout_s, lambda: emitter.last_activity_monotonic,
+                lambda: self.stop(reason="silence"),
+            ),
         ]
         for task in self._tasks:
             # A crashed pump/stats task must never die silently — the log is
@@ -184,15 +191,17 @@ class LiveCaptureService:
         logger.info("capture started: meeting %s, devices %s", meeting_id, controller.device_names)
         return meeting_id
 
-    async def stop(self) -> str:
-        """End the session: flush pipelines, close the meeting, broadcast."""
+    async def stop(self, reason: str = "command") -> str:
+        """End the session; ``reason`` ('command'|'silence'|'error') rides capture.stopped."""
         meeting_id = self._meeting_id
         if meeting_id is None or self._controller is None or self._connection is None:
             raise CaptureServiceError("capture is not running")
         await self._controller.stop()  # No new audio beyond this point.
+        current = asyncio.current_task()  # the auto-stop task may be the caller
         for task in self._tasks:
+            if task is current:
+                continue  # never self-cancel/self-await (would abort this stop)
             task.cancel()
-        for task in self._tasks:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
         for pipeline in self._pipelines.values():
@@ -208,9 +217,9 @@ class LiveCaptureService:
         self._tasks = []
         self._meeting_id = None
         await self._hub.broadcast_event(
-            EVENT_CAPTURE_STOPPED, build_capture_stopped_payload(meeting_id, "command")
+            EVENT_CAPTURE_STOPPED, build_capture_stopped_payload(meeting_id, reason)
         )
-        logger.info("capture stopped: meeting %s", meeting_id)
+        logger.info("capture stopped: meeting %s (%s)", meeting_id, reason)
         return meeting_id
 
     async def _ensure_models_loaded(self) -> None:

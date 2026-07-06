@@ -29,6 +29,7 @@ import uvicorn
 from fastapi import FastAPI, WebSocket
 
 from engine import ENGINE_VERSION
+from engine.enhance import MeetingFinalizationService
 from engine.protocol import EventBroadcastHub
 from engine.runtime_settings import LOOPBACK_HOST, EngineSettings, load_engine_settings
 from engine.stt.live_capture_service import LiveCaptureService
@@ -48,9 +49,23 @@ def _default_capture_service_factory(hub: EventBroadcastHub) -> LiveCaptureServi
     return LiveCaptureService(db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR, hub=hub)
 
 
+# Same factory seam as capture: built AFTER settings load, tests inject fakes.
+FinalizationServiceFactory = Callable[[EventBroadcastHub], MeetingFinalizationService]
+
+
+def _default_finalization_service_factory(hub: EventBroadcastHub) -> MeetingFinalizationService:
+    settings = load_engine_settings()  # Raises on bad env — fail closed.
+    # Construction is inert (no keys, no I/O): providers/vault resolve per
+    # finalize call, so a missing key refuses that call, never engine boot.
+    return MeetingFinalizationService(
+        db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR, hub=hub
+    )
+
+
 def create_app(
     capture_service_factory: CaptureServiceFactory | None = None,
     preload_stt: bool = False,
+    finalization_service_factory: FinalizationServiceFactory | None = None,
 ) -> FastAPI:
     """Build the FastAPI app. Factory form keeps tests isolated per-app.
 
@@ -64,6 +79,9 @@ def create_app(
     # Naomi voice: relays Cartesia audio to every socket via the same hub.
     # Construction is inert (credentials resolve lazily per utterance).
     voice_streamer = TtsPlaybackStreamer(event_hub)
+    # M2 meeting library/finalization: same hub, inert construction.
+    finalization_factory = finalization_service_factory or _default_finalization_service_factory
+    finalization_service = finalization_factory(event_hub)
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -99,6 +117,7 @@ def create_app(
     app.state.event_hub = event_hub
     app.state.capture_service = capture_service
     app.state.voice_streamer = voice_streamer
+    app.state.finalization_service = finalization_service
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -115,6 +134,7 @@ def create_app(
             capture_service=websocket.app.state.capture_service,
             event_hub=websocket.app.state.event_hub,
             voice_streamer=websocket.app.state.voice_streamer,
+            finalization_service=websocket.app.state.finalization_service,
         )
         await handler.run()
 

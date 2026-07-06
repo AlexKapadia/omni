@@ -132,7 +132,8 @@ def build_custom_template(
     Bounds keep a template renderable inside one system frame; validation
     fails closed with ValueError rather than producing a degenerate frame.
     """
-    if not template_id or not template_id.replace("_", "").isalnum() or template_id.lower() != template_id:
+    is_snake = template_id.replace("_", "").isalnum() and template_id.lower() == template_id
+    if not template_id or not is_snake:
         raise ValueError(f"template_id must be lowercase snake_case, got {template_id!r}")
     if template_id in BUILTIN_TEMPLATES or template_id == AUTO_TEMPLATE_ID:
         raise ValueError(f"template_id {template_id!r} collides with a built-in")

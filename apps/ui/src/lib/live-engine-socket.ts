@@ -13,7 +13,7 @@
  * otherwise sendEngineCommand refuses (fail closed) and returns false.
  */
 import { EngineConnection, type WebSocketLike } from "./engine-connection";
-import { makeCommand, parseInboundMessage } from "./protocol";
+import { makeCommand, parseInboundMessage, type Envelope } from "./protocol";
 import {
   CAPTURE_DEVICE_CHANGED_EVENT_NAME,
   CAPTURE_STARTED_EVENT_NAME,
@@ -72,6 +72,32 @@ export function createCaptureEventDispatcher(
 let activeSocket: WebSocket | null = null;
 let appConnection: EngineConnection | null = null;
 
+/**
+ * Additive raw-frame fan-out for request/reply consumers (the meetings
+ * repository correlates replies by envelope id). Listeners receive every
+ * inbound frame; a throwing listener is isolated so it can never break the
+ * capture/status consumers sharing the socket.
+ */
+type EngineFrameListener = (data: unknown) => void;
+const frameListeners = new Set<EngineFrameListener>();
+
+export function subscribeToEngineFrames(listener: EngineFrameListener): () => void {
+  frameListeners.add(listener);
+  return () => {
+    frameListeners.delete(listener);
+  };
+}
+
+function fanOutFrame(data: unknown): void {
+  for (const listener of [...frameListeners]) {
+    try {
+      listener(data);
+    } catch {
+      // Failure isolation: one bad listener never blocks the others.
+    }
+  }
+}
+
 function createTeeSocket(url: string, onFrame: (data: unknown) => void): WebSocketLike {
   const inner = new WebSocket(url);
   const tee: WebSocketLike = {
@@ -88,6 +114,7 @@ function createTeeSocket(url: string, onFrame: (data: unknown) => void): WebSock
   };
   inner.onmessage = (event) => {
     onFrame(event.data); // capture/transcript layer sees the frame first
+    fanOutFrame(event.data); // then request/reply correlators
     tee.onmessage?.({ data: event.data });
   };
   inner.onclose = () => {
@@ -118,15 +145,24 @@ export function startLiveEngineConnection(): void {
 }
 
 /**
- * Send one command envelope to the engine. Returns false (and sends nothing)
- * when no open socket exists — callers surface that honestly in the UI.
+ * Send one pre-built envelope to the engine. Returns false (and sends
+ * nothing) when no open socket exists — callers surface that honestly.
+ * Used by request/reply consumers that must know the envelope id upfront.
  */
-export function sendEngineCommand(name: string, payload: Record<string, unknown> = {}): boolean {
+export function sendEngineEnvelope(envelope: Envelope): boolean {
   if (activeSocket === null || activeSocket.readyState !== WebSocket.OPEN) return false;
   try {
-    activeSocket.send(JSON.stringify(makeCommand(name, payload)));
+    activeSocket.send(JSON.stringify(envelope));
     return true;
   } catch {
     return false; // a torn socket is a refusal, not a crash
   }
+}
+
+/**
+ * Send one command envelope to the engine. Returns false (and sends nothing)
+ * when no open socket exists — callers surface that honestly in the UI.
+ */
+export function sendEngineCommand(name: string, payload: Record<string, unknown> = {}): boolean {
+  return sendEngineEnvelope(makeCommand(name, payload));
 }

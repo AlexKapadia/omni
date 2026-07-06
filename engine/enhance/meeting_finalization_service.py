@@ -22,17 +22,21 @@ Fidelity / resilience invariants:
 """
 
 import logging
-from dataclasses import dataclass, field
 from pathlib import Path
 
 import aiosqlite
 
 from engine.enhance.meeting_extraction_pipeline import run_meeting_extraction
+from engine.enhance.meeting_finalization_result_types import (
+    FinalizationResult,
+    FinalizeRefusedError,
+)
 from engine.enhance.meeting_finalization_steps import (
     RouterFactory,
     VaultRootResolver,
     append_daily_line_step,
     default_router_factory,
+    frontmatter_safe_title,
     ledger_recorder_for,
     run_enhance_step,
     write_actions_region_step,
@@ -69,35 +73,6 @@ from engine.storage.transcript_segments_repository import (
 from engine.vault import VaultWriteError, create_meeting_note, resolve_vault_root
 
 logger = logging.getLogger(__name__)
-
-
-class FinalizeRefusedError(Exception):
-    """The finalize request itself is invalid (unknown/unfinished/duplicate)."""
-
-
-@dataclass(frozen=True)
-class FinalizationResult:
-    """The honest account of one finalization run (reply payload source)."""
-
-    meeting_id: str
-    note_path: str  # vault-relative posix path of the created note
-    template_id: str
-    enhance_ok: bool
-    extraction_ok: bool
-    indexed_chunks: int
-    warnings: tuple[str, ...] = field(default=())
-
-    def to_payload(self) -> dict[str, object]:
-        """The ``ok`` reply payload — field names pinned by the TS mirror."""
-        return {
-            "meeting_id": self.meeting_id,
-            "note_path": self.note_path,
-            "template_id": self.template_id,
-            "enhance_ok": self.enhance_ok,
-            "extraction_ok": self.extraction_ok,
-            "indexed_chunks": self.indexed_chunks,
-            "warnings": list(self.warnings),
-        }
 
 
 class MeetingFinalizationService:
@@ -202,7 +177,10 @@ class MeetingFinalizationService:
             try:
                 note_path = create_meeting_note(
                     vault_root,
-                    title=row.title,
+                    # Presentation-only cleanup: a control-char-bearing title
+                    # must never make the meeting unfinalizable (the DB row
+                    # keeps the original bytes; frontmatter rejects newlines).
+                    title=frontmatter_safe_title(row.title),
                     date_iso=row.started_at[:10],
                     attendees=attendees,
                     tags=("meeting", template.template_id),
@@ -239,7 +217,7 @@ class MeetingFinalizationService:
                 indexed_chunks = await indexer.index_meeting_transcript(meeting_id)
                 report = await indexer.index_changed_files([note_path])
                 indexed_chunks += report.chunks_written
-            except Exception as exc:  # noqa: BLE001 — index failure is non-fatal by design
+            except Exception as exc:  # index failure is non-fatal by design
                 warnings.append(f"indexing unavailable: {exc}")
 
             # STEP daily-log line (isolated).

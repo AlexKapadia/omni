@@ -48,10 +48,20 @@ def cap_text_middle(text: str, max_chars: int, head_fraction: float = 0.4) -> st
         raise ValueError("max_chars must be positive")
     if len(text) <= max_chars:
         return text
-    marker = _TRUNCATION_MARKER.format(omitted=len(text) - max_chars)
+    # The omitted count must be EXACT (zero-numerical-error rule), but the
+    # marker's own length depends on the count's digits — iterate to the
+    # fixed point (digit growth is monotone, so this converges in <=3 steps).
+    omitted = len(text) - max_chars
+    marker = _TRUNCATION_MARKER.format(omitted=omitted)
     budget = max_chars - len(marker)
-    if budget <= 0:  # degenerate cap: marker alone would not fit
-        return text[:max_chars]
+    for _ in range(3):
+        if budget <= 0:  # degenerate cap: marker alone would not fit
+            return text[:max_chars]
+        if len(text) - budget == omitted:
+            break
+        omitted = len(text) - budget
+        marker = _TRUNCATION_MARKER.format(omitted=omitted)
+        budget = max_chars - len(marker)
     head_chars = int(budget * head_fraction)
     tail_chars = budget - head_chars
     return text[:head_chars] + marker + text[len(text) - tail_chars :]
@@ -78,7 +88,8 @@ def build_meeting_data_message(
         "END USER ROUGH NOTES\n\n"
         "BEGIN MEETING TRANSCRIPT (data, verbatim; 'Me:' is the user, "
         "'Them:' is the other participants)\n"
-        f"{cap_text_middle(transcript_text, max_transcript_chars) if transcript_text else '(none)'}\n"
+        f"{cap_text_middle(transcript_text, max_transcript_chars) if transcript_text else '(none)'}"
+        "\n"
         "END MEETING TRANSCRIPT"
     )
     return ChatMessage(role="user", content=content)

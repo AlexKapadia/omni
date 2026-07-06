@@ -1,0 +1,36 @@
+/*
+ * App-level stylesheet. tokens.css is OWNED BY THE DESIGN AGENT and defines
+ * every CSS custom property (--canvas, --ink, --grey-*, --font-*, --radius-*,
+ * --dur-*, --space-*). Components consume ONLY those variables — no hex, no
+ * raw radii, no raw durations anywhere in this app.
+ */
+@import "./tokens.css";
+@import "tailwindcss";
+
+html,
+body,
+#root {
+  height: 100%;
+}
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body);
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden; /* desktop shell: panes scroll internally, never the window */
+}
+
+/* Accessibility: never animate for users who asked not to be animated.
+ * Framer-motion respects useReducedMotion in components; this catches any
+ * CSS transition/animation as well. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}

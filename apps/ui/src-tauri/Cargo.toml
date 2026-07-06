@@ -1,0 +1,28 @@
+# Omni desktop shell (Tauri 2). Hosts the window/tray, supervises the Python
+# engine sidecar, and nothing else — all intelligence lives in the engine.
+[package]
+name = "omni-ui"
+version = "0.1.0"
+description = "Omni desktop shell: window, tray, and engine sidecar supervisor"
+edition = "2021"
+
+[lib]
+name = "omni_ui_lib"
+crate-type = ["staticlib", "cdylib", "rlib"]
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
+
+[dependencies]
+tauri = { version = "2", features = ["tray-icon"] }
+tauri-plugin-single-instance = "2"
+tauri-plugin-global-shortcut = "2"
+tauri-plugin-log = "2"
+log = "0.4"
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+
+# Listed for M7 (auto-update) but deliberately NOT registered in the builder
+# yet — updater endpoints/signing are configured at the packaging milestone.
+tauri-plugin-updater = "2"
+tauri-plugin-process = "2"

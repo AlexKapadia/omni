@@ -6,7 +6,13 @@
 > actions, tri-provider router (Groq / Gemini / optional Anthropic), NSIS installer, auto-update.
 > Open source on GitHub (AlexKapadia/omni) — no secrets ever committed.
 
-**RESUME HERE →** M0 in progress: design-extraction, engine-scaffold, and UI-scaffold agents dispatched (see Agent ledger). When they return: reconcile, verify heartbeat AC, commit+push gate M0.
+**RESUME HERE →** M0: all scaffold agents returned. Engine verified green + committed. UI TS-side
+verified green; Rust side UNVERIFIED — VS2022 Build Tools C++ workload installing in background
+(the old VS2019 BuildTools was a skeleton: no cl.exe/link.exe, no Windows SDK). When install
+completes: `cargo check` in apps/ui/src-tauri FROM POWERSHELL (Git Bash link.exe shadows MSVC),
+fix any Rust compile errors (small fix → inline; big → one Fable agent), then M0 gate: full suite
+once + `pnpm tauri dev` heartbeat AC, commit gate, proceed to M1 (one Fable agent: engine
+audio/ + stt/ capture pipeline).
 
 ---
 
@@ -66,7 +72,9 @@
 |---|---|---|---|
 | design-extract v1 | tokens from Claude Design via DesignSync | docs/design/**, tokens.css | RETURNED: blocked — DesignSync not available to subagents (session-level tool). Orchestrator fetched files itself. |
 | design-extract v2 | tokens from local docs/design/reference/ files | docs/design/**, tokens.css | DONE — brief + components + tokens.css written & committed (tokens.css commits with M0 gate). Flag: reference copy drift (whisper/openai placeholders) — layouts adopted, copy from real contracts. |
-| memory-research | AI-facing retrieval layer research (task #10, pre-M3) | docs/research/** | RUNNING |
+| memory-research | AI-facing retrieval layer research (task #10, pre-M3) | docs/research/** | DONE — 8-source library + recommendation persisted (agent's file writes were sandbox-blocked; orchestrator persisted). M3 architecture: structured-first routing → RRF hybrid (FTS5+sqlite-vec, k=60) → wikilink-graph expansion → chat-tier rerank. |
+| engine-scaffold | (see above) | | DONE — 99 tests green, verified independently, committed 07e780a |
+| ui-scaffold | (see above) | | DONE (TS verified: 82 tests + strict tsc green; Rust UNVERIFIED — MSVC missing, VS2022 BuildTools+VCTools installing). Zero protocol/token deviations. |
 | engine-scaffold | M0 Python sidecar: WS server, protocol v1, migrations, CI, README | engine/**, migrations/**, tests/**, pyproject, ci.yml, README.md | RUNNING |
 | ui-scaffold | M0 Tauri shell: tray, sidecar mgmt, heartbeat footer, protocol mirror | apps/ui/** (except tokens.css) | RUNNING |
 

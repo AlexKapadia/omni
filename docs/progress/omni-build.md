@@ -6,44 +6,22 @@
 > actions, tri-provider router (Groq / Gemini / optional Anthropic), NSIS installer, auto-update.
 > Open source on GitHub (AlexKapadia/omni) — no secrets ever committed.
 
-**RESUME HERE →** ▶ RESUMED 20:23 2026-07-06 per schedule: three continuation agents dispatched
-on branch wip/paused-lanes-20260706 (m2-enhance / m6-detect / m5-dictation). As each verifies
-green: merge to main, flip ledger + this pointer in the same commit, then queue: M3 Ask-Omni
-service → M4 (mocks until OAuth) → M7 ship → evidence/ + insane README (#12/#13) → M9 landing →
-Naomi full loop. (Historical pause note:) ⏸ PAUSED 2026-07-06 ~18:5x. Main was clean and
-green through the Naomi commit. Three lanes were stopped cleanly mid-flight; their partial work is
-committed UNVERIFIED on branch **wip/paused-lanes-20260706** (pushed).
-
-**RESUME PROTOCOL (do in order):**
-1. `git checkout wip/paused-lanes-20260706` (or merge it into a fresh work branch) — the partial
-   files live there; main stays clean until lanes verify green.
-2. Respawn THREE Fable agents (cap 3), each told: "your lane's earlier agent was stopped mid-run;
-   its partial files are on this branch — read them, keep what is good, finish to the original
-   RETURN spec, verify (ruff/mypy/targeted pytest or vitest), report honestly":
-   - **m2-enhance** (owns engine/enhance, engine/protocol additions, engine/server.py +
-     websocket_connection_handler.py wiring, storage/migrations 0005/0006, UI meetings swap +
-     library detail; binding: fidelity mandate, injection framing, live smoke w/ real keys).
-     Stop-point: core pipeline files on disk; was starting the auto-stop monitor; server wiring
-     NOT started.
-   - **m6-detect** (owns engine/detect + tests; wiring deferred). Stop-point: core + 5 test files
-     on disk; remaining: live Edge title-detection check + final verify + return.
-   - **m5-dictation** (owns apps/ui/src-tauri hotkey+pill window, apps/ui/pill.html + src/pill,
-     engine/dictation, migrations/0006→use 0007 if 0006 taken; wiring deferred; design doc §07
-     pill spec). Stop-point: NO files on disk — respawn with full original scope.
-3. After each lane verifies green: merge/commit to main (ledger row + RESUME HERE flip in the SAME
-   commit), then continue queue: M3 Ask-Omni service → M4 (mocks until OAuth) → M7 ship →
-   M9 landing → Naomi full loop (persistent Cartesia socket, turn orchestrator).
-4. END-PHASE MANDATES (user, 2026-07-06 — tasks #12/#13): populate **evidence/** per §3.10
-   (peer-reviewed stats, PNG+interactive-HTML graphs, aesthetic B&W flow diagrams per component +
-   whole system, analysis-only deps manifest) and make the **README insane** per §4.9.8 — REAL
-   product screenshots of every key screen (incl. Naomi's water), genuinely RECORDED video/GIF
-   (Playwright recordVideo + ffmpeg, never mock/AI-generated), honest captions, judged by a
-   separate evaluator agent that actually VIEWS the images. Both run when the real app is
-   capturable (~M7), before/with M9 landing page.
-5. The §4.8 watchdog cron (every 53 min, session-only) auto-fires this protocol if the session
-   survived; if this is a FRESH session, this file + git + the task list are the whole state —
-   act on this pointer directly. Scheduled one-shot auto-resume set for 20:23 2026-07-06.
-RULE: every feature commit flips its ledger row + RESUME HERE in the SAME commit.
+**RESUME HERE →** ✅ BATCH MERGE to main (North Star #4: MERGE GO — 4 GREEN / 2 AMBER bookkeeping).
+M0–M6 + dictation-excellence (beats-Wispr-Flow tier) + Naomi foundation are OFFICIAL on main.
+POST-MERGE QUEUE (in order):
+1. Cleanup lane (review #4 drift): split 4 files >300 lines (test_enhance__finalization_step_isolation 394,
+   test_server__approval_card_commands 380, test_dictation__finalization_flows_with_fakes 313,
+   engine/stt/live_capture_service.py 310); create engine/wiring/ package for the 13 root wiring
+   modules + ratify layout in claude.md §5.7.
+2. M7 SHIP: onboarding wizard (vault path, keys→DPAPI, model download w/ progress+SHA256, Google
+   connect, permissions), PyInstaller sidecar + NSIS installer + tauri-plugin-updater via GitHub
+   Releases, settings completion (real router ledger — retire last mock; hotkey config; templates
+   editor; keep-audio; disclosure), persistent Cartesia socket, Playwright live E2E (§4.9 UI DoD).
+3. Evidence/ + insane README w/ real product media (tasks #12/#13). 4. M9 landing page. 5. Naomi
+   full conversation loop. 6. M8 stretch.
+DEBTS (tracked): dense model BM25-only degradation; Google OAuth pending user creds; stranded-
+'executing' card on hard kill (docstring approval_cards_gateway — surface in a recovery sweep at
+engine boot during M7); instant-execute whitelist deliberately unimplemented until Settings UI.
 
 ---
 
@@ -90,10 +68,10 @@ RULE: every feature commit flips its ledger row + RESUME HERE in the SAME commit
 | M0 Skeleton | Tauri boots to tray, sidecar spawn+handshake+restart, migrations, CI skeleton | **DONE** (live boot AC: shell spawned engine, WS connected, /health ok, Parakeet on CUDA in sidecar, kill-on-exit verified) |
 | M1 Ears | Dual-stream WASAPI+mic capture, VAD, streaming Parakeet, live Me/Them transcript | **DONE** (live-verified: verbatim loopback transcript, lag 898ms) |
 | M2 Notes | Notepad, auto-stop, enhance pipeline + templates, vault writer (managed markers) | **DONE on wip branch** (live smoke vs REAL Groq+Gemini: enhance 13.6s/$0.0035 gemini-2.5-pro, extraction 645ms/$0.0006 llama-3.3-70b, My-Notes sha256 byte-identical; auto-stop via `OMNI_AUTOSTOP_SILENCE_S`; Library detail pane live over WS. Merges to main with the branch.) |
-| M3 Brain | Indexer, embeddings, Ask Omni w/ citations, live Answers panel | TODO |
-| M4 Hands | Extraction, approval cards, Google OAuth, 5 tools, audit log | TODO (OAuth creds pending user) |
-| M5 Voice | Dictation pill, note mode, command mode | TODO |
-| M6 Detection | Calendar notify, mic-in-use, process watch, auto rules | TODO |
+| M3 Brain | Indexer, embeddings, Ask Omni w/ citations, live Answers panel | **DONE** (BM25-only until vec model — documented degradation; live citations verified) |
+| M4 Hands | Extraction, approval cards, Google OAuth, 5 tools, audit log | **DONE** vs fakes (SQL-enforced approvals; real Google AC pends user OAuth creds) |
+| M5 Voice | Dictation pill, note mode, command mode | **DONE** + Wispr-Flow-beating tier (live: cleanup + 336ms real injection) |
+| M6 Detection | Calendar notify, mic-in-use, process watch, auto rules | **DONE** except calendar notify (needs Google creds — M7/M4 AC) |
 | M7 Ship | Onboarding wizard, model downloads, NSIS installer, auto-update, settings | TODO |
 | M8 Stretch | Diarization, MCP server, weekly digest, pre-meeting brief | TODO (only after M7 green) |
 
@@ -119,7 +97,8 @@ RULE: every feature commit flips its ledger row + RESUME HERE in the SAME commit
 | dictation-excellence | Wispr-Flow raise: universal injection, cleanup, dictionary, speed | engine/dictation extend, routing_table row, pill, src-tauri | DONE on wip branch — resume agent verified ALL predecessor partials, zero fixes needed: ruff+mypy clean, 145 py (dictation/vault) + 212 router py + 141 pill ts + 8 rust tests green, cargo check clean. LIVE: real Groq cleanup of messy sentence exact (fillers out, "Priya no wait to Sanjay" resolved, 994ms cold); real Notepad injection round-trip landed verbatim in 336ms, clipboard sentinel restored. Out-of-lane mods kept (justified): completion_contract +1 TaskType, inbox_dictation_writer optional raw_verbatim (raw-retention mandate). |
 | m4-hands | approval cards, 5 tools (draft-only Gmail), Google OAuth vs fakes, audit | engine/agents, engine/google, migrations/0008, approval UI | DONE — 155 py + 32 ts tests (verified). Approval state machine in SQL triggers; TOCTOU race → exactly one execution; no send capability (scanned); real Gemini function-call resolved "Friday at 1" correctly ($0.00026). OAuth code-complete vs fakes until user creds. Wiring spec in approval_protocol_names.py (mini-pass after wiring-pass frees server.py). |
 | wiring-pass | connect ask/detect/dictation server surfaces + finalize UX + devices.list | server.py, ws handler, live screen | DONE — predecessor's checkpoint verified complete (zero fixes), full gate 1390 py + 644 ts green, REAL boot check: ask.query answered w/ exact citation from real BM25 vault, real device enumeration, honest stt gating, deny-by-default intact. |
-| final-wiring | M4 approval surface + vault watchdog wiring + merge gate | server.py, ws handler, approval mount | RUNNING |
+| final-wiring | M4 approval surface + vault watchdog wiring + merge gate | server.py, ws handler, approval mount | DONE — 1412 py + 645 ts gate green (orchestrator-verified), boot check walked cards approved→executing→executed/failed, watcher reindexed external edit. Committed 3dd1c8c. |
+| north-star #4 | merge-gate review | (read-only) | DONE — MERGE: GO. 4 GREEN / 2 AMBER (tracker flip rides merge; 4 files >300 queued) |
 | m6-detect | process/window watch, mic-in-use, VAD trigger, rules engine | engine/detect, tests | DONE on wip branch — predecessor's code fully validated, 120 tests green (verified), live Edge/Meet detection fired t=3s, idle apps correctly sub-threshold. Server wiring deferred (interface in agent return + module docstrings). Merges to main with the branch. |
 | m3-ask | Ask-Omni answer service + live answers spotter | engine/ask, ask-screen/stores | DONE — 26 py + 33 ts tests, live smoke: verified citations, honest no-answer, structured path 1.0s. Wiring deferred (spec in engine/ask/__init__). Committed 1c0e05d. |
 | m5-dictation | hotkey + pill + note/command modes (original scope) | src-tauri, src/pill, engine/dictation | DONE — 98 py + 95 ts tests, live: real intent JSON 800ms, real Inbox note w/ Groq title. Wispr-Flow-raise seams left clean. Wiring deferred (dictation_protocol_names.py). |

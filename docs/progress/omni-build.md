@@ -71,10 +71,12 @@ audio/ + stt/ capture pipeline).
 | Agent | Brief | Owns | Status |
 |---|---|---|---|
 | design-extract v1 | tokens from Claude Design via DesignSync | docs/design/**, tokens.css | RETURNED: blocked — DesignSync not available to subagents (session-level tool). Orchestrator fetched files itself. |
-| design-extract v2 | tokens from local docs/design/reference/ files | docs/design/**, tokens.css | DONE — brief + components + tokens.css written & committed (tokens.css commits with M0 gate). Flag: reference copy drift (whisper/openai placeholders) — layouts adopted, copy from real contracts. |
-| memory-research | AI-facing retrieval layer research (task #10, pre-M3) | docs/research/** | DONE — 8-source library + recommendation persisted (agent's file writes were sandbox-blocked; orchestrator persisted). M3 architecture: structured-first routing → RRF hybrid (FTS5+sqlite-vec, k=60) → wikilink-graph expansion → chat-tier rerank. |
-| engine-scaffold | (see above) | | DONE — 99 tests green, verified independently, committed 07e780a |
-| ui-scaffold | (see above) | | DONE (TS verified: 82 tests + strict tsc green; Rust UNVERIFIED — MSVC missing, VS2022 BuildTools+VCTools installing). Zero protocol/token deviations. |
+| design-extract v2 | tokens from local docs/design/reference/ files | docs/design/**, tokens.css | DONE — brief + components + tokens.css committed. Flag: reference copy drift (whisper/openai placeholders) — layouts adopted, copy from real contracts. |
+| memory-research | AI-facing retrieval layer research (task #10, pre-M3) | docs/research/** | DONE — 8-source library + recommendation committed. M3: structured-first routing → RRF hybrid (FTS5+sqlite-vec, k=60) → wikilink-graph expansion → chat-tier rerank. |
+| engine-scaffold | M0 Python sidecar | engine/**, migrations/**, tests/** | DONE — 99 tests green, verified independently, committed 07e780a |
+| ui-scaffold | M0 Tauri shell | apps/ui/** | DONE — TS: 82 tests + strict tsc green (verified independently); Rust: cargo check GREEN on portable MSVC (no-admin toolchain at %LOCALAPPDATA%\portable-msvc, use setup_x64.bat env for all cargo runs). Zero protocol/token deviations. |
+| m1-ears | dual capture + VAD + Parakeet streaming | engine/audio, engine/stt, tests | RUNNING |
+| north-star #1 | read-only alignment review | (read-only) | DONE — 5 GREEN / 1 AMBER (tracker staleness, fixed); .env.example header fixed |
 | engine-scaffold | M0 Python sidecar: WS server, protocol v1, migrations, CI, README | engine/**, migrations/**, tests/**, pyproject, ci.yml, README.md | RUNNING |
 | ui-scaffold | M0 Tauri shell: tray, sidecar mgmt, heartbeat footer, protocol mirror | apps/ui/** (except tokens.css) | RUNNING |
 
@@ -119,6 +121,6 @@ The FULL suite runs once per milestone gate and on CI push — never re-run gree
   is being attempted; M0 gate = everything green EXCEPT Rust compile verification. M1 (pure
   Python) proceeds in parallel — it does not need MSVC.
 
-- [ ] GROQ_API_KEY + GEMINI_API_KEY in `.env` (needed from M2)
-- [ ] `/design-login` for design token extraction (workaround: token defaults + TODO(design))
+- [x] ~~GROQ_API_KEY + GEMINI_API_KEY~~ — present in `.env`, live-validated 2026-07-06
+- [x] ~~/design-login~~ — done; design extracted and committed
 - [ ] Google OAuth client ID/secret (needed for real M4 AC; mocks until then)

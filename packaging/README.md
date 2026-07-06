@@ -122,7 +122,10 @@ uv run --with pyinstaller pyinstaller packaging/omni-engine.spec --noconfirm --d
 
 # 3) installer (NSIS .exe + .msi). Cargo needs the MSVC env; never Git Bash.
 $env:PATH = "$env:USERPROFILE\.cargo\bin;$env:PATH"
-$env:TAURI_SIGNING_PRIVATE_KEY_PATH = "$env:LOCALAPPDATA\Omni\updater-signing-key"
+# TAURI_SIGNING_PRIVATE_KEY accepts a file path OR the key content (Tauri v2
+# has no separate _PATH variable).
+$env:TAURI_SIGNING_PRIVATE_KEY = "$env:LOCALAPPDATA\Omni\updater-signing-key"
+$env:TAURI_SIGNING_PRIVATE_KEY_PASSWORD = ""
 cmd /c "call %LOCALAPPDATA%\portable-msvc\msvc\setup_x64.bat && cd /d <repo>\apps\ui && pnpm tauri build"
 ```
 
@@ -218,7 +221,7 @@ The key has an empty password (generated with `--ci`), so
 
 - Windows 10/11, `uv`, Node 22 + pnpm 10, Rust stable (MSVC), WebView2.
 - No secrets: dev builds run unsigned locally (set
-  `TAURI_SIGNING_PRIVATE_KEY_PATH` only when you need updater artifacts,
+  `TAURI_SIGNING_PRIVATE_KEY` only when you need updater artifacts,
   or generate your own key with `pnpm tauri signer generate --ci -w <path>`).
 - NSIS/WiX are fetched by the Tauri bundler automatically on first build.
 - Regenerate `stt-runtime-requirements.txt` whenever `uv.lock` changes

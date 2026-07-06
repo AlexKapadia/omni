@@ -1,0 +1,8 @@
+# Pending dependencies — appended by build agents, installed by the
+# orchestrator at reconciliation (pyproject.toml/uv.lock are orchestrator-owned).
+# Format: <package spec>  --  <who needs it>  --  <why>
+
+# --- router agent (M2 prep, 2026-07-06) ---
+groq>=0.13         --  engine/router/provider_client_groq.py       --  official Groq SDK (async chat completions, live_extraction/intent_parsing primary). Imported lazily; unit tests mock the client boundary and pass without it.
+google-genai>=1.0  --  engine/router/provider_client_gemini.py     --  official Gemini SDK (generate_content, function calling, structured output; long_context_bulk primary + standing fallback). Imported lazily; tests pass without it.
+anthropic>=0.40    --  engine/router/provider_client_anthropic.py  --  official Anthropic SDK (Messages API + tool use; OPTIONAL third slot, promoted only when a key exists). Imported lazily; tests pass without it.

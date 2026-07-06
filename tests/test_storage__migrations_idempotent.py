@@ -14,6 +14,16 @@ from engine.storage import apply_migrations, list_applied_migrations, open_sqlit
 from engine.storage.sqlite_migrations_runner import MigrationError
 
 
+def _real_migration_names(real_migrations_dir: Path) -> list[str]:
+    """The repo's real migration files, in application (filename) order.
+
+    Derived, not hard-coded: every agent that lands a new NNNN_*.sql would
+    otherwise have to edit these tests, and a stale literal list would fail
+    for reasons unrelated to the runner's behaviour under test.
+    """
+    return sorted(p.name for p in real_migrations_dir.glob("*.sql"))
+
+
 async def _dump_schema(db_path: Path) -> list[tuple[str, str, str]]:
     """Full normalised schema dump: (type, name, sql) for every object."""
     async with aiosqlite.connect(db_path) as conn:
@@ -28,7 +38,8 @@ async def test_first_run_applies_the_initial_migration(
     tmp_db_path: Path, real_migrations_dir: Path
 ) -> None:
     applied = await apply_migrations(tmp_db_path, real_migrations_dir)
-    assert applied == ["0001_initial.sql"]
+    assert applied == _real_migration_names(real_migrations_dir)
+    assert "0001_initial.sql" in applied
     schema = await _dump_schema(tmp_db_path)
     table_names = {name for kind, name, _ in schema if kind == "table"}
     assert {"meetings", "transcript_segments", "audit_log", "schema_migrations"} <= table_names
@@ -44,7 +55,7 @@ async def test_second_run_applies_nothing_and_schema_is_bytewise_identical(
     second = await apply_migrations(tmp_db_path, real_migrations_dir)
     schema_after_second = await _dump_schema(tmp_db_path)
 
-    assert first == ["0001_initial.sql"]
+    assert first == _real_migration_names(real_migrations_dir)
     assert second == []  # nothing re-applied
     assert schema_after_second == schema_after_first  # identical, object-for-object
 
@@ -60,13 +71,13 @@ async def test_bookkeeping_records_each_migration_exactly_once(
     try:
         rows = await list_applied_migrations(conn)
         cursor = await conn.execute(
-            "SELECT COUNT(*) FROM schema_migrations WHERE name = '0001_initial.sql'"
+            "SELECT name, COUNT(*) FROM schema_migrations GROUP BY name HAVING COUNT(*) > 1"
         )
-        count_row = await cursor.fetchone()
+        duplicated = await cursor.fetchall()
     finally:
         await conn.close()
-    assert rows == ["0001_initial.sql"]
-    assert count_row is not None and count_row[0] == 1
+    assert rows == _real_migration_names(real_migrations_dir)
+    assert list(duplicated) == []  # every migration recorded exactly once
 
 
 async def test_migrations_apply_in_filename_order(tmp_db_path: Path, tmp_path: Path) -> None:

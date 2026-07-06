@@ -21,11 +21,17 @@ import time
 import uuid
 
 from fastapi import WebSocket, WebSocketDisconnect
+from pydantic import ValidationError
 
 from engine.protocol import (
+    COMMAND_CAPTURE_START,
+    COMMAND_CAPTURE_STOP,
     PROTOCOL_VERSION,
+    CaptureStartCommandPayload,
+    CaptureStopCommandPayload,
     Envelope,
     EnvelopeKind,
+    EventBroadcastHub,
     ProtocolError,
     ProtocolErrorCode,
     build_heartbeat_payload,
@@ -33,25 +39,37 @@ from engine.protocol import (
     parse_envelope,
 )
 from engine.runtime_settings import HEARTBEAT_INTERVAL_SECONDS
+from engine.stt.live_capture_service import CaptureServiceError, LiveCaptureService
 
 
 class WebSocketConnectionHandler:
     """Runs one accepted WebSocket connection to completion."""
 
-    def __init__(self, websocket: WebSocket, started_monotonic: float) -> None:
+    def __init__(
+        self,
+        websocket: WebSocket,
+        started_monotonic: float,
+        capture_service: LiveCaptureService,
+        event_hub: EventBroadcastHub,
+    ) -> None:
         self._websocket = websocket
         self._started_monotonic = started_monotonic
-        # Two tasks write to one socket (heartbeat + replies); the lock
-        # serialises sends so frames never interleave mid-write.
+        self._capture_service = capture_service
+        self._event_hub = event_hub
+        # Multiple tasks write to one socket (heartbeat + replies + broadcast
+        # events); the lock serialises sends so frames never interleave.
         self._send_lock = asyncio.Lock()
 
     async def run(self) -> None:
         """Serve the connection until the client disconnects.
 
         The heartbeat runs as a sibling task and is always cancelled and
-        awaited on exit so no orphan task outlives the socket.
+        awaited on exit so no orphan task outlives the socket. The hub
+        subscription is likewise always released (no broadcasts to a dead
+        socket).
         """
         heartbeat_task = asyncio.create_task(self._emit_heartbeats())
+        unsubscribe = self._event_hub.subscribe(self._send)
         try:
             while True:
                 raw = await self._websocket.receive_text()
@@ -59,6 +77,7 @@ class WebSocketConnectionHandler:
         except WebSocketDisconnect:
             pass  # Normal client hang-up; nothing to report.
         finally:
+            unsubscribe()
             heartbeat_task.cancel()
             # Await cancellation so shutdown is graceful, not fire-and-forget.
             with contextlib.suppress(asyncio.CancelledError):
@@ -81,7 +100,11 @@ class WebSocketConnectionHandler:
                 kind=EnvelopeKind.EVENT,
                 name="engine.heartbeat",
                 id=str(uuid.uuid4()),
-                payload=build_heartbeat_payload(self._started_monotonic),
+                payload=build_heartbeat_payload(
+                    self._started_monotonic,
+                    # Live truth per beat: flips true once models are loaded.
+                    stt_ready=self._capture_service.is_stt_ready,
+                ),
             )
             await self._send(heartbeat)
             await asyncio.sleep(HEARTBEAT_INTERVAL_SECONDS)
@@ -127,12 +150,73 @@ class WebSocketConnectionHandler:
                 )
             )
             return
+        if command.name == COMMAND_CAPTURE_START:
+            await self._handle_capture_start(command)
+            return
+        if command.name == COMMAND_CAPTURE_STOP:
+            await self._handle_capture_stop(command)
+            return
         # Deny by default: anything unrecognised is an explicit error.
         await self._send(
             error_reply(
                 command.id,
                 ProtocolErrorCode.UNKNOWN_COMMAND,
                 f"unknown command name: {command.name!r}",
+            )
+        )
+
+    async def _handle_capture_start(self, command: Envelope) -> None:
+        """capture.start → ok {meeting_id} or a structured error reply."""
+        try:
+            # Strict payload validation (extra fields forbidden) — the
+            # command payload is untrusted input like everything inbound.
+            payload = CaptureStartCommandPayload.model_validate(command.payload)
+        except ValidationError:
+            await self._send(
+                error_reply(
+                    command.id,
+                    ProtocolErrorCode.INVALID_PAYLOAD,
+                    "capture.start payload failed validation",
+                )
+            )
+            return
+        try:
+            meeting_id = await self._capture_service.start(payload.title)
+        except CaptureServiceError as exc:
+            # Fail closed with a correlatable, structured reason.
+            await self._send(error_reply(command.id, ProtocolErrorCode.CAPTURE_ERROR, str(exc)))
+            return
+        await self._reply_ok(command.id, {"meeting_id": meeting_id})
+
+    async def _handle_capture_stop(self, command: Envelope) -> None:
+        """capture.stop → ok {meeting_id} or a structured error reply."""
+        try:
+            CaptureStopCommandPayload.model_validate(command.payload)
+        except ValidationError:
+            await self._send(
+                error_reply(
+                    command.id,
+                    ProtocolErrorCode.INVALID_PAYLOAD,
+                    "capture.stop payload failed validation",
+                )
+            )
+            return
+        try:
+            meeting_id = await self._capture_service.stop()
+        except CaptureServiceError as exc:
+            await self._send(error_reply(command.id, ProtocolErrorCode.CAPTURE_ERROR, str(exc)))
+            return
+        await self._reply_ok(command.id, {"meeting_id": meeting_id})
+
+    async def _reply_ok(self, command_id: str, payload: dict[str, object]) -> None:
+        """The standard success reply: name `ok`, id echoing the command."""
+        await self._send(
+            Envelope(
+                v=PROTOCOL_VERSION,
+                kind=EnvelopeKind.REPLY,
+                name="ok",
+                id=command_id,
+                payload=dict(payload),
             )
         )
 

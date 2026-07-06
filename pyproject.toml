@@ -12,6 +12,20 @@ dependencies = [
     "aiosqlite>=0.20",
     "pydantic>=2.8,<3",
     "pydantic-settings>=2.4,<3",
+    # M1 audio/STT light runtime deps (heavy model stack lives in the `stt` extra).
+    "numpy>=1.26",
+    "soxr>=0.5",
+    "onnxruntime>=1.18",
+    "pyaudiowpatch>=0.2.12; sys_platform == 'win32'",
+]
+
+# Heavy STT model stack — multi-GB (torch CUDA + NeMo). Optional extra so CI
+# and non-STT dev syncs stay lean; the engine imports it lazily and reports
+# stt_ready=false honestly when absent (fail closed, never crash).
+[project.optional-dependencies]
+stt = [
+    "nemo-toolkit[asr]>=2.3",
+    "torch>=2.6",
 ]
 
 [dependency-groups]
@@ -27,6 +41,18 @@ dev = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
+
+# ---------------------------------------------------------------------------
+# uv — torch comes from the PyTorch CUDA 12.8 index on Windows (RTX 4070 box);
+# `explicit = true` keeps this index from shadowing PyPI for anything else.
+# ---------------------------------------------------------------------------
+[[tool.uv.index]]
+name = "pytorch-cu128"
+url = "https://download.pytorch.org/whl/cu128"
+explicit = true
+
+[tool.uv.sources]
+torch = [{ index = "pytorch-cu128", marker = "sys_platform == 'win32'" }]
 
 [tool.hatch.build.targets.wheel]
 packages = ["engine"]
@@ -44,7 +70,9 @@ extend-exclude = ["docs", "apps"]
 select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "RUF", "S"]
 
 [tool.ruff.lint.per-file-ignores]
-"tests/**" = ["S101", "S108"]
+# S311: tests use SEEDED pseudo-random generators for property-style cases —
+# deliberate determinism, nothing cryptographic.
+"tests/**" = ["S101", "S108", "S311"]
 
 # ---------------------------------------------------------------------------
 # Mypy — strict on engine code; tests get minor relaxations for fixtures.
@@ -60,6 +88,19 @@ files = ["engine", "tests"]
 module = "tests.*"
 disallow_untyped_decorators = false
 
+# Untyped third-party audio/ML libs (all imported lazily so the engine loads
+# without the heavy `stt` extra installed — e.g. on Linux CI).
+[[tool.mypy.overrides]]
+module = [
+    "soxr",
+    "pyaudiowpatch",
+    "onnxruntime",
+    "nemo.*",
+    "torch",
+    "torch.*",
+]
+ignore_missing_imports = true
+
 # ---------------------------------------------------------------------------
 # Pytest — asyncio auto mode so async tests need no per-test marker.
 # No network in unit tests; all filesystem writes go to tmp_path fixtures.
@@ -67,4 +108,9 @@ disallow_untyped_decorators = false
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
-addopts = "-q"
+# live_stt (real models + real audio devices) is opt-in: deselected by default
+# so unit runs and CI stay hermetic (no network, no GPU, no audio hardware).
+addopts = "-q -m 'not live_stt'"
+markers = [
+    "live_stt: real-model / real-audio integration tests (run explicitly with -m live_stt)",
+]

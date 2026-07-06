@@ -1,0 +1,20 @@
+{
+  "models": [
+    {
+      "name": "silero_vad.onnx",
+      "description": "Silero VAD v5 (ONNX) \u2014 per-stream speech gating",
+      "url": "https://github.com/snakers4/silero-vad/raw/master/src/silero_vad/data/silero_vad.onnx",
+      "bytes": 2327524,
+      "sha256": "1a153a22f4509e292a94e67d6f9b85e8deb25b4988682b7e174c65279d8788e3",
+      "recorded_at": "2026-07-06T15:55:46.028842+00:00"
+    },
+    {
+      "name": "parakeet-tdt-0.6b-v2.nemo",
+      "description": "NVIDIA Parakeet-TDT 0.6B v2 \u2014 streaming transcription",
+      "url": "https://huggingface.co/nvidia/parakeet-tdt-0.6b-v2/resolve/main/parakeet-tdt-0.6b-v2.nemo",
+      "bytes": 2472222720,
+      "sha256": "d99e39955c9d3d0350d8fb7c75e40c64a2b2eaeb003883d7c941fd2e8747b28c",
+      "recorded_at": "2026-07-06T15:59:22.734842+00:00"
+    }
+  ]
+}

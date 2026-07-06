@@ -11,37 +11,74 @@ Security invariants:
   never be reachable from another machine (local-only invariant).
 - Startup fails closed: malformed settings abort the process rather than
   boot on guessed configuration.
-- No telemetry: the server calls out to nothing; it only answers.
+- No telemetry: the server calls out to nothing; it only answers. (The
+  one exception is the explicit, user-initiated model download tool.)
+- Shutdown stops any live capture session so no orphaned audio streams
+  outlive the process.
 """
 
+import asyncio
+import contextlib
+import logging
 import time
-from collections.abc import AsyncIterator
-from contextlib import asynccontextmanager
+from collections.abc import AsyncIterator, Callable
+from pathlib import Path
 from typing import Any
 
 import uvicorn
 from fastapi import FastAPI, WebSocket
 
 from engine import ENGINE_VERSION
+from engine.protocol import EventBroadcastHub
 from engine.runtime_settings import LOOPBACK_HOST, EngineSettings, load_engine_settings
+from engine.stt.live_capture_service import LiveCaptureService
 from engine.websocket_connection_handler import WebSocketConnectionHandler
 
+# The repo's migrations directory (packaging bundles it next to the engine).
+MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
 
-@asynccontextmanager
-async def _lifespan(app: FastAPI) -> AsyncIterator[None]:
-    """Record process start time (monotonic — uptime survives clock changes).
+# A factory (not an instance) so the service is built AFTER settings load,
+# against the hub the app owns. Tests inject fakes through this seam.
+CaptureServiceFactory = Callable[[EventBroadcastHub], LiveCaptureService]
 
-    Uvicorn drives this on startup/shutdown, so exiting the context is the
-    graceful-shutdown hook for any future resources (DB pools, tasks).
+
+def _default_capture_service_factory(hub: EventBroadcastHub) -> LiveCaptureService:
+    settings = load_engine_settings()  # Raises on bad env — fail closed.
+    return LiveCaptureService(db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR, hub=hub)
+
+
+def create_app(
+    capture_service_factory: CaptureServiceFactory | None = None,
+    preload_stt: bool = False,
+) -> FastAPI:
+    """Build the FastAPI app. Factory form keeps tests isolated per-app.
+
+    ``preload_stt`` starts a background model load at boot so the
+    heartbeat's ``stt_ready`` flips true before the first capture.start;
+    it defaults OFF so tests (and tooling) never trigger multi-GB loads.
     """
-    app.state.started_monotonic = time.monotonic()
-    yield
-    # Graceful shutdown: per-connection tasks are cancelled by their own
-    # handlers on disconnect; nothing process-wide to tear down in M0.
+    event_hub = EventBroadcastHub()
+    factory = capture_service_factory or _default_capture_service_factory
+    capture_service = factory(event_hub)
 
+    @contextlib.asynccontextmanager
+    async def lifespan(app: FastAPI) -> AsyncIterator[None]:
+        """Startup: clocks + optional model preload. Shutdown: stop capture."""
+        app.state.started_monotonic = time.monotonic()
+        preload_task: asyncio.Task[None] | None = None
+        if preload_stt:
+            # Background: heartbeats flow (stt_ready=false) while models load.
+            preload_task = asyncio.create_task(capture_service.preload_models())
+        yield
+        if preload_task is not None and not preload_task.done():
+            preload_task.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await preload_task
+        if capture_service.is_capturing:
+            # Graceful shutdown: never orphan live audio streams.
+            with contextlib.suppress(Exception):
+                await capture_service.stop()
 
-def create_app() -> FastAPI:
-    """Build the FastAPI app. Factory form keeps tests isolated per-app."""
     app = FastAPI(
         title="omni-engine",
         version=ENGINE_VERSION,
@@ -50,8 +87,10 @@ def create_app() -> FastAPI:
         docs_url=None,
         redoc_url=None,
         openapi_url=None,
-        lifespan=_lifespan,
+        lifespan=lifespan,
     )
+    app.state.event_hub = event_hub
+    app.state.capture_service = capture_service
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -65,6 +104,8 @@ def create_app() -> FastAPI:
         handler = WebSocketConnectionHandler(
             websocket=websocket,
             started_monotonic=websocket.app.state.started_monotonic,
+            capture_service=websocket.app.state.capture_service,
+            event_hub=websocket.app.state.event_hub,
         )
         await handler.run()
 
@@ -78,7 +119,8 @@ def build_uvicorn_config(settings: EngineSettings) -> uvicorn.Config:
     (loopback-only host, env-driven port) without opening a socket.
     """
     return uvicorn.Config(
-        app=create_app(),
+        # Production app preloads STT so stt_ready flips true at boot.
+        app=create_app(preload_stt=True),
         # Local-only invariant: loopback constant, never a setting.
         host=LOOPBACK_HOST,
         port=settings.engine_port,
@@ -91,6 +133,13 @@ def build_uvicorn_config(settings: EngineSettings) -> uvicorn.Config:
 
 def main() -> None:
     """Process entrypoint: load settings (fail closed) and serve until signalled."""
+    # Root logging at INFO: the engine log is the audit surface for capture
+    # lifecycle and the 60 s p50/p95 latency lines (instrumentation mandate)
+    # — uvicorn only configures its own loggers, never the root.
+    logging.basicConfig(
+        level=logging.INFO,
+        format="%(asctime)s %(levelname)s %(name)s: %(message)s",
+    )
     settings = load_engine_settings()  # Raises on bad env — fail closed.
     server = uvicorn.Server(build_uvicorn_config(settings))
     # uvicorn installs SIGINT/SIGTERM handlers → graceful shutdown of the

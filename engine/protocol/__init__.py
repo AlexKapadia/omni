@@ -11,6 +11,23 @@ must pass through ``parse_envelope`` (size cap + strict validation) before
 any handler sees it — fail closed, never crash the socket.
 """
 
+from engine.protocol.capture_event_payloads import (
+    COMMAND_CAPTURE_START,
+    COMMAND_CAPTURE_STOP,
+    EVENT_CAPTURE_DEVICE_CHANGED,
+    EVENT_CAPTURE_STARTED,
+    EVENT_CAPTURE_STOPPED,
+    EVENT_TRANSCRIPT_FINAL,
+    EVENT_TRANSCRIPT_PARTIAL,
+    CaptureStartCommandPayload,
+    CaptureStopCommandPayload,
+    build_capture_device_changed_payload,
+    build_capture_started_payload,
+    build_capture_stopped_payload,
+    build_transcript_final_payload,
+    build_transcript_partial_payload,
+)
+from engine.protocol.event_broadcast_hub import EventBroadcastHub
 from engine.protocol.heartbeat_payload import build_heartbeat_payload
 from engine.protocol.websocket_envelope import (
     MAX_MESSAGE_BYTES,
@@ -24,13 +41,28 @@ from engine.protocol.websocket_envelope import (
 )
 
 __all__ = [
+    "COMMAND_CAPTURE_START",
+    "COMMAND_CAPTURE_STOP",
+    "EVENT_CAPTURE_DEVICE_CHANGED",
+    "EVENT_CAPTURE_STARTED",
+    "EVENT_CAPTURE_STOPPED",
+    "EVENT_TRANSCRIPT_FINAL",
+    "EVENT_TRANSCRIPT_PARTIAL",
     "MAX_MESSAGE_BYTES",
     "PROTOCOL_VERSION",
+    "CaptureStartCommandPayload",
+    "CaptureStopCommandPayload",
     "Envelope",
     "EnvelopeKind",
+    "EventBroadcastHub",
     "ProtocolError",
     "ProtocolErrorCode",
+    "build_capture_device_changed_payload",
+    "build_capture_started_payload",
+    "build_capture_stopped_payload",
     "build_heartbeat_payload",
+    "build_transcript_final_payload",
+    "build_transcript_partial_payload",
     "error_reply",
     "parse_envelope",
 ]

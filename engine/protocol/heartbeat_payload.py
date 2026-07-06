@@ -17,19 +17,20 @@ from typing import Any
 from engine import ENGINE_VERSION
 
 
-def build_heartbeat_payload(started_monotonic: float) -> dict[str, Any]:
+def build_heartbeat_payload(started_monotonic: float, stt_ready: bool = False) -> dict[str, Any]:
     """Build one heartbeat payload.
 
     ``started_monotonic`` is the ``time.monotonic()`` reading captured at
     process start — monotonic (not wall) time, so uptime survives clock
     changes and is never negative.
 
-    ``stt_ready`` is pinned ``False`` in M0: the STT stack does not exist
-    yet, and the contract says the UI must be told honestly.
+    ``stt_ready`` reports whether the STT models (VAD + Parakeet) are
+    loaded and capture could start NOW. Defaults ``False`` — the honest
+    answer until the capture service says otherwise (fail closed).
     """
     return {
         "uptime_s": time.monotonic() - started_monotonic,
         "engine_version": ENGINE_VERSION,
         "python": platform.python_version(),
-        "stt_ready": False,
+        "stt_ready": stt_ready,
     }

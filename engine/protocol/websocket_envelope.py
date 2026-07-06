@@ -51,6 +51,9 @@ class ProtocolErrorCode(StrEnum):
     MESSAGE_TOO_LARGE = "message_too_large"
     NOT_A_COMMAND = "not_a_command"
     UNKNOWN_COMMAND = "unknown_command"
+    # M1 additions (additive — existing codes/semantics unchanged):
+    INVALID_PAYLOAD = "invalid_payload"  # Command payload failed validation.
+    CAPTURE_ERROR = "capture_error"  # Capture could not start/stop.
 
 
 class ProtocolError(Exception):

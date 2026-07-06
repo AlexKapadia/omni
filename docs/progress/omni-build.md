@@ -115,7 +115,8 @@ RULE: every feature commit flips its ledger row + RESUME HERE in the SAME commit
 | m3-index | hybrid retrieval index per research contract | engine/index, migrations/0004, tests | DONE — 123 tests (665 repo), committed. Dense side degrades to BM25-only until vec model ships; reranker interface chat-gated. |
 | naomi-build | fluid visual + Cartesia voice foundation per brief | apps/ui/src/naomi, engine/voice | DONE — 135 UI + 65 engine tests, live Cartesia TTFA 469–610ms (cold-connect dominated; persistent socket = loop TODO), committed |
 | m2-enhance | enhance pipeline, templates, extraction, finalization, auto-stop | engine/enhance, server wiring, UI meetings swap | RUNNING |
-| m6-detect | process/window watch, mic-in-use, VAD trigger, rules engine | engine/detect, tests | RUNNING |
+| m6-detect | process/window watch, mic-in-use, VAD trigger, rules engine | engine/detect, tests | DONE on wip branch — predecessor's code fully validated, 120 tests green (verified), live Edge/Meet detection fired t=3s, idle apps correctly sub-threshold. Server wiring deferred (interface in agent return + module docstrings). Merges to main with the branch. |
+| m3-ask | Ask-Omni answer service + live answers spotter | engine/ask, ask-screen/stores | RUNNING |
 | north-star #2 | read-only alignment review | (read-only) | DONE — 4 GREEN / 2 AMBER (stt file split + this tracker fix) |
 
 ## Pacing policy (user mandate, revised 2026-07-06 — binding)

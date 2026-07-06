@@ -6,3 +6,8 @@
 groq>=0.13         --  engine/router/provider_client_groq.py       --  official Groq SDK (async chat completions, live_extraction/intent_parsing primary). Imported lazily; unit tests mock the client boundary and pass without it.
 google-genai>=1.0  --  engine/router/provider_client_gemini.py     --  official Gemini SDK (generate_content, function calling, structured output; long_context_bulk primary + standing fallback). Imported lazily; tests pass without it.
 anthropic>=0.40    --  engine/router/provider_client_anthropic.py  --  official Anthropic SDK (Messages API + tool use; OPTIONAL third slot, promoted only when a key exists). Imported lazily; tests pass without it.
+
+# --- index-layer agent (M3 brain, 2026-07-06) ---
+sqlite-vec>=0.1.6  --  engine/index/sqlite_vec_store.py             --  vec0 loadable extension for in-process dense KNN (chunks_vec). Imported via importlib at first use; unit tests mock VectorStoreProtocol. PACKAGING: the vec0 DLL must ship in the PyInstaller bundle.
+tokenizers>=0.20   --  engine/index/bge_small_onnx_embedder.py     --  HuggingFace tokenizer (tokenizer.json) for bge-small-en-v1.5 ONNX embedding; also replaces the chunker's documented chars/4 token heuristic once landed. Imported via importlib; tests mock EmbedderProtocol.
+watchdog>=4.0      --  engine/index/vault_watchdog_file_watcher.py --  OS file-change events for incremental vault indexing (wiring lands with M3 server integration). Imported via importlib; fail-closed IndexDependencyMissingError without it.

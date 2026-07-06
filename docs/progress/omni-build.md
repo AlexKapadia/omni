@@ -6,10 +6,10 @@
 > actions, tri-provider router (Groq / Gemini / optional Anthropic), NSIS installer, auto-update.
 > Open source on GitHub (AlexKapadia/omni) — no secrets ever committed.
 
-**RESUME HERE →** M0 + M1 gates DONE. Running lanes: m3-index, naomi-build. Next when a lane
-frees: M2 enhance pipeline agent (router+vault both DONE — fuse notes+transcript via templates,
-auto-stop, meeting finalization writes the vault note). Then M4 (Google tools; mocks until user
-OAuth creds), M5 dictation, M6 detection, M7 ship, M9 landing page, Naomi full loop.
+**RESUME HERE →** M0+M1 DONE; M3 index layer DONE (Ask-Omni service + Answers panel wiring
+remain for M3 gate). Running lanes: naomi-build, m2-enhance. Next when a lane frees: M3 Ask-Omni
+service agent (retrieval → router synthesis → citations → UI swap of mock ask provider), then
+M4 (mocks until user OAuth creds), M5, M6, M7, M9 landing page, Naomi full loop.
 RULE: every feature commit flips its ledger row + RESUME HERE in the SAME commit.
 
 ---
@@ -79,7 +79,7 @@ RULE: every feature commit flips its ledger row + RESUME HERE in the SAME commit
 | router | tri-provider router + DPAPI keys + ledger + kill switch | engine/router, engine/security, migrations/0003 | DONE — 172 tests, committed |
 | ui-screens | Library / Live meeting / Ask Omni / Settings per design brief | apps/ui/src | DONE — 230 tests, committed |
 | naomi-research | fluid-visual art + Cartesia voice pipeline research | docs/research/naomi, naomi-visual-brief.md | DONE — 10-source library + build contract, committed |
-| m3-index | hybrid retrieval index per research contract | engine/index, migrations/0004, tests | RUNNING |
+| m3-index | hybrid retrieval index per research contract | engine/index, migrations/0004, tests | DONE — 123 tests (665 repo), committed. Dense side degrades to BM25-only until vec model ships; reranker interface chat-gated. |
 | naomi-build | fluid visual + Cartesia voice foundation per brief | apps/ui/src/naomi, engine/voice | RUNNING |
 | north-star #2 | read-only alignment review | (read-only) | DONE — 4 GREEN / 2 AMBER (stt file split + this tracker fix) |
 

@@ -32,6 +32,7 @@ from engine import ENGINE_VERSION
 from engine.protocol import EventBroadcastHub
 from engine.runtime_settings import LOOPBACK_HOST, EngineSettings, load_engine_settings
 from engine.stt.live_capture_service import LiveCaptureService
+from engine.voice import TtsPlaybackStreamer
 from engine.websocket_connection_handler import WebSocketConnectionHandler
 
 # The repo's migrations directory (packaging bundles it next to the engine).
@@ -60,6 +61,9 @@ def create_app(
     event_hub = EventBroadcastHub()
     factory = capture_service_factory or _default_capture_service_factory
     capture_service = factory(event_hub)
+    # Naomi voice: relays Cartesia audio to every socket via the same hub.
+    # Construction is inert (credentials resolve lazily per utterance).
+    voice_streamer = TtsPlaybackStreamer(event_hub)
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -78,6 +82,9 @@ def create_app(
             # Graceful shutdown: never orphan live audio streams.
             with contextlib.suppress(Exception):
                 await capture_service.stop()
+        # Graceful shutdown: never orphan a speaking utterance either.
+        with contextlib.suppress(Exception):
+            await voice_streamer.shutdown()
 
     app = FastAPI(
         title="omni-engine",
@@ -91,6 +98,7 @@ def create_app(
     )
     app.state.event_hub = event_hub
     app.state.capture_service = capture_service
+    app.state.voice_streamer = voice_streamer
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -106,6 +114,7 @@ def create_app(
             started_monotonic=websocket.app.state.started_monotonic,
             capture_service=websocket.app.state.capture_service,
             event_hub=websocket.app.state.event_hub,
+            voice_streamer=websocket.app.state.voice_streamer,
         )
         await handler.run()
 

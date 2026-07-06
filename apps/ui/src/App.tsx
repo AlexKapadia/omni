@@ -12,6 +12,7 @@ import { NavRail, type SectionId } from "./components/nav-rail";
 import { StatusFooter } from "./components/status-footer";
 import { tokenDurationSeconds } from "./lib/design-token-motion";
 import { startLiveEngineConnection } from "./lib/live-engine-socket";
+import { NaomiView } from "./naomi/NaomiView";
 import { AskScreen } from "./screens/ask-screen";
 import { LibraryScreen } from "./screens/library-screen";
 import { LiveMeetingScreen } from "./screens/live-meeting-screen";
@@ -52,6 +53,7 @@ export default function App() {
               )}
               {activeSection === "live" && <LiveMeetingScreen />}
               {activeSection === "ask" && <AskScreen />}
+              {activeSection === "naomi" && <NaomiView />}
               {activeSection === "settings" && <SettingsScreen />}
             </motion.div>
           </AnimatePresence>

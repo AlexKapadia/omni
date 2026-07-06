@@ -40,6 +40,7 @@ from engine.protocol import (
 )
 from engine.runtime_settings import HEARTBEAT_INTERVAL_SECONDS
 from engine.stt.live_capture_service import CaptureServiceError, LiveCaptureService
+from engine.voice import NAOMI_COMMAND_NAMES, TtsPlaybackStreamer, dispatch_naomi_command
 
 
 class WebSocketConnectionHandler:
@@ -51,11 +52,14 @@ class WebSocketConnectionHandler:
         started_monotonic: float,
         capture_service: LiveCaptureService,
         event_hub: EventBroadcastHub,
+        voice_streamer: TtsPlaybackStreamer | None = None,
     ) -> None:
         self._websocket = websocket
         self._started_monotonic = started_monotonic
         self._capture_service = capture_service
         self._event_hub = event_hub
+        # Optional additive surface: None → naomi.* commands refuse honestly.
+        self._voice_streamer = voice_streamer
         # Multiple tasks write to one socket (heartbeat + replies + broadcast
         # events); the lock serialises sends so frames never interleave.
         self._send_lock = asyncio.Lock()
@@ -155,6 +159,11 @@ class WebSocketConnectionHandler:
             return
         if command.name == COMMAND_CAPTURE_STOP:
             await self._handle_capture_stop(command)
+            return
+        if command.name in NAOMI_COMMAND_NAMES:
+            # Additive naomi.say / naomi.cancel surface (engine.voice owns
+            # validation, refusal semantics, and replies).
+            await dispatch_naomi_command(command, self._voice_streamer, self._send)
             return
         # Deny by default: anything unrecognised is an explicit error.
         await self._send(

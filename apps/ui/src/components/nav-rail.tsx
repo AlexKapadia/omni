@@ -13,12 +13,13 @@ import { OmniMark } from "./omni-mark";
 import { tokenDurationSeconds } from "../lib/design-token-motion";
 import { useTranscript } from "../lib/transcript-store";
 
-export type SectionId = "library" | "live" | "ask" | "settings";
+export type SectionId = "library" | "live" | "ask" | "naomi" | "settings";
 
 const SECTIONS: ReadonlyArray<{ id: SectionId; label: string }> = [
   { id: "library", label: "Library" },
   { id: "live", label: "Live meeting" },
   { id: "ask", label: "Ask Omni" },
+  { id: "naomi", label: "Naomi" },
   { id: "settings", label: "Settings" },
 ];
 

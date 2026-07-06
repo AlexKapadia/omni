@@ -4,7 +4,7 @@ version = "0.1.0"
 description = "Omni engine sidecar: local-first meeting-intelligence engine (FastAPI + WebSocket protocol v1, SQLite storage)."
 readme = "README.md"
 requires-python = ">=3.11,<3.12"
-license = { text = "Proprietary" }
+license = { text = "MIT" }
 dependencies = [
     "fastapi>=0.115",
     "uvicorn[standard]>=0.30",

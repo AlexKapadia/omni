@@ -95,7 +95,13 @@ async def _apply_one_migration(connection: aiosqlite.Connection, migration_file:
     not contain their own BEGIN/COMMIT.
     """
     sql = migration_file.read_text(encoding="utf-8")
-    if re.search(r"^\s*(BEGIN|COMMIT)\b", sql, flags=re.IGNORECASE | re.MULTILINE):
+    # Only transaction statements are banned: `BEGIN;` / `BEGIN TRANSACTION` /
+    # `COMMIT`. A bare `BEGIN` opening a trigger body (CREATE TRIGGER ...
+    # BEGIN <newline>) is legitimate SQL and must NOT trip this guard.
+    transaction_statement = re.compile(
+        r"^\s*(BEGIN\s*(;|TRANSACTION\b)|COMMIT\b)", flags=re.IGNORECASE | re.MULTILINE
+    )
+    if transaction_statement.search(sql):
         raise MigrationError(
             f"{migration_file.name}: migrations must not manage their own "
             "transactions; the runner wraps each file in one"

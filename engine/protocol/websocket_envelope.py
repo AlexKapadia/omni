@@ -75,8 +75,9 @@ class Envelope(BaseModel):
 
     model_config = ConfigDict(extra="forbid", frozen=True)
 
-    # Literal pin: only protocol version 1 is accepted.
-    v: int = Field(ge=PROTOCOL_VERSION, le=PROTOCOL_VERSION)
+    # Literal pin: only the INTEGER 1 is accepted — strict mode rejects
+    # "1" (string) and 1.0 (float); versioning must be unambiguous.
+    v: int = Field(ge=PROTOCOL_VERSION, le=PROTOCOL_VERSION, strict=True)
     kind: EnvelopeKind
     name: str = Field(min_length=1, max_length=_MAX_NAME_LENGTH)
     id: str = Field(min_length=1, max_length=_MAX_ID_LENGTH)

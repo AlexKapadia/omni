@@ -16,6 +16,7 @@ Security invariants:
 """
 
 import asyncio
+import contextlib
 import time
 import uuid
 
@@ -60,10 +61,8 @@ class WebSocketConnectionHandler:
         finally:
             heartbeat_task.cancel()
             # Await cancellation so shutdown is graceful, not fire-and-forget.
-            try:
+            with contextlib.suppress(asyncio.CancelledError):
                 await heartbeat_task
-            except asyncio.CancelledError:
-                pass
 
     async def _send(self, envelope: Envelope) -> None:
         """Serialised send — the only path that writes to the socket."""

@@ -1,0 +1,77 @@
+# CI for Omni — engine (Python sidecar) + ui (Tauri/React, once it exists).
+# Lean by design at M0: lint + types + tests. Coverage/mutation gates land
+# at the hardening gate (claude.md §7.2 — Linux CI is the enforcement plane).
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  engine:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv (pins Python 3.11 from pyproject)
+        uses: astral-sh/setup-uv@v5
+        with:
+          python-version: "3.11"
+
+      - name: Sync dependencies
+        run: uv sync --locked
+
+      - name: Ruff lint
+        run: uv run ruff check .
+
+      - name: Mypy type check
+        run: uv run mypy
+
+      - name: Pytest
+        run: uv run pytest
+
+  ui:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      # The UI lands in a later gate; this job self-skips until
+      # apps/ui/package.json exists so CI stays green meanwhile.
+      - name: Check whether the UI exists yet
+        id: ui_exists
+        run: |
+          if [ -f apps/ui/package.json ]; then
+            echo "exists=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "exists=false" >> "$GITHUB_OUTPUT"
+            echo "apps/ui/package.json not found - skipping UI job steps."
+          fi
+
+      - name: Setup pnpm
+        if: steps.ui_exists.outputs.exists == 'true'
+        uses: pnpm/action-setup@v4
+        with:
+          version: 9
+
+      - name: Setup Node
+        if: steps.ui_exists.outputs.exists == 'true'
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+          cache-dependency-path: apps/ui/pnpm-lock.yaml
+
+      - name: Install UI dependencies
+        if: steps.ui_exists.outputs.exists == 'true'
+        working-directory: apps/ui
+        run: pnpm install --frozen-lockfile
+
+      - name: Typecheck UI
+        if: steps.ui_exists.outputs.exists == 'true'
+        working-directory: apps/ui
+        run: pnpm run typecheck
+
+      - name: Test UI
+        if: steps.ui_exists.outputs.exists == 'true'
+        working-directory: apps/ui
+        run: pnpm run test

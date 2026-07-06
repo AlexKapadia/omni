@@ -65,7 +65,8 @@
 | Agent | Brief | Owns | Status |
 |---|---|---|---|
 | design-extract v1 | tokens from Claude Design via DesignSync | docs/design/**, tokens.css | RETURNED: blocked — DesignSync not available to subagents (session-level tool). Orchestrator fetched files itself. |
-| design-extract v2 | tokens from local docs/design/reference/ files | docs/design/**, tokens.css | RUNNING |
+| design-extract v2 | tokens from local docs/design/reference/ files | docs/design/**, tokens.css | DONE — brief + components + tokens.css written & committed (tokens.css commits with M0 gate). Flag: reference copy drift (whisper/openai placeholders) — layouts adopted, copy from real contracts. |
+| memory-research | AI-facing retrieval layer research (task #10, pre-M3) | docs/research/** | RUNNING |
 | engine-scaffold | M0 Python sidecar: WS server, protocol v1, migrations, CI, README | engine/**, migrations/**, tests/**, pyproject, ci.yml, README.md | RUNNING |
 | ui-scaffold | M0 Tauri shell: tray, sidecar mgmt, heartbeat footer, protocol mirror | apps/ui/** (except tokens.css) | RUNNING |
 

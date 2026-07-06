@@ -9,7 +9,7 @@
  * never invents a hard-coded duration.
  */
 
-export type DurationToken = "--dur-micro" | "--dur-page";
+export type DurationToken = "--dur-micro" | "--dur-page" | "--dur-panel";
 
 const cache = new Map<DurationToken, number>();
 

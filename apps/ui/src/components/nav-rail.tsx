@@ -1,17 +1,23 @@
 /**
- * Left navigation rail: Meetings / Ask Omni / Settings.
+ * Left navigation rail (components doc §03): 224px, hairline right border,
+ * the Omni lockup, one row per screen, and the on-device footer line.
  *
- * M0: sections are local state (no router yet — real routes arrive with real
- * screens). The active indicator is a framer-motion shared-layout element;
- * motion is suppressed for users with prefers-reduced-motion.
+ * Sections are app state (no router dep — state-based routing in App.tsx).
+ * The active indicator is a framer-motion shared-layout element; the Live
+ * row carries the breathing ring while capture is genuinely live. Motion is
+ * suppressed for users with prefers-reduced-motion.
  */
 import { motion, useReducedMotion } from "framer-motion";
+import { BreathingRing } from "./breathing-ring";
+import { OmniMark } from "./omni-mark";
 import { tokenDurationSeconds } from "../lib/design-token-motion";
+import { useTranscript } from "../lib/transcript-store";
 
-export type SectionId = "meetings" | "ask" | "settings";
+export type SectionId = "library" | "live" | "ask" | "settings";
 
 const SECTIONS: ReadonlyArray<{ id: SectionId; label: string }> = [
-  { id: "meetings", label: "Meetings" },
+  { id: "library", label: "Library" },
+  { id: "live", label: "Live meeting" },
   { id: "ask", label: "Ask Omni" },
   { id: "settings", label: "Settings" },
 ];
@@ -23,16 +29,27 @@ interface NavRailProps {
 
 export function NavRail({ active, onSelect }: NavRailProps) {
   const reducedMotion = useReducedMotion();
+  const captureLive = useTranscript((s) => s.captureStatus === "live");
 
   return (
     <nav
       aria-label="Primary"
-      className="flex w-[200px] shrink-0 flex-col border-r border-[var(--grey-200)] px-[var(--space-3)] py-[var(--space-6)]"
+      className="flex shrink-0 flex-col border-r border-[var(--grey-200)]"
+      style={{ width: 224, padding: "24px 16px" }} // doc: rail 224px, 24/16 padding
     >
-      <div className="mb-[var(--space-8)] px-[var(--space-3)] font-[family-name:var(--font-display)] text-lg tracking-tight">
-        Omni
+      <div
+        className="mb-[var(--space-8)] flex items-center px-[var(--space-3)]"
+        style={{ gap: 10 }} // doc lockup gap
+      >
+        <OmniMark size={22} />
+        <span
+          className="font-[family-name:var(--font-display)] font-semibold text-[var(--ink)]"
+          style={{ fontSize: 17, letterSpacing: "-0.02em" }} // doc: rail wordmark
+        >
+          Omni
+        </span>
       </div>
-      <ul className="flex flex-col gap-[var(--space-1)]">
+      <ul className="m-0 flex list-none flex-col gap-[var(--space-1)] p-0">
         {SECTIONS.map((section) => {
           const isActive = section.id === active;
           return (
@@ -55,16 +72,33 @@ export function NavRail({ active, onSelect }: NavRailProps) {
                 aria-current={isActive ? "page" : undefined}
                 onClick={() => onSelect(section.id)}
                 className={
-                  "relative block w-full rounded-[var(--radius-control)] px-[var(--space-3)] py-[var(--space-2)] text-left text-sm " +
-                  (isActive ? "text-[var(--ink)]" : "text-[var(--grey-600)] hover:text-[var(--ink)]")
+                  "relative flex w-full cursor-pointer items-center justify-between border-none bg-transparent text-left " +
+                  (isActive
+                    ? "font-semibold text-[var(--ink)]"
+                    : "text-[var(--grey-600)] hover:text-[var(--ink)]")
                 }
+                // Doc nav row: padding 9px 12px, 14px body size.
+                style={{
+                  padding: "9px 12px",
+                  fontSize: "var(--text-body-size)",
+                  borderRadius: "var(--radius-control)",
+                }}
               >
                 {section.label}
+                {section.id === "live" && captureLive && <BreathingRing size={8} breathing />}
               </button>
             </li>
           );
         })}
       </ul>
+      <div
+        className="mt-auto border-t border-[var(--grey-200)]"
+        style={{ padding: "16px 12px 0" }} // doc rail footer
+      >
+        <p className="m-0 text-[var(--grey-600)]" style={{ fontSize: "var(--text-meta-size)" }}>
+          All data on this device
+        </p>
+      </div>
     </nav>
   );
 }

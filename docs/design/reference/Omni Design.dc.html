@@ -1,0 +1,917 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="design_doc_mode" content="canvas">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin="anonymous">
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<style>
+  html, body { margin: 0; padding: 0; background: #E8E8E8; }
+  @keyframes omniBreathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+  @keyframes omniAperture { 0%, 74%, 100% { transform: rotate(-8deg) scale(1); } 82% { transform: rotate(22deg) scale(0.55); } 90% { transform: rotate(-8deg) scale(1); } }
+  @keyframes omniShimmer { 0% { background-position: -320px 0; } 100% { background-position: 320px 0; } }
+  @media (prefers-reduced-motion: reduce) { * { animation: none !important; transition: none !important; } }
+</style>
+</helmet>
+
+<div style="display:flex; flex-direction:column; gap:110px; padding:100px; background:#E8E8E8; font-family:'Inter',sans-serif; align-items:flex-start; color:#0A0A0A;">
+
+  <!-- ================= COVER ================= -->
+  <div id="cover" data-screen-label="Cover" style="display:flex; flex-direction:column; gap:28px;">
+    <svg width="88" height="88" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="#0A0A0A" stroke-width="11" stroke-dasharray="29.8 9.99" transform="rotate(-8 50 50)"></circle></svg>
+    <div style="font-family:'Space Grotesk',sans-serif; font-size:56px; font-weight:600; letter-spacing:-0.04em; line-height:1;">Omni</div>
+    <div style="font-size:15px; color:#525252; max-width:520px; line-height:1.6;">Brand and product design. Local-first meeting intelligence for Windows. One rule everywhere: white canvas, black and grey only. State is weight, scale, motion and depth — never hue.</div>
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">v1.0 · 1440 primary canvas · single source of truth for Claude Code</div>
+  </div>
+
+  <!-- ================= LOGO SUITE ================= -->
+  <div id="logo" data-screen-label="Logo suite" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">01 · Logo suite</div>
+    <div style="width:1440px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); padding:64px; box-sizing:border-box; display:flex; flex-direction:column; gap:56px;">
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr 1fr; gap:32px;">
+        <div style="display:flex; flex-direction:column; gap:20px; border:1px solid #EDEDED; padding:32px; min-height:280px; justify-content:space-between;">
+          <div style="display:flex; align-items:center; justify-content:center; flex:1;">
+            <svg width="160" height="160" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="#0A0A0A" stroke-width="11" stroke-dasharray="29.8 9.99" transform="rotate(-8 50 50)"></circle></svg>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="font-size:13px; font-weight:600;">Primary mark</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">6 segments · r38 · stroke 11 · rot −8°</div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:20px; border:1px solid #EDEDED; padding:32px; min-height:280px; justify-content:space-between;">
+          <div style="display:flex; align-items:center; justify-content:center; gap:40px; flex:1;">
+            <svg width="16" height="16" viewBox="0 0 100 100"><circle cx="50" cy="50" r="34" fill="none" stroke="#0A0A0A" stroke-width="20" stroke-dasharray="54 17.2" transform="rotate(-8 50 50)"></circle></svg>
+            <svg width="96" height="96" viewBox="0 0 100 100"><circle cx="50" cy="50" r="34" fill="none" stroke="#0A0A0A" stroke-width="20" stroke-dasharray="54 17.2" transform="rotate(-8 50 50)"></circle></svg>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="font-size:13px; font-weight:600;">Tray variant</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">3 segments · heavier stroke · shown at 16px true size</div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:20px; border:1px solid #EDEDED; padding:32px; min-height:280px; justify-content:space-between;">
+          <div style="display:flex; align-items:center; justify-content:center; gap:16px; flex:1;">
+            <svg width="44" height="44" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="#0A0A0A" stroke-width="11" stroke-dasharray="29.8 9.99" transform="rotate(-8 50 50)"></circle></svg>
+            <span style="font-family:'Space Grotesk',sans-serif; font-size:34px; font-weight:600; letter-spacing:-0.03em;">Omni</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="font-size:13px; font-weight:600;">Horizontal lockup</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">gap = 0.4 × mark width · baseline-centred</div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:20px; border:1px solid #EDEDED; padding:32px; min-height:280px; justify-content:space-between;">
+          <div style="display:flex; align-items:center; justify-content:center; flex:1;">
+            <svg width="140" height="140" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="#0A0A0A" stroke-width="11" stroke-dasharray="29.8 9.99" style="transform-origin:50px 50px; animation:{{ apertureAnim }};"></circle></svg>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:4px;">
+            <div style="font-size:13px; font-weight:600;">Animated variant (live)</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">rotate +30° · contract to 55% · open · 900ms · launch + onboarding only</div>
+          </div>
+        </div>
+      </div>
+      <div style="display:flex; gap:48px; border-top:1px solid #EDEDED; padding-top:32px;">
+        <div style="font-size:13px; color:#525252; max-width:440px; line-height:1.7;">One ring, three readings: a camera aperture (it sees), a speaker ring (it hears), an orbit (omni). One colour, black on white, no exceptions. The ring at 8px scale is the live-capture heartbeat everywhere in the product.</div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <span style="display:inline-block; width:10px; height:10px; border:2.5px solid #0A0A0A; border-radius:50%; animation:{{ breatheCss }};"></span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">breathing ring · opacity 100 → 55% · 2.4s sine · the only permanent animation</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= DESIGN SYSTEM ================= -->
+  <div id="system" data-screen-label="Design system" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">02 · Design system</div>
+    <div style="width:1440px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); padding:64px; box-sizing:border-box; display:flex; flex-direction:column; gap:56px;">
+
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; letter-spacing:-0.02em;">Palette — total chromatic silence</div>
+        <div style="display:grid; grid-template-columns:repeat(7,1fr); gap:16px;">
+          <div style="display:flex; flex-direction:column; gap:8px;"><div style="height:88px; background:#FFFFFF; border:1px solid #EDEDED;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:11px;">#FFFFFF</div><div style="font-size:12px; color:#A3A3A3;">canvas</div></div>
+          <div style="display:flex; flex-direction:column; gap:8px;"><div style="height:88px; background:#F7F7F7;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:11px;">#F7F7F7</div><div style="font-size:12px; color:#A3A3A3;">surface</div></div>
+          <div style="display:flex; flex-direction:column; gap:8px;"><div style="height:88px; background:#EDEDED;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:11px;">#EDEDED</div><div style="font-size:12px; color:#A3A3A3;">border / divider</div></div>
+          <div style="display:flex; flex-direction:column; gap:8px;"><div style="height:88px; background:#D4D4D4;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:11px;">#D4D4D4</div><div style="font-size:12px; color:#A3A3A3;">disabled</div></div>
+          <div style="display:flex; flex-direction:column; gap:8px;"><div style="height:88px; background:#A3A3A3;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:11px;">#A3A3A3</div><div style="font-size:12px; color:#A3A3A3;">secondary · "Them"</div></div>
+          <div style="display:flex; flex-direction:column; gap:8px;"><div style="height:88px; background:#525252;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:11px;">#525252</div><div style="font-size:12px; color:#A3A3A3;">tertiary emphasis</div></div>
+          <div style="display:flex; flex-direction:column; gap:8px;"><div style="height:88px; background:#0A0A0A;"></div><div style="font-family:'JetBrains Mono',monospace; font-size:11px;">#0A0A0A</div><div style="font-size:12px; color:#A3A3A3;">ink</div></div>
+        </div>
+        <div style="display:flex; gap:16px;">
+          <div style="flex:1; height:56px; background:linear-gradient(#FFFFFF,#F7F7F7); border:1px solid #EDEDED; display:flex; align-items:center; padding:0 16px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">max permitted wash · #FFFFFF → #F7F7F7 vertical</div>
+          <div style="flex:1; height:56px; background:#FFFFFF; border:1px solid #EDEDED; box-shadow:0 8px 24px rgba(0,0,0,0.08); display:flex; align-items:center; padding:0 16px; font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">shadow/float · 0 8px 24px rgba(0,0,0,0.08) · the only shadow</div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; letter-spacing:-0.02em;">Type scale</div>
+        <div style="display:flex; flex-direction:column;">
+          <div style="display:grid; grid-template-columns:100px 1fr 380px; align-items:baseline; padding:14px 0; border-bottom:1px solid #EDEDED;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">56 / 1.0</span><span style="font-family:'Space Grotesk',sans-serif; font-size:56px; font-weight:600; letter-spacing:-0.04em;">Hero display</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">Space Grotesk 600 · −0.04em · onboarding, brand only</span></div>
+          <div style="display:grid; grid-template-columns:100px 1fr 380px; align-items:baseline; padding:14px 0; border-bottom:1px solid #EDEDED;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">40 / 1.1</span><span style="font-family:'Space Grotesk',sans-serif; font-size:40px; font-weight:600; letter-spacing:-0.03em;">Page display</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">Space Grotesk 600 · −0.03em · empty states, Ask</span></div>
+          <div style="display:grid; grid-template-columns:100px 1fr 380px; align-items:baseline; padding:14px 0; border-bottom:1px solid #EDEDED;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">28 / 1.2</span><span style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:600; letter-spacing:-0.02em;">Note title</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">Space Grotesk 600 · −0.02em · note + screen titles</span></div>
+          <div style="display:grid; grid-template-columns:100px 1fr 380px; align-items:baseline; padding:14px 0; border-bottom:1px solid #EDEDED;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">20 / 1.3</span><span style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; letter-spacing:-0.02em;">Section heading</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">Space Grotesk 600 · −0.02em</span></div>
+          <div style="display:grid; grid-template-columns:100px 1fr 380px; align-items:baseline; padding:14px 0; border-bottom:1px solid #EDEDED;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">16 / 1.5</span><span style="font-size:16px; font-weight:500;">Emphasis body — row titles, card titles</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">Inter 500 · 0em</span></div>
+          <div style="display:grid; grid-template-columns:100px 1fr 380px; align-items:baseline; padding:14px 0; border-bottom:1px solid #EDEDED;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">14 / 1.6</span><span style="font-size:14px;">Body — UI default, note prose, generous line height</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">Inter 400 · 0em · #0A0A0A / #525252</span></div>
+          <div style="display:grid; grid-template-columns:100px 1fr 380px; align-items:baseline; padding:14px 0; border-bottom:1px solid #EDEDED;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">13 / 1.6</span><span style="font-family:'JetBrains Mono',monospace; font-size:13px;">Transcript — typeset evidence, always mono</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">JetBrains Mono 400 · 0em</span></div>
+          <div style="display:grid; grid-template-columns:100px 1fr 380px; align-items:baseline; padding:14px 0;"><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">12 / 1.5</span><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">Meta — timestamps, paths, ledger, labels 0.08em caps</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">JetBrains Mono 400–500 · #A3A3A3</span></div>
+        </div>
+      </div>
+
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:48px;">
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; letter-spacing:-0.02em;">Spacing</div>
+          <div style="display:flex; flex-direction:column; gap:10px;">
+            <div style="display:flex; align-items:center; gap:12px;"><div style="width:4px; height:16px; background:#0A0A0A;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">4 · hairline gaps</span></div>
+            <div style="display:flex; align-items:center; gap:12px;"><div style="width:8px; height:16px; background:#0A0A0A;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">8 · inside controls</span></div>
+            <div style="display:flex; align-items:center; gap:12px;"><div style="width:12px; height:16px; background:#0A0A0A;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">12 · control padding</span></div>
+            <div style="display:flex; align-items:center; gap:12px;"><div style="width:16px; height:16px; background:#0A0A0A;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">16 · between rows</span></div>
+            <div style="display:flex; align-items:center; gap:12px;"><div style="width:24px; height:16px; background:#0A0A0A;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">24 · card padding</span></div>
+            <div style="display:flex; align-items:center; gap:12px;"><div style="width:32px; height:16px; background:#0A0A0A;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">32 · section gap</span></div>
+            <div style="display:flex; align-items:center; gap:12px;"><div style="width:48px; height:16px; background:#0A0A0A;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">48 · page margin</span></div>
+            <div style="display:flex; align-items:center; gap:12px;"><div style="width:64px; height:16px; background:#0A0A0A;"></div><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">64 · canvas breathing room</span></div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; letter-spacing:-0.02em;">Radii + controls</div>
+          <div style="display:flex; gap:12px; align-items:flex-end;">
+            <div style="width:56px; height:56px; border:1px solid #D4D4D4; border-radius:4px;"></div>
+            <div style="width:56px; height:56px; border:1px solid #D4D4D4; border-radius:8px;"></div>
+            <div style="width:56px; height:56px; border:1px solid #D4D4D4; border-radius:12px;"></div>
+            <div style="width:56px; height:32px; border:1px solid #D4D4D4; border-radius:999px;"></div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">4 chips · 8 controls · 12 cards · 999 pills</div>
+          <div style="display:flex; gap:12px; align-items:center; flex-wrap:wrap; margin-top:8px;">
+            <button style="background:#0A0A0A; color:#FFFFFF; border:none; border-radius:8px; padding:10px 18px; font-family:'Inter',sans-serif; font-size:14px; font-weight:500; cursor:pointer;">Save to vault</button>
+            <button style="background:#FFFFFF; color:#0A0A0A; border:1px solid #D4D4D4; border-radius:8px; padding:10px 18px; font-family:'Inter',sans-serif; font-size:14px; font-weight:500; cursor:pointer;">Edit</button>
+            <button style="background:transparent; color:#525252; border:none; padding:10px 8px; font-family:'Inter',sans-serif; font-size:14px; font-weight:500; cursor:pointer;">Dismiss</button>
+            <button style="background:#F7F7F7; color:#D4D4D4; border:none; border-radius:8px; padding:10px 18px; font-family:'Inter',sans-serif; font-size:14px; font-weight:500;">Disabled</button>
+          </div>
+          <div style="display:flex; gap:20px; align-items:center; margin-top:8px;">
+            <span style="width:36px; height:20px; background:#0A0A0A; border-radius:999px; position:relative; display:inline-block;"><span style="position:absolute; top:2px; right:2px; width:16px; height:16px; background:#FFFFFF; border-radius:50%;"></span></span>
+            <span style="width:36px; height:20px; background:#EDEDED; border-radius:999px; position:relative; display:inline-block;"><span style="position:absolute; top:2px; left:2px; width:16px; height:16px; background:#FFFFFF; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span></span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">toggle on / off · 120ms travel</span>
+          </div>
+          <div style="margin-top:8px; display:flex; flex-direction:column; gap:8px;">
+            <div style="height:14px; width:80%; border-radius:4px; background:linear-gradient(90deg,#F7F7F7 25%,#EDEDED 50%,#F7F7F7 75%); background-size:640px 100%; animation:omniShimmer 1.6s linear infinite;"></div>
+            <div style="height:14px; width:60%; border-radius:4px; background:linear-gradient(90deg,#F7F7F7 25%,#EDEDED 50%,#F7F7F7 75%); background-size:640px 100%; animation:omniShimmer 1.6s linear infinite;"></div>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">loading · skeleton shimmer · never a spinner on primary surfaces</span>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; letter-spacing:-0.02em;">Waveform</div>
+          <div style="border:1px solid #EDEDED; padding:20px; display:flex; align-items:center; justify-content:center;">{{ waveDsDemo }}</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3; line-height:1.7;">2.5px bars · ink on white · driven by real levels · fast attack (0.5), damped decay (0.93) so it feels physical · floor 2px</div>
+        </div>
+      </div>
+
+      <div style="display:flex; flex-direction:column; gap:20px;">
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; letter-spacing:-0.02em;">Motion spec</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; line-height:1.5;">
+          <div style="display:grid; grid-template-columns:220px 130px 220px 180px 1fr; gap:0 24px; padding:10px 0; border-bottom:1px solid #0A0A0A; color:#A3A3A3; font-size:11px; text-transform:uppercase; letter-spacing:0.08em;"><span>name</span><span>duration</span><span>easing</span><span>properties</span><span>notes</span></div>
+          <div style="display:grid; grid-template-columns:220px 130px 220px 180px 1fr; gap:0 24px; padding:12px 0; border-bottom:1px solid #EDEDED;"><span>micro-interaction</span><span>180ms</span><span>cubic-bezier(0,0,.2,1)</span><span>transform, opacity</span><span style="color:#525252;">hover, press, toggle</span></div>
+          <div style="display:grid; grid-template-columns:220px 130px 220px 180px 1fr; gap:0 24px; padding:12px 0; border-bottom:1px solid #EDEDED;"><span>view transition</span><span>300ms</span><span>cubic-bezier(0,0,.2,1)</span><span>transform, opacity</span><span style="color:#525252;">route changes, panel open</span></div>
+          <div style="display:grid; grid-template-columns:220px 130px 220px 180px 1fr; gap:0 24px; padding:12px 0; border-bottom:1px solid #EDEDED;"><span>breathing ring</span><span>2400ms loop</span><span>sine (ease-in-out)</span><span>opacity 1 → .55</span><span style="color:#525252;">only while capture is live; the only permanent animation</span></div>
+          <div style="display:grid; grid-template-columns:220px 130px 220px 180px 1fr; gap:0 24px; padding:12px 0; border-bottom:1px solid #EDEDED;"><span>enhance moment</span><span>250ms / line</span><span>cubic-bezier(0,0,.2,1)</span><span>opacity 0→1, y +6→0</span><span style="color:#525252;">AI lines settle between user lines, 80ms stagger; user lines never move</span></div>
+          <div style="display:grid; grid-template-columns:220px 130px 220px 180px 1fr; gap:0 24px; padding:12px 0; border-bottom:1px solid #EDEDED;"><span>answers panel hit</span><span>200ms</span><span>cubic-bezier(0,0,.2,1)</span><span>y +8→0, opacity, shadow</span><span style="color:#525252;">shadow blooms 0 → 0 8px 24px rgba(0,0,0,.08); no bounce</span></div>
+          <div style="display:grid; grid-template-columns:220px 130px 220px 180px 1fr; gap:0 24px; padding:12px 0; border-bottom:1px solid #EDEDED;"><span>approve card</span><span>300ms</span><span>cubic-bezier(.4,0,.2,1)</span><span>scale, travel, opacity</span><span style="color:#525252;">card compresses to black check chip, files itself into the note</span></div>
+          <div style="display:grid; grid-template-columns:220px 130px 220px 180px 1fr; gap:0 24px; padding:12px 0; border-bottom:1px solid #EDEDED;"><span>logo aperture</span><span>900ms</span><span>cubic-bezier(.4,0,.2,1)</span><span>rotate +30°, scale .55</span><span style="color:#525252;">launch + onboarding only</span></div>
+          <div style="display:grid; grid-template-columns:220px 130px 220px 180px 1fr; gap:0 24px; padding:12px 0;"><span>global rules</span><span>60fps</span><span>—</span><span>transform/opacity only</span><span style="color:#525252;">honour prefers-reduced-motion: freeze all loops, keep end states</span></div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 1 · LIBRARY ================= -->
+  <div id="library" data-screen-label="Library" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">03 · Library — home</div>
+    <div style="width:1440px; height:900px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); box-sizing:border-box; display:flex; overflow:hidden;">
+      <!-- left rail -->
+      <div style="width:224px; border-right:1px solid #EDEDED; display:flex; flex-direction:column; padding:24px 16px; box-sizing:border-box; flex-shrink:0;">
+        <div style="display:flex; align-items:center; gap:10px; padding:0 12px 24px;">
+          <svg width="22" height="22" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="#0A0A0A" stroke-width="11" stroke-dasharray="29.8 9.99" transform="rotate(-8 50 50)"></circle></svg>
+          <span style="font-family:'Space Grotesk',sans-serif; font-size:17px; font-weight:600; letter-spacing:-0.02em;">Omni</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:2px;">
+          <div style="padding:9px 12px; border-radius:8px; background:#F7F7F7; font-size:14px; font-weight:600; color:#0A0A0A;">Library</div>
+          <div style="padding:9px 12px; border-radius:8px; font-size:14px; color:#525252;" style-hover="background:#F7F7F7;">Ask</div>
+          <div style="padding:9px 12px; border-radius:8px; font-size:14px; color:#525252;" style-hover="background:#F7F7F7;">People</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:9px 12px; border-radius:8px;" style-hover="background:#F7F7F7;"><span style="font-size:14px; color:#525252;">Inbox</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">3</span></div>
+          <div style="padding:9px 12px; border-radius:8px; font-size:14px; color:#525252;" style-hover="background:#F7F7F7;">Settings</div>
+        </div>
+        <div style="margin-top:auto; padding:16px 12px; border-top:1px solid #EDEDED; display:flex; flex-direction:column; gap:6px;">
+          <div style="font-size:12px; color:#525252;">All data on this device</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">~/Documents/vault</div>
+          <div style="height:3px; background:#EDEDED; border-radius:999px; margin-top:4px;"><div style="width:22%; height:3px; background:#A3A3A3; border-radius:999px;"></div></div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">4.4 GB of 20 GB</div>
+        </div>
+      </div>
+      <!-- main -->
+      <div style="flex:1; display:flex; flex-direction:column; padding:48px 64px; box-sizing:border-box; overflow:hidden;">
+        <div style="display:flex; justify-content:space-between; align-items:flex-end; padding-bottom:32px;">
+          <div style="display:flex; flex-direction:column; gap:6px;">
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:600; letter-spacing:-0.02em;">Today</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">Mon Jul 6, 2026 · 3 meetings</div>
+          </div>
+          <button style="background:#0A0A0A; color:#FFFFFF; border:none; border-radius:8px; padding:10px 18px; font-family:'Inter',sans-serif; font-size:14px; font-weight:500; cursor:pointer;" style-hover="transform:translateY(-1px);">Quick note</button>
+        </div>
+        <div style="display:flex; flex-direction:column;">
+          <div style="display:grid; grid-template-columns:88px 1fr 120px; gap:24px; align-items:center; padding:18px 16px; margin:0 -16px; border-top:1px solid #EDEDED; border-radius:8px;" style-hover="background:#F7F7F7;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">09:30</span>
+            <span style="display:flex; flex-direction:column; gap:3px;"><span style="font-size:15px; font-weight:500;">Product sync — Atlas</span><span style="font-size:13px; color:#A3A3A3;">Scope cut for v0.9; Dana owns the migration plan by Friday.</span></span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3; text-align:right;">42:17</span>
+          </div>
+          <div style="display:grid; grid-template-columns:88px 1fr 120px; gap:24px; align-items:center; padding:18px 16px; margin:0 -16px; border-top:1px solid #EDEDED; border-radius:8px;" style-hover="background:#F7F7F7;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">11:00</span>
+            <span style="display:flex; flex-direction:column; gap:3px;"><span style="font-size:15px; font-weight:500;">1:1 — Priya</span><span style="font-size:13px; color:#A3A3A3;">Growth path review; she takes the platform interviews next cycle.</span></span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3; text-align:right;">28:03</span>
+          </div>
+          <div style="display:grid; grid-template-columns:88px 1fr 120px; gap:24px; align-items:center; padding:18px 16px; margin:0 -16px; border-top:1px solid #EDEDED; border-bottom:1px solid #EDEDED; border-radius:8px;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px;">14:00</span>
+            <span style="display:flex; flex-direction:column; gap:3px;"><span style="font-size:15px; font-weight:500;">Vendor call — Northwind</span><span style="font-size:13px; color:#A3A3A3;">From calendar · Teams</span></span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252; text-align:right;">in 40 min</span>
+          </div>
+        </div>
+        <div style="padding:40px 0 16px; font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Friday · Jul 3</div>
+        <div style="display:flex; flex-direction:column;">
+          <div style="display:grid; grid-template-columns:88px 1fr 120px; gap:24px; align-items:center; padding:18px 16px; margin:0 -16px; border-top:1px solid #EDEDED; border-radius:8px;" style-hover="background:#F7F7F7;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">15:30</span>
+            <span style="display:flex; flex-direction:column; gap:3px;"><span style="font-size:15px; font-weight:500;">Interview — staff engineer</span><span style="font-size:13px; color:#A3A3A3;">Strong systems depth; concerns on team lead experience. Advance.</span></span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3; text-align:right;">55:41</span>
+          </div>
+          <div style="display:grid; grid-template-columns:88px 1fr 120px; gap:24px; align-items:center; padding:18px 16px; margin:0 -16px; border-top:1px solid #EDEDED; border-radius:8px;" style-hover="background:#F7F7F7;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">10:00</span>
+            <span style="display:flex; flex-direction:column; gap:3px;"><span style="font-size:15px; font-weight:500;">Quick note — pricing thoughts</span><span style="font-size:13px; color:#A3A3A3;">Hold list at $79; revisit after Northwind renewal lands.</span></span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3; text-align:right;">03:12</span>
+          </div>
+          <div style="display:grid; grid-template-columns:88px 1fr 120px; gap:24px; align-items:center; padding:18px 16px; margin:0 -16px; border-top:1px solid #EDEDED; border-bottom:1px solid #EDEDED; border-radius:8px;" style-hover="background:#F7F7F7;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">09:00</span>
+            <span style="display:flex; flex-direction:column; gap:3px;"><span style="font-size:15px; font-weight:500;">Eng standup</span><span style="font-size:13px; color:#A3A3A3;">Migration blocked on auth tokens; Sam pairs with Dana after lunch.</span></span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3; text-align:right;">14:56</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 2 · LIVE MEETING ================= -->
+  <div id="live" data-screen-label="Live meeting" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">04 · Live meeting — flagship</div>
+    <div style="width:1440px; height:900px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); box-sizing:border-box; display:flex; flex-direction:column; overflow:hidden;">
+      <div style="flex:1; display:flex; overflow:hidden;">
+        <!-- notepad -->
+        <div style="flex:2; display:flex; flex-direction:column; padding:56px 72px; box-sizing:border-box; min-width:0;">
+          <div style="display:flex; justify-content:space-between; align-items:baseline; padding-bottom:8px;">
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:600; letter-spacing:-0.02em;">Vendor call — Northwind</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">14:00 · Teams</div>
+          </div>
+          <div style="flex:1; padding-top:32px; font-size:16px; line-height:2; color:#0A0A0A;">
+            <div>pricing — they want the 2025 rate held</div>
+            <div>ask marcus about the SSO timeline before we commit</div>
+            <div style="color:#D4D4D4;">Type anything. Omni is listening.<span style="display:inline-block; width:1.5px; height:20px; background:#0A0A0A; vertical-align:-4px; margin-left:2px; animation:{{ breatheCss }};"></span></div>
+          </div>
+        </div>
+        <!-- transcript -->
+        <div style="flex:1; border-left:1px solid #EDEDED; display:flex; flex-direction:column; position:relative; min-width:0; background:linear-gradient(#FFFFFF,#F7F7F7);">
+          <div style="padding:20px 24px 12px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Transcript</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">auto-scroll · hold to pause</span>
+          </div>
+          <div style="flex:1; overflow:hidden; padding:8px 24px; display:flex; flex-direction:column; gap:12px; font-family:'JetBrains Mono',monospace; font-size:12.5px; line-height:1.6;">
+            <div style="align-self:flex-start; max-width:85%; border:1px solid #A3A3A3; border-radius:10px; padding:8px 12px; color:#A3A3A3;">We're happy with the product. The only sticking point going into renewal is price.<span style="display:block; font-size:10px; margin-top:4px;">Them · 14:07:12</span></div>
+            <div style="align-self:flex-end; max-width:85%; color:#0A0A0A; text-align:right;">Understood. What did we land on last year — the July number?<span style="display:block; font-size:10px; color:#A3A3A3; margin-top:4px;">Me · 14:07:31</span></div>
+            <div style="align-self:flex-start; max-width:85%; border:1px solid #A3A3A3; border-radius:10px; padding:8px 12px; color:#A3A3A3;">I'd have to check. We had a multi-year clause discussed but never signed.<span style="display:block; font-size:10px; margin-top:4px;">Them · 14:07:48</span></div>
+            <div style="align-self:flex-end; max-width:85%; color:#0A0A0A; text-align:right;">Give me one second, I have it here.<span style="display:block; font-size:10px; color:#A3A3A3; margin-top:4px;">Me · 14:08:02</span></div>
+            <div style="align-self:flex-start; max-width:85%; border:1px solid #A3A3A3; border-radius:10px; padding:8px 12px; color:#A3A3A3;">Sure. And we should talk SSO at some point too.<span style="display:block; font-size:10px; margin-top:4px;">Them · 14:08:15</span></div>
+          </div>
+          <!-- answers panel -->
+          <sc-if value="{{ answersOpen }}" hint-placeholder-val="{{ true }}">
+            <div style="position:absolute; right:20px; bottom:20px; width:340px; background:#FFFFFF; border:1px solid #EDEDED; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.08); padding:20px; box-sizing:border-box; display:flex; flex-direction:column; gap:10px;">
+              <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Answer</span>
+                <span style="font-size:12px; color:#A3A3A3; cursor:pointer;">Collapse</span>
+              </div>
+              <div style="font-size:13px; color:#A3A3A3; font-style:italic;">"What did we land on last year?"</div>
+              <div style="font-size:14px; line-height:1.6; color:#0A0A0A;">Northwind renewed Jul 2025 at <strong>$68/seat/yr</strong>, 140 seats. A 3-year clause at $61 was discussed on the Jun 12 call but never signed.</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3; border-top:1px solid #EDEDED; padding-top:10px;">↳ vault/clients/northwind.md · 2025-07-14 renewal call</div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ answersClosed }}" hint-placeholder-val="{{ false }}">
+            <div style="position:absolute; right:20px; bottom:20px; display:flex; align-items:center; gap:8px; background:#FFFFFF; border:1px solid #EDEDED; border-radius:999px; box-shadow:0 8px 24px rgba(0,0,0,0.08); padding:8px 16px; font-size:13px; color:#525252; cursor:pointer;">
+              <span style="display:inline-block; width:8px; height:8px; border:2px solid #0A0A0A; border-radius:50%; animation:{{ breatheCss }};"></span>Answers
+            </div>
+          </sc-if>
+        </div>
+      </div>
+      <!-- capture bar -->
+      <div style="height:64px; border-top:1px solid #EDEDED; display:flex; align-items:center; gap:24px; padding:0 32px; box-sizing:border-box; flex-shrink:0;">
+        <span style="display:inline-block; width:12px; height:12px; border:3px solid #0A0A0A; border-radius:50%; animation:{{ breatheCss }};"></span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">00:42:17</span>
+        {{ waveMeeting }}
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">mic + system audio · on-device</span>
+        <button style="margin-left:auto; background:#FFFFFF; color:#0A0A0A; border:1px solid #D4D4D4; border-radius:8px; padding:8px 16px; font-family:'Inter',sans-serif; font-size:14px; font-weight:500; cursor:pointer;" style-hover="border-color:#0A0A0A;">Stop</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 3 · POST-MEETING NOTE ================= -->
+  <div id="note" data-screen-label="Post-meeting note" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">05 · Post-meeting note — enhance + approvals</div>
+    <div style="width:1440px; height:960px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); box-sizing:border-box; display:flex; flex-direction:column; padding:56px 0 0; overflow:hidden;">
+      <div style="width:820px; margin:0 auto; display:flex; flex-direction:column; gap:0; flex:1; min-height:0;">
+        <div style="display:flex; justify-content:space-between; align-items:baseline;">
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:600; letter-spacing:-0.02em;">Vendor call — Northwind</div>
+          <div style="display:flex; align-items:center; gap:8px; font-size:13px; color:#525252;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">Template</span>
+            <span style="border:1px solid #EDEDED; border-radius:999px; padding:4px 12px; background:#F7F7F7; font-weight:500; color:#0A0A0A;">Meeting</span>
+            <span style="border:1px solid transparent; border-radius:999px; padding:4px 12px; cursor:pointer;" style-hover="border-color:#EDEDED;">1:1</span>
+            <span style="border:1px solid transparent; border-radius:999px; padding:4px 12px; cursor:pointer;" style-hover="border-color:#EDEDED;">Interview</span>
+          </div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3; padding:8px 0 28px;">Mon Jul 6 · 14:00–14:47 · marcus, elena (northwind) · enhanced 14:48</div>
+        <div style="font-size:15px; line-height:1.9; display:flex; flex-direction:column; gap:6px; overflow:hidden;">
+          <div style="color:#0A0A0A; font-weight:500;">pricing — they want the 2025 rate held</div>
+          <div style="color:#525252; padding-left:20px; border-left:2px solid #EDEDED;">Elena confirmed renewal intent at the current $68/seat. Marcus pushed back on any increase, citing the unsigned 3-year clause from Jun 2025. Agreed: hold $68 if they commit to 2 years and 160 seats; otherwise standard uplift applies.</div>
+          <div style="color:#0A0A0A; font-weight:500; margin-top:10px;">ask marcus about the SSO timeline before we commit</div>
+          <div style="color:#525252; padding-left:20px; border-left:2px solid #EDEDED;">Marcus expects their IT to require SAML by Q1 2027. Not a blocker for this renewal, but he wants a written roadmap note attached to the contract.</div>
+          <div style="color:#525252; padding-left:20px; border-left:2px solid #EDEDED; margin-top:10px;">Next step agreed on the call: lunch with Elena on Friday to close the seat count, then contract draft to their procurement by Jul 15.</div>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3; padding:20px 0 24px; display:flex; gap:24px;">
+          <span style="color:#0A0A0A;">■ your lines</span><span>▏woven context — slides in 250ms per line, your lines never move</span>
+        </div>
+        <!-- approval rack -->
+        <div style="display:flex; gap:16px; padding-bottom:28px;">
+          <sc-if value="{{ notApproved }}" hint-placeholder-val="{{ true }}">
+            <div style="width:264px; border:1px solid #EDEDED; border-radius:12px; padding:18px; box-sizing:border-box; display:flex; flex-direction:column; gap:10px;">
+              <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Create event</div>
+              <div style="font-size:14px; font-weight:500;">Lunch with Elena</div>
+              <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252;">Fri Jul 10 · 12:00–13:00</div>
+              <div style="display:flex; align-items:center; gap:4px; margin-top:6px;">
+                <button style="background:#0A0A0A; color:#FFFFFF; border:none; border-radius:8px; padding:8px 14px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; cursor:pointer;">Approve</button>
+                <button style="background:transparent; color:#525252; border:none; padding:8px 10px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer;">Edit</button>
+                <button style="background:transparent; color:#A3A3A3; border:none; padding:8px 10px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer;">Dismiss</button>
+              </div>
+            </div>
+          </sc-if>
+          <sc-if value="{{ approved }}" hint-placeholder-val="{{ false }}">
+            <div style="align-self:flex-start; display:flex; align-items:center; gap:8px; background:#0A0A0A; color:#FFFFFF; border-radius:999px; padding:8px 16px; font-size:13px; font-weight:500;">✓ Event created</div>
+          </sc-if>
+          <div style="width:264px; border:1px solid #EDEDED; border-radius:12px; padding:18px; box-sizing:border-box; display:flex; flex-direction:column; gap:10px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Save contact</div>
+            <div style="font-size:14px; font-weight:500;">Elena Marsh</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252;">elena@northwind.com<br>+1 415 555 0182</div>
+            <div style="display:flex; align-items:center; gap:4px; margin-top:6px;">
+              <button style="background:#0A0A0A; color:#FFFFFF; border:none; border-radius:8px; padding:8px 14px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; cursor:pointer;">Approve</button>
+              <button style="background:transparent; color:#525252; border:none; padding:8px 10px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer;">Edit</button>
+              <button style="background:transparent; color:#A3A3A3; border:none; padding:8px 10px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer;">Dismiss</button>
+            </div>
+          </div>
+          <div style="width:264px; border:1px solid #EDEDED; border-radius:12px; padding:18px; box-sizing:border-box; display:flex; flex-direction:column; gap:10px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Draft email</div>
+            <div style="font-size:14px; font-weight:500;">Recap to Marcus</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252;">Pricing terms + SSO roadmap note</div>
+            <div style="display:flex; align-items:center; gap:4px; margin-top:6px;">
+              <button style="background:#0A0A0A; color:#FFFFFF; border:none; border-radius:8px; padding:8px 14px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; cursor:pointer;">Approve</button>
+              <button style="background:transparent; color:#525252; border:none; padding:8px 10px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer;">Edit</button>
+              <button style="background:transparent; color:#A3A3A3; border:none; padding:8px 10px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer;">Dismiss</button>
+            </div>
+          </div>
+        </div>
+      </div>
+      <!-- collapsed transcript -->
+      <div style="border-top:1px solid #EDEDED; background:linear-gradient(#FFFFFF,#F7F7F7); padding:18px 64px; display:flex; justify-content:space-between; align-items:center; cursor:pointer; flex-shrink:0;">
+        <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252;">Transcript · 47 min · 6,204 words</span>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">expand ▾</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 4 · ASK OMNI ================= -->
+  <div id="ask" data-screen-label="Ask Omni" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">06 · Ask Omni — answer state + empty state</div>
+    <div style="display:flex; gap:48px;">
+      <div style="width:1440px; height:900px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); box-sizing:border-box; display:flex; flex-direction:column; align-items:center; padding:72px 0; overflow:hidden;">
+        <div style="width:720px; display:flex; flex-direction:column; gap:40px;">
+          <div style="border:1px solid #0A0A0A; border-radius:12px; padding:16px 20px; font-size:15px; display:flex; justify-content:space-between; align-items:center;">
+            <span>what have we agreed with northwind on pricing?</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">↵</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:20px;">
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; letter-spacing:-0.02em;">Northwind pricing — current position</div>
+            <div style="font-size:15px; line-height:1.8; color:#0A0A0A;">The 2025 renewal closed at <strong>$68/seat/yr for 140 seats</strong> <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">[1]</span>. A 3-year clause at $61 was discussed in June 2025 but never signed <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">[2]</span>.</div>
+            <div style="font-size:15px; line-height:1.8; color:#0A0A0A;">On today's call you agreed to hold $68 if Northwind commits to two years and expands to 160 seats; otherwise the standard uplift applies. Contract draft is due to their procurement by Jul 15 <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">[3]</span>.</div>
+            <div style="border-top:1px solid #EDEDED; padding-top:16px; display:flex; flex-direction:column; gap:8px; font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252;">
+              <span style="cursor:pointer;" style-hover="color:#0A0A0A;">[1] vault/clients/northwind.md · renewal 2025-07-14</span>
+              <span style="cursor:pointer;" style-hover="color:#0A0A0A;">[2] vault/meetings/2025-06-12 northwind pricing.md</span>
+              <span style="cursor:pointer;" style-hover="color:#0A0A0A;">[3] vault/meetings/2026-07-06 vendor call — northwind.md</span>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div style="width:1440px; height:900px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:32px;">
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:40px; font-weight:600; letter-spacing:-0.03em; color:#0A0A0A;">Ask across everything you know</div>
+        <div style="width:720px; border:1px solid #D4D4D4; border-radius:12px; padding:16px 20px; font-size:15px; color:#D4D4D4; display:flex; justify-content:space-between; align-items:center;" style-hover="border-color:#0A0A0A;">
+          <span>Ask a question</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">Ctrl ⇧ A</span>
+        </div>
+        <div style="font-size:13px; color:#A3A3A3;">Answers come from your vault only. Nothing leaves this device.</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 5 · DICTATION PILL ================= -->
+  <div id="pill" data-screen-label="Dictation pill" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">07 · Dictation pill — idle / listening / command parsed / approval popover</div>
+    <div style="display:flex; gap:56px; align-items:flex-start;">
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; align-items:center; gap:14px; background:#FFFFFF; border:1px solid #EDEDED; border-radius:999px; box-shadow:0 8px 24px rgba(0,0,0,0.08); padding:10px 18px;">
+          {{ wavePillIdle }}
+          <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">00:00</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#D4D4D4;">Note</span>
+        </div>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">idle · flat baseline · timer zeroed</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; align-items:center; gap:14px; background:#FFFFFF; border:1px solid #EDEDED; border-radius:999px; box-shadow:0 8px 24px rgba(0,0,0,0.08); padding:10px 18px;">
+          {{ wavePillListen }}
+          <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#0A0A0A;">00:37</span>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#0A0A0A;">Note</span>
+        </div>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">listening · live levels · mode in ink</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="display:flex; flex-direction:column; gap:0; width:360px;">
+          <div style="display:flex; align-items:center; gap:14px; background:#FFFFFF; border:1px solid #EDEDED; border-radius:999px; box-shadow:0 8px 24px rgba(0,0,0,0.08); padding:10px 18px; align-self:flex-start;">
+            {{ wavePillCmd }}
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#0A0A0A;">00:04</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; background:#0A0A0A; color:#FFFFFF; border-radius:999px; padding:3px 10px;">Command</span>
+          </div>
+          <div style="margin-top:12px; width:320px; background:#FFFFFF; border:1px solid #EDEDED; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.08); padding:18px; box-sizing:border-box; display:flex; flex-direction:column; gap:10px;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Create event</div>
+            <div style="font-size:13px; color:#A3A3A3; font-style:italic;">"schedule lunch with dana friday noon"</div>
+            <div style="font-size:14px; font-weight:500;">Lunch with Dana</div>
+            <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252;">Fri Jul 10 · 12:00–13:00</div>
+            <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
+              <button style="background:#0A0A0A; color:#FFFFFF; border:none; border-radius:8px; padding:8px 14px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; cursor:pointer;">Approve</button>
+              <button style="background:transparent; color:#525252; border:none; padding:8px 10px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer;">Edit</button>
+              <button style="background:transparent; color:#A3A3A3; border:none; padding:8px 10px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer;">Dismiss</button>
+            </div>
+          </div>
+        </div>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">command parsed · mode chip inverts · popover rises 8px / 200ms</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 6 · PEOPLE ================= -->
+  <div id="people" data-screen-label="People" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">08 · People</div>
+    <div style="width:1440px; height:760px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); box-sizing:border-box; display:flex; flex-direction:column; padding:48px 64px; overflow:hidden;">
+      <div style="display:flex; justify-content:space-between; align-items:flex-end; padding-bottom:32px;">
+        <div style="display:flex; flex-direction:column; gap:6px;">
+          <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:600; letter-spacing:-0.02em;">People</div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;">38 contacts · built from your meetings</div>
+        </div>
+        <div style="border:1px solid #D4D4D4; border-radius:8px; padding:9px 14px; font-size:14px; color:#A3A3A3; width:240px;">Search people</div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr 1fr; gap:20px;">
+        <div style="border:1px solid #EDEDED; border-radius:12px; padding:24px; display:flex; flex-direction:column; gap:14px;" style-hover="box-shadow:0 8px 24px rgba(0,0,0,0.08);">
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; letter-spacing:-0.02em;">Elena Marsh</div>
+            <div style="font-size:13px; color:#A3A3A3;">Head of procurement · Northwind</div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252; display:flex; flex-direction:column; gap:4px; border-top:1px solid #EDEDED; padding-top:12px;">
+            <span>elena@northwind.com</span><span>+1 415 555 0182</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; border-top:1px solid #EDEDED; padding-top:12px;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Meetings · 4</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252; cursor:pointer;" style-hover="color:#0A0A0A;">[[2026-07-06 · Vendor call — Northwind]]</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252; cursor:pointer;" style-hover="color:#0A0A0A;">[[2025-07-14 · Renewal call]]</span>
+          </div>
+        </div>
+        <div style="border:1px solid #EDEDED; border-radius:12px; padding:24px; display:flex; flex-direction:column; gap:14px;" style-hover="box-shadow:0 8px 24px rgba(0,0,0,0.08);">
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; letter-spacing:-0.02em;">Dana Okafor</div>
+            <div style="font-size:13px; color:#A3A3A3;">Staff engineer · Atlas team</div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252; display:flex; flex-direction:column; gap:4px; border-top:1px solid #EDEDED; padding-top:12px;">
+            <span>dana@yourco.com</span><span>+1 628 555 0244</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; border-top:1px solid #EDEDED; padding-top:12px;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Meetings · 12</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252; cursor:pointer;" style-hover="color:#0A0A0A;">[[2026-07-06 · Product sync — Atlas]]</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252; cursor:pointer;" style-hover="color:#0A0A0A;">[[2026-07-03 · Eng standup]]</span>
+          </div>
+        </div>
+        <div style="border:1px solid #EDEDED; border-radius:12px; padding:24px; display:flex; flex-direction:column; gap:14px;" style-hover="box-shadow:0 8px 24px rgba(0,0,0,0.08);">
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:20px; font-weight:600; letter-spacing:-0.02em;">Marcus Bell</div>
+            <div style="font-size:13px; color:#A3A3A3;">VP engineering · Northwind</div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252; display:flex; flex-direction:column; gap:4px; border-top:1px solid #EDEDED; padding-top:12px;">
+            <span>marcus@northwind.com</span><span style="color:#D4D4D4;">no phone yet</span>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:6px; border-top:1px solid #EDEDED; padding-top:12px;">
+            <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Meetings · 3</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252; cursor:pointer;" style-hover="color:#0A0A0A;">[[2026-07-06 · Vendor call — Northwind]]</span>
+            <span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252; cursor:pointer;" style-hover="color:#0A0A0A;">[[2025-06-12 · Northwind pricing]]</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 7 · ONBOARDING ================= -->
+  <div id="onboarding" data-screen-label="Onboarding" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">09 · Onboarding — a two-minute ritual</div>
+    <div style="display:flex; gap:40px; align-items:stretch;">
+      <div style="width:560px; height:560px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); box-sizing:border-box; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:28px; padding:48px;">
+        <svg width="120" height="120" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="#0A0A0A" stroke-width="11" stroke-dasharray="29.8 9.99" style="transform-origin:50px 50px; animation:{{ apertureAnim }};"></circle></svg>
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:40px; font-weight:600; letter-spacing:-0.03em;">Omni</div>
+        <div style="font-size:14px; color:#525252; text-align:center; line-height:1.7; max-width:340px;">It hears your meetings, remembers everything you know, and acts. Everything stays on this device.</div>
+        <button style="background:#0A0A0A; color:#FFFFFF; border:none; border-radius:8px; padding:12px 28px; font-family:'Inter',sans-serif; font-size:14px; font-weight:500; cursor:pointer;">Begin</button>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">1 / 4</div>
+      </div>
+      <div style="width:560px; height:560px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; gap:24px; padding:56px;">
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:600; letter-spacing:-0.02em;">Let Omni hear</div>
+        <div style="font-size:14px; color:#525252; line-height:1.7;">Speak — the meter moving is the proof.</div>
+        <div style="display:flex; flex-direction:column; gap:14px;">
+          <div style="border:1px solid #EDEDED; border-radius:12px; padding:18px 20px; display:flex; align-items:center; gap:16px;">
+            <div style="flex:1; display:flex; flex-direction:column; gap:8px;"><span style="font-size:14px; font-weight:500;">Microphone</span>{{ meterMic }}</div>
+            <span style="display:flex; align-items:center; gap:6px; background:#0A0A0A; color:#FFFFFF; border-radius:999px; padding:5px 14px; font-size:12px; font-weight:500;">✓ Granted</span>
+          </div>
+          <div style="border:1px solid #EDEDED; border-radius:12px; padding:18px 20px; display:flex; align-items:center; gap:16px;">
+            <div style="flex:1; display:flex; flex-direction:column; gap:8px;"><span style="font-size:14px; font-weight:500;">System audio</span><div style="width:200px; height:6px; background:#EDEDED; border-radius:999px;"></div></div>
+            <button style="background:#FFFFFF; color:#0A0A0A; border:1px solid #0A0A0A; border-radius:999px; padding:5px 14px; font-family:'Inter',sans-serif; font-size:12px; font-weight:500; cursor:pointer;">Grant</button>
+          </div>
+        </div>
+        <div style="font-size:13px; color:#A3A3A3;">No bot joins your calls. Audio is captured on this machine only.</div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3; margin-top:auto;">2 / 4</div>
+      </div>
+      <div style="width:560px; height:560px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; gap:24px; padding:56px;">
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:600; letter-spacing:-0.02em;">Choose your vault</div>
+        <div style="font-size:14px; color:#525252; line-height:1.7;">Notes are plain Markdown. Obsidian reads them directly, and they are yours forever.</div>
+        <div style="border:1px solid #0A0A0A; border-radius:12px; padding:18px 20px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:13px;">~/Documents/vault</span>
+          <button style="background:transparent; color:#525252; border:none; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; cursor:pointer;">Change</button>
+        </div>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3; line-height:1.8;">vault/<br>&nbsp;&nbsp;meetings/&nbsp;&nbsp;people/&nbsp;&nbsp;notes/&nbsp;&nbsp;clients/</div>
+        <button style="background:#0A0A0A; color:#FFFFFF; border:none; border-radius:8px; padding:12px 28px; font-family:'Inter',sans-serif; font-size:14px; font-weight:500; cursor:pointer; align-self:flex-start;">Use this folder</button>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3; margin-top:auto;">3 / 4</div>
+      </div>
+      <div style="width:560px; height:560px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); box-sizing:border-box; display:flex; flex-direction:column; justify-content:center; gap:22px; padding:56px;">
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:600; letter-spacing:-0.02em;">Models</div>
+        <div style="border:1px solid #EDEDED; border-radius:12px; padding:14px 18px; display:flex; justify-content:space-between; align-items:center;">
+          <span style="font-family:'JetBrains Mono',monospace; font-size:13px; color:#525252;">sk-ant-••••••••••••R2Qw</span>
+          <span style="font-size:12px; color:#0A0A0A; font-weight:500;">✓ Valid</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:12px;"><span>whisper-large-v3-turbo</span><span style="color:#A3A3A3;">1.62 GB · 62%</span></div>
+            <div style="height:4px; background:#EDEDED; border-radius:999px;"><div style="width:62%; height:4px; background:#0A0A0A; border-radius:999px;"></div></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:12px;"><span>bge-small-en-v1.5</span><span style="color:#A3A3A3;">133 MB · done</span></div>
+            <div style="height:4px; background:#0A0A0A; border-radius:999px;"></div>
+          </div>
+          <div style="display:flex; flex-direction:column; gap:8px;">
+            <div style="display:flex; justify-content:space-between; font-family:'JetBrains Mono',monospace; font-size:12px; color:#A3A3A3;"><span>silero-vad</span><span>2.2 MB · queued</span></div>
+            <div style="height:4px; background:#EDEDED; border-radius:999px;"></div>
+          </div>
+        </div>
+        <div style="font-size:13px; color:#A3A3A3;">Transcription runs on this device. Cloud models are optional and per-task.</div>
+        <button style="background:#F7F7F7; color:#D4D4D4; border:none; border-radius:8px; padding:12px 28px; font-family:'Inter',sans-serif; font-size:14px; font-weight:500; align-self:flex-start;">Finish</button>
+        <div style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3; margin-top:auto;">4 / 4</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 8 · SETTINGS ================= -->
+  <div id="settings" data-screen-label="Settings" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">10 · Settings — router + ledger</div>
+    <div style="width:1440px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); box-sizing:border-box; display:flex; flex-direction:column; padding:48px 64px 56px; gap:40px;">
+      <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:600; letter-spacing:-0.02em;">Settings</div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:48px;">
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Devices</div>
+          <div style="border:1px solid #EDEDED; border-radius:12px; padding:6px 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid #EDEDED;"><span style="font-size:14px;">Microphone</span><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252;">Shure MV7 ▾</span></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid #EDEDED;"><span style="font-size:14px;">System audio</span><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252;">Default output (loopback) ▾</span></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0;"><span style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:14px;">Keep audio after transcription</span><span style="font-size:12px; color:#A3A3A3;">Off deletes recordings once the note is saved</span></span><span style="width:36px; height:20px; background:#EDEDED; border-radius:999px; position:relative; display:inline-block; flex-shrink:0;"><span style="position:absolute; top:2px; left:2px; width:16px; height:16px; background:#FFFFFF; border-radius:50%; box-shadow:0 1px 3px rgba(0,0,0,0.15);"></span></span></div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3; margin-top:12px;">Capture</div>
+          <div style="border:1px solid #EDEDED; border-radius:12px; padding:6px 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid #EDEDED;"><span style="font-size:14px;">Dictation hotkey</span><span style="display:flex; gap:6px; align-items:center;"><span style="border:1px solid #D4D4D4; border-radius:6px; padding:3px 8px; font-family:'JetBrains Mono',monospace; font-size:12px; box-shadow:0 1px 0 #D4D4D4;">Ctrl</span><span style="border:1px solid #D4D4D4; border-radius:6px; padding:3px 8px; font-family:'JetBrains Mono',monospace; font-size:12px; box-shadow:0 1px 0 #D4D4D4;">⇧</span><span style="border:1px solid #D4D4D4; border-radius:6px; padding:3px 8px; font-family:'JetBrains Mono',monospace; font-size:12px; box-shadow:0 1px 0 #D4D4D4;">Space</span><span style="font-size:13px; color:#525252; margin-left:8px; cursor:pointer;">Record</span></span></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-bottom:1px solid #EDEDED;"><span style="font-size:14px;">Note templates</span><span style="font-family:'JetBrains Mono',monospace; font-size:12px; color:#525252;">Meeting · 1:1 · Interview · Edit ▸</span></div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0;"><span style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:14px;">Disclosure reminder</span><span style="font-size:12px; color:#A3A3A3;">Nudge to tell participants a transcript is being taken</span></span><span style="width:36px; height:20px; background:#0A0A0A; border-radius:999px; position:relative; display:inline-block; flex-shrink:0;"><span style="position:absolute; top:2px; right:2px; width:16px; height:16px; background:#FFFFFF; border-radius:50%;"></span></span></div>
+          </div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">AI router</div>
+          <div style="border:1px solid #EDEDED; border-radius:12px; padding:20px; font-family:'JetBrains Mono',monospace; font-size:12px;">
+            <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; padding-bottom:10px; border-bottom:1px solid #0A0A0A; color:#A3A3A3; font-size:11px; text-transform:uppercase; letter-spacing:0.08em;"><span>task</span><span style="text-align:center;">local</span><span style="text-align:center;">anthropic</span><span style="text-align:center;">openai</span></div>
+            <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; align-items:center; padding:11px 0; border-bottom:1px solid #EDEDED;"><span>transcription</span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; background:#0A0A0A; border-radius:50%;"></span></span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; border:1px solid #D4D4D4; border-radius:50%;"></span></span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; border:1px solid #D4D4D4; border-radius:50%;"></span></span></div>
+            <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; align-items:center; padding:11px 0; border-bottom:1px solid #EDEDED;"><span>note enhancement</span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; border:1px solid #D4D4D4; border-radius:50%;"></span></span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; background:#0A0A0A; border-radius:50%;"></span></span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; border:1px solid #D4D4D4; border-radius:50%;"></span></span></div>
+            <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; align-items:center; padding:11px 0; border-bottom:1px solid #EDEDED;"><span>live answers</span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; border:1px solid #D4D4D4; border-radius:50%;"></span></span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; background:#0A0A0A; border-radius:50%;"></span></span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; border:1px solid #D4D4D4; border-radius:50%;"></span></span></div>
+            <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; align-items:center; padding:11px 0; border-bottom:1px solid #EDEDED;"><span>action parsing</span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; background:#0A0A0A; border-radius:50%;"></span></span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; border:1px solid #D4D4D4; border-radius:50%;"></span></span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; border:1px solid #D4D4D4; border-radius:50%;"></span></span></div>
+            <div style="display:grid; grid-template-columns:1.4fr 1fr 1fr 1fr; align-items:center; padding:11px 0;"><span>embeddings</span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; background:#0A0A0A; border-radius:50%;"></span></span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; border:1px solid #D4D4D4; border-radius:50%;"></span></span><span style="text-align:center;"><span style="display:inline-block; width:10px; height:10px; border:1px solid #D4D4D4; border-radius:50%;"></span></span></div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3; margin-top:12px;">Cost + latency · last 30 days</div>
+          <div style="border:1px solid #EDEDED; border-radius:12px; padding:20px; font-family:'JetBrains Mono',monospace; font-size:12px;">
+            <div style="display:grid; grid-template-columns:1.4fr 0.8fr 1fr 0.8fr 0.8fr; padding-bottom:10px; border-bottom:1px solid #0A0A0A; color:#A3A3A3; font-size:11px; text-transform:uppercase; letter-spacing:0.08em;"><span>task</span><span style="text-align:right;">calls</span><span style="text-align:right;">tokens</span><span style="text-align:right;">p50</span><span style="text-align:right;">cost</span></div>
+            <div style="display:grid; grid-template-columns:1.4fr 0.8fr 1fr 0.8fr 0.8fr; padding:11px 0; border-bottom:1px solid #EDEDED;"><span>transcription</span><span style="text-align:right;">184</span><span style="text-align:right; color:#A3A3A3;">—</span><span style="text-align:right;">0.4×rt</span><span style="text-align:right;">$0.00</span></div>
+            <div style="display:grid; grid-template-columns:1.4fr 0.8fr 1fr 0.8fr 0.8fr; padding:11px 0; border-bottom:1px solid #EDEDED;"><span>note enhancement</span><span style="text-align:right;">92</span><span style="text-align:right;">1.21M</span><span style="text-align:right;">3.8s</span><span style="text-align:right;">$4.12</span></div>
+            <div style="display:grid; grid-template-columns:1.4fr 0.8fr 1fr 0.8fr 0.8fr; padding:11px 0; border-bottom:1px solid #EDEDED;"><span>live answers</span><span style="text-align:right;">57</span><span style="text-align:right;">0.34M</span><span style="text-align:right;">1.2s</span><span style="text-align:right;">$1.87</span></div>
+            <div style="display:grid; grid-template-columns:1.4fr 0.8fr 1fr 0.8fr 0.8fr; padding:11px 0; border-bottom:1px solid #EDEDED;"><span>action parsing</span><span style="text-align:right;">41</span><span style="text-align:right;">0.02M</span><span style="text-align:right;">0.3s</span><span style="text-align:right;">$0.00</span></div>
+            <div style="display:grid; grid-template-columns:1.4fr 0.8fr 1fr 0.8fr 0.8fr; padding:11px 0; font-weight:500;"><span>total</span><span style="text-align:right;">374</span><span style="text-align:right;">1.57M</span><span style="text-align:right;">—</span><span style="text-align:right;">$5.99</span></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 9 · TRAY + TOAST ================= -->
+  <div id="tray" data-screen-label="Tray and toast" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">11 · Tray menu + capture toast</div>
+    <div style="display:flex; gap:56px; align-items:flex-start;">
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="width:280px; background:#FFFFFF; border:1px solid #EDEDED; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.08); padding:8px; box-sizing:border-box;">
+          <div style="display:flex; align-items:center; gap:12px; padding:12px 14px; border-bottom:1px solid #EDEDED;">
+            <span style="display:inline-block; width:10px; height:10px; border:2.5px solid #0A0A0A; border-radius:50%; animation:{{ breatheCss }};"></span>
+            <span style="display:flex; flex-direction:column; gap:1px;"><span style="font-size:13px; font-weight:500;">Capturing</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">Vendor call — Northwind · 00:12:04</span></span>
+          </div>
+          <div style="padding:10px 14px; font-size:14px; border-radius:8px; cursor:pointer;" style-hover="background:#F7F7F7;">Open Omni</div>
+          <div style="display:flex; justify-content:space-between; align-items:center; padding:10px 14px; border-radius:8px; cursor:pointer;" style-hover="background:#F7F7F7;"><span style="font-size:14px;">Quick note</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">Ctrl ⇧ Space</span></div>
+          <div style="padding:10px 14px; font-size:14px; border-radius:8px; cursor:pointer;" style-hover="background:#F7F7F7;">Pause capture</div>
+          <div style="padding:10px 14px; font-size:14px; border-radius:8px; cursor:pointer;" style-hover="background:#F7F7F7;">Settings</div>
+          <div style="border-top:1px solid #EDEDED; margin-top:4px; padding:10px 14px; font-size:14px; color:#525252; border-radius:8px; cursor:pointer;" style-hover="background:#F7F7F7;">Quit Omni</div>
+        </div>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">tray menu · capturing state</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <div style="width:360px; background:#FFFFFF; border:1px solid #EDEDED; border-radius:12px; box-shadow:0 8px 24px rgba(0,0,0,0.08); padding:20px; box-sizing:border-box; display:flex; flex-direction:column; gap:12px;">
+          <div style="display:flex; flex-direction:column; gap:3px;">
+            <span style="font-size:14px; font-weight:500;">Teams call detected</span>
+            <span style="font-size:13px; color:#A3A3A3;">Vendor call — Northwind, from your calendar</span>
+          </div>
+          <div style="display:flex; align-items:center; gap:8px;">
+            <button style="background:#0A0A0A; color:#FFFFFF; border:none; border-radius:8px; padding:9px 16px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500; cursor:pointer;">Start capturing</button>
+            <button style="background:transparent; color:#525252; border:none; padding:9px 12px; font-family:'Inter',sans-serif; font-size:13px; cursor:pointer;">Not now</button>
+          </div>
+          <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">auto-dismisses in 30s · never auto-starts</span>
+        </div>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">"start capturing?" toast · bottom-right, rises 8px / 200ms</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 10 · MOBILE COMPANION ================= -->
+  <div id="mobile" data-screen-label="Mobile companion" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">12 · Mobile companion — capture anywhere, brain stays on the desktop</div>
+    <div style="display:flex; gap:48px; align-items:flex-start;">
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" title="" hint-size="390px,844px">
+          <div style="height:100%; background:#FFFFFF; display:flex; flex-direction:column; padding:16px 24px 32px; box-sizing:border-box; font-family:'Inter',sans-serif; color:#0A0A0A;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding-bottom:20px;">
+              <div style="display:flex; align-items:center; gap:8px;">
+                <svg width="18" height="18" viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" fill="none" stroke="#0A0A0A" stroke-width="11" stroke-dasharray="29.8 9.99" transform="rotate(-8 50 50)"></circle></svg>
+                <span style="font-family:'Space Grotesk',sans-serif; font-size:16px; font-weight:600; letter-spacing:-0.02em;">Omni</span>
+              </div>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#A3A3A3;">synced 2 min ago</span>
+            </div>
+            <div style="display:flex; flex-direction:column; gap:2px; padding-bottom:20px;">
+              <span style="font-family:'Space Grotesk',sans-serif; font-size:24px; font-weight:600; letter-spacing:-0.02em;">Today</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">Mon Jul 6 · 2 captures</span>
+            </div>
+            <div style="display:flex; flex-direction:column;">
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-top:1px solid #EDEDED;">
+                <span style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:14px; font-weight:500;">Idea — pricing page rewrite</span><span style="font-size:12px; color:#A3A3A3;">Enhanced on desktop · in vault</span></span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">08:12</span>
+              </div>
+              <div style="display:flex; justify-content:space-between; align-items:center; padding:14px 0; border-top:1px solid #EDEDED; border-bottom:1px solid #EDEDED;">
+                <span style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:14px; font-weight:500;">Coffee with Sam</span><span style="font-size:12px; color:#A3A3A3;">18 min · transcribed</span></span>
+                <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">10:40</span>
+              </div>
+            </div>
+            <div style="margin-top:auto; display:flex; flex-direction:column; align-items:center; gap:14px;">
+              <div style="width:84px; height:84px; border-radius:50%; background:#0A0A0A; display:flex; align-items:center; justify-content:center;">
+                <span style="display:inline-block; width:22px; height:22px; border:5px solid #FFFFFF; border-radius:50%;"></span>
+              </div>
+              <span style="font-size:13px; color:#525252;">Record</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#A3A3A3;">paired with DESKTOP-7F2K · nothing in the cloud</span>
+            </div>
+          </div>
+        </x-import>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">home · one action: record</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" title="" hint-size="390px,844px">
+          <div style="height:100%; background:#FFFFFF; display:flex; flex-direction:column; align-items:center; padding:16px 24px 32px; box-sizing:border-box; font-family:'Inter',sans-serif; color:#0A0A0A;">
+            <div style="display:flex; gap:8px; padding:16px 0 0;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; background:#0A0A0A; color:#FFFFFF; border-radius:999px; padding:5px 14px;">Idea</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3; border:1px solid #EDEDED; border-radius:999px; padding:5px 14px;">Meeting</span>
+            </div>
+            <div style="flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:24px;">
+              <span style="display:inline-block; width:16px; height:16px; border:4px solid #0A0A0A; border-radius:50%; animation:{{ breatheCss }};"></span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:32px;">03:12</span>
+              {{ wavePhoneLive }}
+              <span style="font-size:13px; color:#A3A3A3; text-align:center; max-width:240px;">Transcribing on your desktop over local Wi-Fi.</span>
+            </div>
+            <button style="background:#FFFFFF; color:#0A0A0A; border:1px solid #0A0A0A; border-radius:999px; padding:12px 32px; font-family:'Inter',sans-serif; font-size:14px; font-weight:500;">Stop</button>
+          </div>
+        </x-import>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">recording · breathing ring + live levels</span>
+      </div>
+      <div style="display:flex; flex-direction:column; gap:12px;">
+        <x-import component-from-global-scope="IOSDevice" from="./ios-frame.jsx" title="" hint-size="390px,844px">
+          <div style="height:100%; background:#FFFFFF; display:flex; flex-direction:column; padding:16px 24px 32px; box-sizing:border-box; font-family:'Inter',sans-serif; color:#0A0A0A;">
+            <div style="font-family:'JetBrains Mono',monospace; font-size:10px; color:#A3A3A3; padding:8px 0 16px;">saved to vault · 10:58</div>
+            <div style="font-family:'Space Grotesk',sans-serif; font-size:22px; font-weight:600; letter-spacing:-0.02em; padding-bottom:12px;">Coffee with Sam</div>
+            <div style="font-size:14px; line-height:1.8; display:flex; flex-direction:column; gap:6px;">
+              <div style="font-weight:500;">sam might join the atlas team in sept</div>
+              <div style="color:#525252; padding-left:14px; border-left:2px solid #EDEDED;">He wants to close his current contract first. Open to a staff role if the migration work is still on the table.</div>
+            </div>
+            <div style="margin-top:20px; border:1px solid #EDEDED; border-radius:12px; padding:16px; display:flex; flex-direction:column; gap:8px;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:10px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Create reminder</span>
+              <span style="font-size:14px; font-weight:500;">Follow up with Sam — Sept 1</span>
+              <div style="display:flex; align-items:center; gap:4px; margin-top:4px;">
+                <button style="background:#0A0A0A; color:#FFFFFF; border:none; border-radius:8px; padding:8px 14px; font-family:'Inter',sans-serif; font-size:13px; font-weight:500;">Approve</button>
+                <button style="background:transparent; color:#A3A3A3; border:none; padding:8px 10px; font-family:'Inter',sans-serif; font-size:13px;">Dismiss</button>
+              </div>
+            </div>
+            <div style="margin-top:auto; font-family:'JetBrains Mono',monospace; font-size:10px; color:#A3A3A3; text-align:center;">enhanced by your desktop · open there to edit</div>
+          </div>
+        </x-import>
+        <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">synced note · same enhance + approve language as desktop</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= SCREEN 11 · CONNECTIONS ================= -->
+  <div id="connections" data-screen-label="Connections" style="display:flex; flex-direction:column; gap:16px;">
+    <div style="font-family:'JetBrains Mono',monospace; font-size:12px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">13 · Connections — calendar, mail, contacts, paired devices</div>
+    <div style="width:1440px; background:#FFFFFF; border:1px solid #E2E2E2; box-shadow:0 8px 32px rgba(0,0,0,0.06); box-sizing:border-box; display:flex; flex-direction:column; padding:48px 64px 56px; gap:32px;">
+      <div style="display:flex; flex-direction:column; gap:6px;">
+        <div style="font-family:'Space Grotesk',sans-serif; font-size:28px; font-weight:600; letter-spacing:-0.02em;">Connections</div>
+        <div style="font-size:14px; color:#525252;">Omni reads to give context and drafts on your behalf. It never sends or changes anything without an approval.</div>
+      </div>
+      <div style="display:grid; grid-template-columns:1fr 1fr; gap:48px;">
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Services</div>
+          <div style="border:1px solid #EDEDED; border-radius:12px; padding:6px 20px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid #EDEDED;">
+              <span style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:14px; font-weight:500;">Google Calendar</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">you@gmail.com · read + create events</span></span>
+              <span style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500;">✓ Connected<span style="color:#A3A3A3; font-weight:400; margin-left:8px; cursor:pointer;">Disconnect</span></span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid #EDEDED;">
+              <span style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:14px; font-weight:500;">Gmail</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">you@gmail.com · read + draft only, never sends</span></span>
+              <span style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500;">✓ Connected<span style="color:#A3A3A3; font-weight:400; margin-left:8px; cursor:pointer;">Disconnect</span></span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid #EDEDED;">
+              <span style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:14px; font-weight:500;">Outlook — calendar + mail</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">work account · read + draft</span></span>
+              <button style="background:#FFFFFF; color:#0A0A0A; border:1px solid #0A0A0A; border-radius:999px; padding:6px 16px; font-family:'Inter',sans-serif; font-size:12px; font-weight:500; cursor:pointer;">Connect</button>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0; border-bottom:1px solid #EDEDED;">
+              <span style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:14px; font-weight:500;">Windows contacts</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">read + save contacts</span></span>
+              <span style="display:flex; align-items:center; gap:6px; font-size:12px; font-weight:500;">✓ Connected<span style="color:#A3A3A3; font-weight:400; margin-left:8px; cursor:pointer;">Disconnect</span></span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; padding:16px 0;">
+              <span style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:14px; font-weight:500;">Todoist</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">create tasks from approvals</span></span>
+              <button style="background:#FFFFFF; color:#0A0A0A; border:1px solid #0A0A0A; border-radius:999px; padding:6px 16px; font-family:'Inter',sans-serif; font-size:12px; font-weight:500; cursor:pointer;">Connect</button>
+            </div>
+          </div>
+          <div style="font-size:12px; color:#A3A3A3;">Tokens are stored encrypted on this device. Every write goes through an approval card first.</div>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:16px;">
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3;">Paired devices</div>
+          <div style="border:1px solid #EDEDED; border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:14px;">
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+              <span style="display:flex; align-items:center; gap:12px;">
+                <span style="display:inline-block; width:10px; height:10px; border:2.5px solid #0A0A0A; border-radius:50%; animation:{{ breatheCss }};"></span>
+                <span style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:14px; font-weight:500;">This PC — DESKTOP-7F2K</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">the brain · models + vault live here</span></span>
+              </span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">always on</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center; border-top:1px solid #EDEDED; padding-top:14px;">
+              <span style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:14px; font-weight:500;">Phone — Omni mobile</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">local Wi-Fi sync · end-to-end encrypted · last seen 2 min ago</span></span>
+              <span style="font-size:12px; font-weight:500;">✓ Paired</span>
+            </div>
+          </div>
+          <div style="border:1px solid #EDEDED; border-radius:12px; padding:20px; display:flex; flex-direction:column; gap:10px;">
+            <span style="font-size:14px; font-weight:500;">Pair a new device</span>
+            <span style="font-size:13px; color:#525252; line-height:1.6;">Install Omni on your phone, then enter this code. Devices talk directly — audio and notes never touch a server.</span>
+            <div style="display:flex; align-items:center; gap:16px; margin-top:4px;">
+              <span style="font-family:'JetBrains Mono',monospace; font-size:24px; letter-spacing:0.15em; border:1px solid #0A0A0A; border-radius:8px; padding:10px 20px;">7F2K-93QX</span>
+              <span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">expires in 09:41</span>
+            </div>
+          </div>
+          <div style="font-family:'JetBrains Mono',monospace; font-size:11px; letter-spacing:0.08em; text-transform:uppercase; color:#A3A3A3; margin-top:8px;">Vault</div>
+          <div style="border:1px solid #EDEDED; border-radius:12px; padding:20px; display:flex; justify-content:space-between; align-items:center;">
+            <span style="display:flex; flex-direction:column; gap:2px;"><span style="font-size:14px; font-weight:500;">Obsidian vault</span><span style="font-family:'JetBrains Mono',monospace; font-size:11px; color:#A3A3A3;">~/Documents/vault · plain Markdown · always local</span></span>
+            <span style="font-size:12px; font-weight:500;">built in</span>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props="{
+  &quot;motionOn&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Motion&quot;, &quot;description&quot;: &quot;Breathing ring, waveforms, aperture loop&quot;},
+  &quot;answersOpen&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: true, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Live meeting&quot;, &quot;description&quot;: &quot;Answers panel expanded vs collapsed pill&quot;},
+  &quot;approvedState&quot;: {&quot;editor&quot;: &quot;boolean&quot;, &quot;default&quot;: false, &quot;tsType&quot;: &quot;boolean&quot;, &quot;section&quot;: &quot;Post-meeting&quot;, &quot;description&quot;: &quot;Show first approval card compressed to check chip&quot;}
+}">
+class Component extends DCLogic {
+  getWaveform() {
+    if (this._Waveform) return this._Waveform;
+    this._Waveform = class extends React.Component {
+      componentDidMount() {
+        const c = this.canvas;
+        if (!c) return;
+        const dpr = window.devicePixelRatio || 1;
+        c.width = this.props.width * dpr;
+        c.height = this.props.height * dpr;
+        const ctx = c.getContext('2d');
+        ctx.scale(dpr, dpr);
+        const bars = this.props.bars || 24;
+        this.levels = new Array(bars).fill(0.08);
+        this.lv = 0;
+        this.t = 0;
+        const reduced = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        const loop = () => {
+          this.t += 1;
+          const w = this.props.width, h = this.props.height;
+          const active = this.props.active && !reduced;
+          ctx.clearRect(0, 0, w, h);
+          if (this.props.mode === 'meter') {
+            const target = active ? 0.2 + 0.6 * Math.abs(Math.sin(this.t / 23)) * (0.4 + 0.6 * Math.random()) : 0;
+            this.lv += (target - this.lv) * (target > this.lv ? 0.3 : 0.06);
+            ctx.fillStyle = '#EDEDED';
+            ctx.fillRect(0, 0, w, h);
+            ctx.fillStyle = '#0A0A0A';
+            ctx.fillRect(0, 0, Math.max(2, w * this.lv), h);
+          } else {
+            ctx.fillStyle = '#0A0A0A';
+            const bw = 2.5;
+            const gap = (w - bars * bw) / (bars - 1);
+            for (let i = 0; i < bars; i++) {
+              const lv = this.levels[i];
+              let target = 0.06;
+              if (active) {
+                const env = 0.3 + 0.7 * Math.abs(Math.sin((this.t + i * 7) / 29));
+                target = Math.random() < 0.25 ? env * (0.3 + 0.7 * Math.random()) : lv * 0.9;
+              }
+              this.levels[i] = target > lv ? lv + (target - lv) * 0.5 : lv * 0.93 + target * 0.01;
+              const bh = Math.max(2, this.levels[i] * h);
+              ctx.fillRect(i * (bw + gap), (h - bh) / 2, bw, bh);
+            }
+          }
+          this.raf = requestAnimationFrame(loop);
+        };
+        this.raf = requestAnimationFrame(loop);
+      }
+      componentWillUnmount() {
+        cancelAnimationFrame(this.raf);
+      }
+      render() {
+        return React.createElement('canvas', {
+          ref: (el) => { this.canvas = el; },
+          style: { width: this.props.width + 'px', height: this.props.height + 'px', display: 'block', flexShrink: 0 }
+        });
+      }
+    };
+    return this._Waveform;
+  }
+
+  renderVals() {
+    const motion = this.props.motionOn ?? true;
+    const answersOpen = this.props.answersOpen ?? true;
+    const approved = this.props.approvedState ?? false;
+    const W = this.getWaveform();
+    const wave = (key, w, h, bars, active) => React.createElement(W, { key, width: w, height: h, bars, active: active && motion });
+    return {
+      answersOpen,
+      answersClosed: !answersOpen,
+      approved,
+      notApproved: !approved,
+      breatheCss: motion ? 'omniBreathe 2.4s ease-in-out infinite' : 'none',
+      apertureAnim: motion ? 'omniAperture 5.6s cubic-bezier(0.4,0,0.2,1) infinite' : 'none',
+      waveDsDemo: wave('ds', 320, 32, 52, true),
+      waveMeeting: wave('m', 280, 26, 44, true),
+      wavePhoneLive: wave('ph', 220, 36, 36, true),
+      wavePillIdle: wave('pi', 110, 18, 20, false),
+      wavePillListen: wave('pl', 110, 18, 20, true),
+      wavePillCmd: wave('pc', 110, 18, 20, true),
+      meterMic: React.createElement(W, { key: 'mm', width: 200, height: 6, mode: 'meter', active: motion })
+    };
+  }
+}
+</script>
+</body>
+</html>

@@ -6,7 +6,7 @@
 > actions, tri-provider router (Groq / Gemini / optional Anthropic), NSIS installer, auto-update.
 > Open source on GitHub (AlexKapadia/omni) — no secrets ever committed.
 
-**RESUME HERE →** M0 in progress: dispatch scaffolding agents (UI shell, engine sidecar, migrations, CI).
+**RESUME HERE →** M0 in progress: design-extraction, engine-scaffold, and UI-scaffold agents dispatched (see Agent ledger). When they return: reconcile, verify heartbeat AC, commit+push gate M0.
 
 ---
 
@@ -27,6 +27,24 @@
   for engine, Rust 1.96.1 (installed this session), ffmpeg 8. `make` NOT installed — run underlying
   commands directly (§7.1).
 - **Mutation testing is never agent-initiated** (§7.7) — batched at hardening gate on CI only.
+- **Keys ARE present and validated** (2026-07-06): GROQ_API_KEY + GEMINI_API_KEY in `.env`, both
+  confirmed with live calls (Groq RTT 0.5s / 7ms inference; Gemini 2.5 Flash OK). User is away —
+  full autonomy authorized ("run autonomously, you can walk away").
+- **Repos:** old private `OMNI` renamed → `OMNI-archive` + archived (user asked delete; token lacks
+  delete_repo scope — user can hard-delete later, zero data lost). Project pushed to
+  **github.com/AlexKapadia/omni** (public).
+- **Transcription fidelity policy (user mandate, 2026-07-06):** the raw transcript is ground truth —
+  NEVER substitute words the model didn't hear; unclear audio gets conservative, clearly-bounded
+  gap-fill only. Disfluency/filler removal ("ums", false starts, rambling) happens ONLY in the
+  enhancement layer, never in the raw transcript. Same for typed notes: enhancement cleans, raw
+  stays byte-identical.
+- **Speed is a showcase feature (user mandate):** surface real-time performance in the UI — live
+  per-utterance STT lag and per-call provider latency (the router ledger), visible as it happens.
+- **All credentials are user-suppliable in-app (user mandate):** API keys AND Google OAuth client
+  ID/secret enterable in onboarding wizard + Settings, guided so a non-developer can complete it —
+  DPAPI-encrypted, plaintext never on disk. The open-source download works 100% on user-pasted keys.
+- **Design access confirmed:** DesignSync reaches project `d160c7f8…` (files: `Omni Design.dc.html`,
+  `ios-frame.jsx`, `support.js`). Extraction delegated to an agent → `docs/design/` + `tokens.css`.
 
 ## Milestone checklist
 
@@ -46,7 +64,24 @@
 
 | Agent | Brief | Owns | Status |
 |---|---|---|---|
-| _(none yet)_ | | | |
+| design-extract v1 | tokens from Claude Design via DesignSync | docs/design/**, tokens.css | RETURNED: blocked — DesignSync not available to subagents (session-level tool). Orchestrator fetched files itself. |
+| design-extract v2 | tokens from local docs/design/reference/ files | docs/design/**, tokens.css | RUNNING |
+| engine-scaffold | M0 Python sidecar: WS server, protocol v1, migrations, CI, README | engine/**, migrations/**, tests/**, pyproject, ci.yml, README.md | RUNNING |
+| ui-scaffold | M0 Tauri shell: tray, sidecar mgmt, heartbeat footer, protocol mirror | apps/ui/** (except tokens.css) | RUNNING |
+
+## Pacing policy (user mandate, 2026-07-06 — binding)
+
+Token quota is shared with the user's other running projects. **Spread agent usage over ~4 hours:
+max 1–2 concurrent agents after the current M0 batch, milestones strictly sequential, heartbeat-
+paced dispatches.** Model quality is NOT the economy lever — use Fable for anything design,
+language, landing-page, big, important, or system-wide. Pacing = fewer simultaneous agents,
+never weaker models.
+
+## Late-added scope
+
+- **M9 Landing page (after M7, user mandate):** scroll-animated aesthetic marketing page with REAL
+  product screenshots (never mocks, §4.9.8), fades/motion as you scroll showing the product in use,
+  GitHub-linked download (Releases) + bring-your-own-keys setup guide. GitHub Pages. Fable-built.
 
 ## Gate state
 

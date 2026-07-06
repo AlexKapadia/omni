@@ -39,19 +39,14 @@ from engine.protocol.capture_event_payloads import (
     EVENT_CAPTURE_DEVICE_CHANGED,
     EVENT_CAPTURE_STARTED,
     EVENT_CAPTURE_STOPPED,
-    EVENT_TRANSCRIPT_FINAL,
-    EVENT_TRANSCRIPT_PARTIAL,
     build_capture_device_changed_payload,
     build_capture_started_payload,
     build_capture_stopped_payload,
-    build_transcript_final_payload,
-    build_transcript_partial_payload,
 )
 from engine.protocol.event_broadcast_hub import EventBroadcastHub
 from engine.storage.meetings_repository import insert_meeting, mark_meeting_ended, utc_now_iso
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
-from engine.storage.transcript_segments_repository import insert_transcript_segment
 from engine.stt.model_weights_downloader import SILERO_VAD_FILENAME, models_directory
 from engine.stt.parakeet_nemo_transcriber import (
     ParakeetNemoTranscriber,
@@ -59,10 +54,8 @@ from engine.stt.parakeet_nemo_transcriber import (
 )
 from engine.stt.per_stream_transcription_pipeline import PerStreamTranscriptionPipeline
 from engine.stt.silero_onnx_voice_activity_detector import SileroOnnxVoiceActivityDetector
-from engine.stt.transcription_latency_tracker import (
-    STATS_LOG_INTERVAL_S,
-    TranscriptionLatencyTracker,
-)
+from engine.stt.transcript_event_emitter import TranscriptEventEmitter
+from engine.stt.transcription_latency_tracker import STATS_LOG_INTERVAL_S
 from engine.stt.word_token_types import WordToken
 
 logger = logging.getLogger(__name__)
@@ -122,8 +115,7 @@ class LiveCaptureService:
         self._tasks: list[asyncio.Task[None]] = []
         self._connection: aiosqlite.Connection | None = None  # Open during a session.
         self._anchor_monotonic = 0.0
-        self._sequence_counters: dict[str, int] = {}
-        self._latency = TranscriptionLatencyTracker()
+        self._emitter: TranscriptEventEmitter | None = None  # Per-session.
 
     @property
     def is_stt_ready(self) -> bool:
@@ -172,8 +164,9 @@ class LiveCaptureService:
         self._connection = connection
         self._controller = controller
         self._meeting_id = meeting_id
-        self._sequence_counters = {label.value: 0 for label in StreamLabel}
-        self._latency = TranscriptionLatencyTracker()
+        self._emitter = TranscriptEventEmitter(
+            self._hub, connection, meeting_id, self._anchor_monotonic
+        )
         self._pipelines = {
             label: self._build_pipeline(label) for label in (StreamLabel.THEM, StreamLabel.ME)
         }
@@ -206,7 +199,9 @@ class LiveCaptureService:
             await pipeline.finalize()  # Emits any in-flight finals.
         await mark_meeting_ended(self._connection, meeting_id, utc_now_iso())
         await self._connection.close()
-        self._latency.log_summary()  # Closing latency report for the session.
+        if self._emitter is not None:
+            self._emitter.log_latency_summary()  # Closing latency report.
+        self._emitter = None
         self._connection = None
         self._controller = None
         self._pipelines = {}
@@ -248,10 +243,14 @@ class LiveCaptureService:
             return await asyncio.to_thread(transcriber.transcribe_window, samples)
 
         async def on_partial(words: list[WordToken]) -> None:
-            await self._emit_partial(label, words)
+            emitter = self._emitter
+            if emitter is not None:  # Session may tear down mid-flight.
+                await emitter.emit_partial(label, words)
 
         async def on_final(words: list[WordToken], t_open: float, t_close: float) -> None:
-            await self._emit_final(label, words, t_close)
+            emitter = self._emitter
+            if emitter is not None:  # Session may tear down mid-flight.
+                await emitter.emit_final(label, words)
 
         return PerStreamTranscriptionPipeline(
             stream=label,
@@ -279,60 +278,8 @@ class LiveCaptureService:
         """Speed showcase: p50/p95 finalisation lag into the log every 60 s."""
         while True:
             await asyncio.sleep(STATS_LOG_INTERVAL_S)
-            self._latency.log_summary()
-
-    def _next_seq(self, stream: str) -> int:
-        self._sequence_counters[stream] = self._sequence_counters.get(stream, 0) + 1
-        return self._sequence_counters[stream]
-
-    async def _emit_partial(self, label: StreamLabel, words: list[WordToken]) -> None:
-        await self._hub.broadcast_event(
-            EVENT_TRANSCRIPT_PARTIAL,
-            build_transcript_partial_payload(
-                stream=label.value,
-                # Space-joined verbatim tokens — the join is presentation,
-                # the tokens are ground truth (fidelity mandate).
-                text=" ".join(w.text for w in words),
-                t_start=words[0].t_start,
-                t_end=words[-1].t_end,
-                seq=self._next_seq(label.value),
-            ),
-        )
-
-    async def _emit_final(
-        self, label: StreamLabel, words: list[WordToken], t_close: float
-    ) -> None:
-        if self._meeting_id is None or self._connection is None:
-            return  # Session tore down mid-flight; nothing to persist onto.
-        segment_id = str(uuid.uuid4())
-        text = " ".join(w.text for w in words)
-        t_start, t_end = words[0].t_start, words[-1].t_end
-        await insert_transcript_segment(
-            self._connection,
-            segment_id=segment_id,
-            meeting_id=self._meeting_id,
-            stream=label.value,
-            text=text,  # Verbatim (fidelity mandate).
-            t_start=t_start,
-            t_end=t_end,
-            created_at_iso=utc_now_iso(),
-        )
-        # lag = audio-end -> emit, on the shared monotonic clock. max(0)
-        # guards sub-ms scheduling skew from ever reporting negative time.
-        lag_ms = max(0.0, (time.monotonic() - (self._anchor_monotonic + t_end)) * 1000.0)
-        self._latency.record(lag_ms)
-        await self._hub.broadcast_event(
-            EVENT_TRANSCRIPT_FINAL,
-            build_transcript_final_payload(
-                stream=label.value,
-                text=text,
-                t_start=t_start,
-                t_end=t_end,
-                seq=self._next_seq(label.value),
-                segment_id=segment_id,
-                lag_ms=lag_ms,
-            ),
-        )
+            if self._emitter is not None:
+                self._emitter.log_latency_summary()
 
     def _on_device_changed(self, label: StreamLabel, device_name: str, recovered_ms: float) -> None:
         """Controller callback (event loop): announce recovery to the UI."""

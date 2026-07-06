@@ -6,13 +6,12 @@
 > actions, tri-provider router (Groq / Gemini / optional Anthropic), NSIS installer, auto-update.
 > Open source on GitHub (AlexKapadia/omni) — no secrets ever committed.
 
-**RESUME HERE →** M0: all scaffold agents returned. Engine verified green + committed. UI TS-side
-verified green; Rust side UNVERIFIED — VS2022 Build Tools C++ workload installing in background
-(the old VS2019 BuildTools was a skeleton: no cl.exe/link.exe, no Windows SDK). When install
-completes: `cargo check` in apps/ui/src-tauri FROM POWERSHELL (Git Bash link.exe shadows MSVC),
-fix any Rust compile errors (small fix → inline; big → one Fable agent), then M0 gate: full suite
-once + `pnpm tauri dev` heartbeat AC, commit gate, proceed to M1 (one Fable agent: engine
-audio/ + stt/ capture pipeline).
+**RESUME HERE →** M0 boot AC in flight (`pnpm tauri dev` background + 18:03 one-shot check —
+green = flip M0 DONE). M1/vault/router/ui-screens DONE+committed. Running lanes: m3-index,
+naomi-build. Next after a lane frees: M2 enhance pipeline (needs router+vault, both DONE) then
+M4/M5/M6. North Star #2: 4 GREEN/2 AMBER — both AMBERs fixed (this edit + stt file split).
+RULE (adopted from review #2): every feature commit flips its ledger row + RESUME HERE in the
+SAME commit.
 
 ---
 
@@ -56,8 +55,8 @@ audio/ + stt/ capture pipeline).
 
 | Gate | Scope | Status |
 |---|---|---|
-| M0 Skeleton | Tauri boots to tray, sidecar spawn+handshake+restart, migrations, CI skeleton | **IN-PROGRESS** |
-| M1 Ears | Dual-stream WASAPI+mic capture, VAD, streaming Parakeet, live Me/Them transcript | TODO |
+| M0 Skeleton | Tauri boots to tray, sidecar spawn+handshake+restart, migrations, CI skeleton | **GREEN except live boot AC (in flight)** |
+| M1 Ears | Dual-stream WASAPI+mic capture, VAD, streaming Parakeet, live Me/Them transcript | **DONE** (live-verified: verbatim loopback transcript, lag 898ms) |
 | M2 Notes | Notepad, auto-stop, enhance pipeline + templates, vault writer (managed markers) | TODO |
 | M3 Brain | Indexer, embeddings, Ask Omni w/ citations, live Answers panel | TODO |
 | M4 Hands | Extraction, approval cards, Google OAuth, 5 tools, audit log | TODO (OAuth creds pending user) |
@@ -75,14 +74,15 @@ audio/ + stt/ capture pipeline).
 | memory-research | AI-facing retrieval layer research (task #10, pre-M3) | docs/research/** | DONE — 8-source library + recommendation committed. M3: structured-first routing → RRF hybrid (FTS5+sqlite-vec, k=60) → wikilink-graph expansion → chat-tier rerank. |
 | engine-scaffold | M0 Python sidecar | engine/**, migrations/**, tests/** | DONE — 99 tests green, verified independently, committed 07e780a |
 | ui-scaffold | M0 Tauri shell | apps/ui/** | DONE — TS: 82 tests + strict tsc green (verified independently); Rust: cargo check GREEN on portable MSVC (no-admin toolchain at %LOCALAPPDATA%\portable-msvc, use setup_x64.bat env for all cargo runs). Zero protocol/token deviations. |
-| m1-ears | dual capture + VAD + Parakeet streaming | engine/audio, engine/stt, tests | RUNNING |
+| m1-ears | dual capture + VAD + Parakeet streaming | engine/audio, engine/stt, tests | DONE — 135 tests, live smoke passed, committed f01647b |
 | north-star #1 | read-only alignment review | (read-only) | DONE — 5 GREEN / 1 AMBER (tracker staleness, fixed); .env.example header fixed |
 | vault-writer | M2 core: Obsidian writers, managed regions | engine/vault, tests | DONE — 135 tests green (verified), committed. Managed markers are id-addressed: omni:managed:enhanced-notes/actions/transcript. |
-| router | tri-provider router + DPAPI keys + ledger + kill switch | engine/router, engine/security, migrations/0003 | RUNNING |
-| ui-screens | Library / Live meeting / Ask Omni / Settings per design brief | apps/ui/src (excl. protocol/connection/tokens) | RUNNING |
-| naomi-research | fluid-visual art + Cartesia voice pipeline research (M10, user-prioritized "now") | docs/research/naomi, docs/design/naomi-visual-brief.md | RUNNING (user-authorized 4th lane; cap 3 resumes after) |
-| engine-scaffold | M0 Python sidecar: WS server, protocol v1, migrations, CI, README | engine/**, migrations/**, tests/**, pyproject, ci.yml, README.md | RUNNING |
-| ui-scaffold | M0 Tauri shell: tray, sidecar mgmt, heartbeat footer, protocol mirror | apps/ui/** (except tokens.css) | RUNNING |
+| router | tri-provider router + DPAPI keys + ledger + kill switch | engine/router, engine/security, migrations/0003 | DONE — 172 tests, committed |
+| ui-screens | Library / Live meeting / Ask Omni / Settings per design brief | apps/ui/src | DONE — 230 tests, committed |
+| naomi-research | fluid-visual art + Cartesia voice pipeline research | docs/research/naomi, naomi-visual-brief.md | DONE — 10-source library + build contract, committed |
+| m3-index | hybrid retrieval index per research contract | engine/index, migrations/0004, tests | RUNNING |
+| naomi-build | fluid visual + Cartesia voice foundation per brief | apps/ui/src/naomi, engine/voice | RUNNING |
+| north-star #2 | read-only alignment review | (read-only) | DONE — 4 GREEN / 2 AMBER (stt file split + this tracker fix) |
 
 ## Pacing policy (user mandate, revised 2026-07-06 — binding)
 

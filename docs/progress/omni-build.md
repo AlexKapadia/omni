@@ -169,13 +169,15 @@ The FULL suite runs once per milestone gate and on CI push — never re-run gree
 
 ## Gate state
 
-- **Current gate:** M0. Green when: `pnpm tauri dev` shows live engine heartbeat in UI footer;
-  sidecar survives kill/restart; migrations apply; repo pushed to GitHub with CI skeleton.
-- Repo initialized, `.gitignore` + `.env.example` in place, Rust installed. Nothing else built yet.
+- **Current gate:** the WIRING RECONCILIATION PASS + batch merge to main. M0+M1 gates DONE
+  (live-verified). Landed on wip branch awaiting merge: M3 index+ask, M5 dictation, M6 detect,
+  Naomi foundation. M2 enhance in flight. M3/M5/M6 milestone gates close only after the wiring
+  pass (see RESUME HERE) wires their deferred server surfaces and the merged suite runs green.
 
 ## Blockers / waiting-on-user
 
-- [ ] **MSVC C++ toolchain needs one elevated click (M0 Rust compile).** The box's VS2019 BuildTools
+- [x] ~~MSVC C++ toolchain~~ — RESOLVED via portable-MSVC (no-admin, %LOCALAPPDATA%\portable-msvc);
+  the elevated VS install is optional now. Original note: The box's VS2019 BuildTools
   is a skeleton (no cl.exe/link.exe/SDK); silent install requires admin and UAC auto-denies with
   nobody present. WHEN YOU'RE BACK, run in an elevated PowerShell (one command):
   `& "$env:LOCALAPPDATA\Temp\claude\C--dev-Omni\1a51eada-e8ae-4bb3-82f1-b9d977816f3d\scratchpad\vs_BuildTools.exe" --passive --wait --norestart --add Microsoft.VisualStudio.Workload.VCTools --includeRecommended`

@@ -1,11 +1,8 @@
 """Incremental indexer: change isolation, deletion, atomicity, transcripts.
 
-Synthetic vaults in tmp_path throughout. The core claims under test:
-changing ONE note re-chunks ONLY that note (other notes' chunk ids are
-untouched), deleting a note removes every trace, the vector store sees the
-matching delete/upsert calls, and transcripts index from the real
-``transcript_segments`` rows at meeting finalisation.
-"""
+Synthetic vaults in tmp_path. Claims: changing ONE note re-chunks only that
+note, deletion removes every trace (incl. matching vector-store delete/upsert
+calls), and transcripts index from real ``transcript_segments`` rows."""
 
 from collections.abc import Sequence
 from pathlib import Path

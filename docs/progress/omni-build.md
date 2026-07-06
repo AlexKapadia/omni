@@ -80,13 +80,19 @@ audio/ + stt/ capture pipeline).
 | engine-scaffold | M0 Python sidecar: WS server, protocol v1, migrations, CI, README | engine/**, migrations/**, tests/**, pyproject, ci.yml, README.md | RUNNING |
 | ui-scaffold | M0 Tauri shell: tray, sidecar mgmt, heartbeat footer, protocol mirror | apps/ui/** (except tokens.css) | RUNNING |
 
-## Pacing policy (user mandate, 2026-07-06 — binding)
+## Pacing policy (user mandate, revised 2026-07-06 — binding)
 
-Token quota is shared with the user's other running projects. **Spread agent usage over ~4 hours:
-max 1–2 concurrent agents after the current M0 batch, milestones strictly sequential, heartbeat-
-paced dispatches.** Model quality is NOT the economy lever — use Fable for anything design,
-language, landing-page, big, important, or system-wide. Pacing = fewer simultaneous agents,
-never weaker models.
+Token quota is shared with the user's other running projects. **HARD CAP: 3 concurrent agents**
+(user first corrected 1–2 as "too economical", then fixed the cap at 3), on genuinely disjoint
+lanes (no shared files — pyproject/uv.lock reserved to one owner per phase). Model quality is NOT
+the economy lever — Fable for anything design, language, landing-page, big, important, or
+system-wide. No redundant re-verification of green work.
+
+## Model decisions
+
+- **STT stays parakeet-tdt-0.6b-v2** (checked 2026-07-06): newest is v3 (multilingual, 25 langs)
+  but v2 is BETTER at English — 6.05% vs 6.34% WER (Open ASR leaderboard) — and Omni's primary
+  use is English meetings. v3 = future config option for multilingual users (same size, drop-in).
 
 ## Test-economy policy (user mandate, 2026-07-06 — binding)
 
@@ -104,6 +110,15 @@ The FULL suite runs once per milestone gate and on CI push — never re-run gree
 - **M9 Landing page (after M7, user mandate):** scroll-animated aesthetic marketing page with REAL
   product screenshots (never mocks, §4.9.8), fades/motion as you scroll showing the product in use,
   GitHub-linked download (Releases) + bring-your-own-keys setup guide. GitHub Pages. Fable-built.
+- **M10 Naomi voice agent (post-core, user mandate 2026-07-06, task #11):** Jarvis-style realtime
+  voice agent — Cartesia voice (key + voice ID `7348…fedc` in `.env`, never committed), name Naomi.
+  Millisecond retrieval over ALL user data (rides M3), real action execution (rides M4 + approval
+  rules), document upload → general AI knowledge base, in-app Notion-like Obsidian viewer.
+  Visual: black fluid "pool of water" that flows and reacts emotionally (laughing/happy/agitated) —
+  design-critical, NOT plain white. Process: Fable RESEARCH agent first (fluid/shader/audio-reactive
+  techniques, e.g. WebGL/WebGPU fluid sim, metaballs, FFT-driven motion + Cartesia realtime
+  websocket pipeline + voice-agent turn loop), THEN Fable build agent briefed from that research.
+  Naomi's speed showcase: end-to-end voice→answer latency displayed live (user's speed mandate).
 
 ## Gate state
 

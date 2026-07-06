@@ -77,6 +77,10 @@ audio/ + stt/ capture pipeline).
 | ui-scaffold | M0 Tauri shell | apps/ui/** | DONE — TS: 82 tests + strict tsc green (verified independently); Rust: cargo check GREEN on portable MSVC (no-admin toolchain at %LOCALAPPDATA%\portable-msvc, use setup_x64.bat env for all cargo runs). Zero protocol/token deviations. |
 | m1-ears | dual capture + VAD + Parakeet streaming | engine/audio, engine/stt, tests | RUNNING |
 | north-star #1 | read-only alignment review | (read-only) | DONE — 5 GREEN / 1 AMBER (tracker staleness, fixed); .env.example header fixed |
+| vault-writer | M2 core: Obsidian writers, managed regions | engine/vault, tests | DONE — 135 tests green (verified), committed. Managed markers are id-addressed: omni:managed:enhanced-notes/actions/transcript. |
+| router | tri-provider router + DPAPI keys + ledger + kill switch | engine/router, engine/security, migrations/0003 | RUNNING |
+| ui-screens | Library / Live meeting / Ask Omni / Settings per design brief | apps/ui/src (excl. protocol/connection/tokens) | RUNNING |
+| naomi-research | fluid-visual art + Cartesia voice pipeline research (M10, user-prioritized "now") | docs/research/naomi, docs/design/naomi-visual-brief.md | RUNNING (user-authorized 4th lane; cap 3 resumes after) |
 | engine-scaffold | M0 Python sidecar: WS server, protocol v1, migrations, CI, README | engine/**, migrations/**, tests/**, pyproject, ci.yml, README.md | RUNNING |
 | ui-scaffold | M0 Tauri shell: tray, sidecar mgmt, heartbeat footer, protocol mirror | apps/ui/** (except tokens.css) | RUNNING |
 

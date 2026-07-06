@@ -11,6 +11,7 @@ mod dictation_pill_window;
 pub mod dictation_text_injection;
 mod engine_sidecar;
 mod tray;
+mod updater_launch_check;
 
 use tauri::{AppHandle, Manager, RunEvent};
 
@@ -39,12 +40,24 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        // M7: auto-update from GitHub Releases (signature-verified) + the
+        // process plugin backing the post-install relaunch.
+        .plugin(tauri_plugin_updater::Builder::new().build())
+        .plugin(tauri_plugin_process::init())
         // M5: the pill's paste command (clipboard-swap + SendInput Ctrl+V).
+        // M7: updater commands driven from Settings.
         .invoke_handler(tauri::generate_handler![
-            dictation_text_injection::inject_dictation_text
+            dictation_text_injection::inject_dictation_text,
+            updater_launch_check::updater_download_and_install,
+            updater_launch_check::updater_restart_app
         ])
         .setup(|app| {
             tray::build_tray(app.handle())?;
+            // M7: one update check per launch, release builds only (dev has
+            // no published release to compare against — skip the noise).
+            if !cfg!(debug_assertions) {
+                updater_launch_check::spawn_launch_check(app.handle());
+            }
             // M5: hold-F9 dictation pill (window + global shortcut binding).
             dictation_pill_window::setup_dictation_pill(app.handle())?;
             // Start supervising the engine sidecar immediately; the supervisor

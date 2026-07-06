@@ -1,0 +1,35 @@
+# UTF-8
+# Windows VERSIONINFO resource for the frozen engine executable.
+# Keep the numeric tuples in lockstep with [project].version in pyproject.toml.
+VSVersionInfo(
+  ffi=FixedFileInfo(
+    filevers=(0, 1, 0, 0),
+    prodvers=(0, 1, 0, 0),
+    mask=0x3F,
+    flags=0x0,
+    OS=0x40004,
+    fileType=0x1,
+    subtype=0x0,
+    date=(0, 0),
+  ),
+  kids=[
+    StringFileInfo(
+      [
+        StringTable(
+          "040904B0",
+          [
+            StringStruct("CompanyName", "Omni"),
+            StringStruct("FileDescription", "Omni engine sidecar (local-first meeting intelligence)"),
+            StringStruct("FileVersion", "0.1.0"),
+            StringStruct("InternalName", "omni-engine"),
+            StringStruct("LegalCopyright", "MIT License"),
+            StringStruct("OriginalFilename", "omni-engine.exe"),
+            StringStruct("ProductName", "Omni"),
+            StringStruct("ProductVersion", "0.1.0"),
+          ],
+        )
+      ]
+    ),
+    VarFileInfo([VarStruct("Translation", [2057, 1200])]),
+  ],
+)

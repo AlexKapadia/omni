@@ -6,6 +6,9 @@
 credentials.json
 token.json
 client_secret*.json
+# Tauri updater signing key lives at %LOCALAPPDATA%/Omni/updater-signing-key —
+# never in the repo. Belt-and-braces pattern in case one is ever copied here.
+*updater-signing-key*
 
 # Python
 .venv/

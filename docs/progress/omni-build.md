@@ -29,9 +29,16 @@ committed UNVERIFIED on branch **wip/paused-lanes-20260706** (pushed).
 3. After each lane verifies green: merge/commit to main (ledger row + RESUME HERE flip in the SAME
    commit), then continue queue: M3 Ask-Omni service → M4 (mocks until OAuth) → M7 ship →
    M9 landing → Naomi full loop (persistent Cartesia socket, turn orchestrator).
-4. The §4.8 watchdog cron (every 53 min, session-only) auto-fires this protocol if the session
+4. END-PHASE MANDATES (user, 2026-07-06 — tasks #12/#13): populate **evidence/** per §3.10
+   (peer-reviewed stats, PNG+interactive-HTML graphs, aesthetic B&W flow diagrams per component +
+   whole system, analysis-only deps manifest) and make the **README insane** per §4.9.8 — REAL
+   product screenshots of every key screen (incl. Naomi's water), genuinely RECORDED video/GIF
+   (Playwright recordVideo + ffmpeg, never mock/AI-generated), honest captions, judged by a
+   separate evaluator agent that actually VIEWS the images. Both run when the real app is
+   capturable (~M7), before/with M9 landing page.
+5. The §4.8 watchdog cron (every 53 min, session-only) auto-fires this protocol if the session
    survived; if this is a FRESH session, this file + git + the task list are the whole state —
-   act on this pointer directly.
+   act on this pointer directly. Scheduled one-shot auto-resume set for 20:23 2026-07-06.
 RULE: every feature commit flips its ledger row + RESUME HERE in the SAME commit.
 
 ---

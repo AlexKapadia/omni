@@ -6,7 +6,11 @@
 > actions, tri-provider router (Groq / Gemini / optional Anthropic), NSIS installer, auto-update.
 > Open source on GitHub (AlexKapadia/omni) — no secrets ever committed.
 
-**RESUME HERE →** ⏸ PAUSED 2026-07-06 ~18:5x (user usage quota; back ~1h45). Main is clean and
+**RESUME HERE →** ▶ RESUMED 20:23 2026-07-06 per schedule: three continuation agents dispatched
+on branch wip/paused-lanes-20260706 (m2-enhance / m6-detect / m5-dictation). As each verifies
+green: merge to main, flip ledger + this pointer in the same commit, then queue: M3 Ask-Omni
+service → M4 (mocks until OAuth) → M7 ship → evidence/ + insane README (#12/#13) → M9 landing →
+Naomi full loop. (Historical pause note:) ⏸ PAUSED 2026-07-06 ~18:5x. Main was clean and
 green through the Naomi commit. Three lanes were stopped cleanly mid-flight; their partial work is
 committed UNVERIFIED on branch **wip/paused-lanes-20260706** (pushed).
 

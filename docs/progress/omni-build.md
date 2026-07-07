@@ -13,25 +13,23 @@
 auto-update pipeline; onboarding wizard; settings completion), M10 Naomi (foundation + full
 conversation loop — talk/retrieve/speak/barge-in/action-cards). North Star #1-5 all GREEN/pass.
 
-**RUNNING (Opus, headless worktrees, cap 3):**
-- e2e-media (#14) — feature/e2e-and-media: HEADLESS-only Playwright (user actively working — headed
-  was banned after it stole focus 2026-07-07). Live E2E (§4.9 DoD) + real product media (§4.9.8).
-  Fixing a render bug (app shell needs a Tauri-API shim to mount in plain Chromium).
-- coverage-hardening — feature/coverage-hardening: evidence measured 86.7 line / 78.2 branch,
-  BELOW the §5.5 gate (90/85). Closing with adversarial tests + honest pragma-exclusion of true
-  hardware/external boundaries (documented). This is the last real quality gate before ship.
+**RUNNING (Opus, headless worktree):**
+- a11y-contrast — feature/a11y-contrast: user chose "darken secondary TEXT only" (keep grey-400
+  decoration); introduces an AA-compliant secondary-text grey (>=4.5:1 on white). Last §4.9 UI
+  DoD item. When it lands -> M7 fully done + tokens ready for the landing page.
 
-DONE this session: evidence/ merged (#12 — retrieval p50 0.78ms, citation-exactness 1.000,
-dictation guard 1.000/1020 cases, router cost Decimal-exact). Naomi loop merged (#11).
-Note: 3 files sit AT exactly 300 lines on main (vault_indexer_service, live_capture_service,
-approval_cards_gateway) — compliant but zero headroom; preventive trim queued.
+DONE this session (all merged to main, 1974 py + 792 ts green): Naomi loop (#11), evidence (#12),
+E2E+media (#14, 2 real bugs fixed), README (#13, real media + refreshed to final numbers),
+coverage-hardening (engine 98.87 line / 94.74 branch — §5.5 gate PASSED, +408 adversarial tests),
+build-path placeholder fix (fresh clone compiles), WCAG contrast decision made.
 
-**NEXT (in order):** merge evidence + e2e-media as they land (worktrees off main; disjoint dirs —
-clean merges expected) -> README #13 (insane, consumes real media) -> M9 landing page (consumes
-real media; scroll-animated; GitHub Pages) -> small debts (stranded-'executing' recovery sweep at
-boot; migrations double-ship cleanup) -> optionally tag v0.1.0-alpha for first public release ->
-M8 stretch. USER ACTIONS available: raise Fable limit (or stay on Opus); Google OAuth creds ->
-.env (real M4/M6 ACs); TAURI_SIGNING_PRIVATE_KEY repo secret (packaging/README.md) for releases.
+**NEXT (in order):** merge a11y-contrast -> mark M7 done -> **M9 landing page** (#9, LAST
+creative piece — scroll-animated, real media, GitHub Pages, built on the AA-corrected tokens) ->
+optional `v0.1.0-alpha` release tag (needs TAURI_SIGNING_PRIVATE_KEY repo secret from
+%LOCALAPPDATA%/Omni/updater-signing-key) -> minor debts (stranded-'executing' recovery sweep;
+migrations double-ship cleanup; 3 files at exactly-300 preventive trim) -> M8 stretch (diarization,
+MCP server, weekly digest). USER ACTIONS available: raise Fable limit; Google OAuth creds -> .env
+(real M4/M6 ACs); set the signing secret for releases.
 
 ---
 

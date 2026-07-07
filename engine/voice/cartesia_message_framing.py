@@ -56,10 +56,15 @@ def build_generation_request(
     context_id: str,
     voice_id: str,
     affect: tuple[float, float] | None,
+    *,
+    continue_transcript: bool = False,
 ) -> str:
-    """The single-shot generation frame (continue=false: last chunk, per the
-    docs' latency guidance). Word timestamps ON — they drive the caption and
-    the pool's word-rate pulses."""
+    """One generation frame. ``continue_transcript=True`` marks a NON-FINAL
+    input chunk on a multiplexed context (Cartesia input streaming: the turn
+    orchestrator sends clause chunks with continue=true and the LAST chunk
+    with continue=false, per the docs' continuation contract). The default
+    (False) is the single-shot shape the dev naomi.say path keeps using.
+    Word timestamps ON — they drive the caption and word-rate pulses."""
     request: dict[str, object] = {
         "model_id": CARTESIA_MODEL_ID,
         "transcript": text,
@@ -71,7 +76,7 @@ def build_generation_request(
             "sample_rate": CARTESIA_OUTPUT_SAMPLE_RATE,
         },
         "add_timestamps": True,
-        "continue": False,
+        "continue": continue_transcript,
         "language": "en",
     }
     if affect is not None:

@@ -49,3 +49,9 @@ Thumbs.db
 !packaging/dist/omni-engine/PLACEHOLDER.txt
 packaging/dist/omni-engine/*
 !packaging/dist/omni-engine/PLACEHOLDER.txt
+
+# live E2E runtime + generated artifacts (never committed; regenerated per run)
+.e2e-run/
+apps/ui/e2e/playwright-report/
+apps/ui/test-results/
+apps/ui/playwright-report/

@@ -21,10 +21,13 @@ network / GPU / DPAPI / audio hardware). **408 new adversarial test functions**
 added across **27 new test files**.
 
 The gate is met by genuine tests plus standard config exclusions alone — **no
-per-line `# pragma: no cover` was added to runtime source**. (A pre-integration
-checkpoint measured 96.59% line / 91.61% branch before the final two test
-clusters even landed, so the exclusions below are ordinary hygiene, not
-load-bearing for the gate.)
+per-line `# pragma: no cover` was added to runtime source**. The `.coveragerc`
+exclusions are demonstrably **not load-bearing**: they remove only **50 of 9649
+statements (0.5%) and 12 of 2026 branches (0.6%)** from the denominator (the
+manual live probe + Protocol `...` bodies + `__main__` guards + `TYPE_CHECKING`),
+whereas the result clears the gate by **+8.9pp on line and +9.7pp on branch**. A
+pre-integration checkpoint measured 96.59% line / 91.61% branch before the final
+two test clusters even landed.
 
 ## How the gap was closed — GENUINE tests, not padding
 

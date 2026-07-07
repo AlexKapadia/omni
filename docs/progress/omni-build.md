@@ -25,6 +25,40 @@ engine boot during M7); instant-execute whitelist deliberately unimplemented unt
 
 ---
 
+## M7 onboarding+settings lane (IN PROGRESS — resume-from-death checkpoint)
+
+**Branch:** `feature/m7-onboarding` (this checkout). North Star: 4-step first-run wizard +
+Settings completion (retire mock-settings-data.ts), all engine surfaces real + tested.
+
+**Predecessor partials (VERIFIED good by resume agent, kept):** protocol payloads
+(settings/ledger/keys/models/google), app_settings_repository + migration 0009 (append-only
+history triggers), settings_value_validation, app_settings_command_gateway + dispatcher,
+provider_key_live_validation, key-store cartesia slot, cartesia_credentials DPAPI-first.
+**Gap found:** new payloads NOT exported in engine/protocol/__init__.py (dispatcher import
+would fail) — fixing.
+
+**Command contract (pinned — UI builds against these):**
+- `settings.get` {} -> {settings, kill_switch_engaged, routing[], template_options[]}
+- `settings.update` {values:{...}, create_vault_dir?:bool} -> {applied}
+- `setup.status` {} -> {keys{groq,gemini,anthropic,cartesia:bool}, vault{configured,path}, models[], google_connected, onboarding_complete, setup_complete}
+- `keys.save` {provider, key} -> {ok}; `keys.validate` {provider} -> {provider, valid, message, latency_ms}
+- `ledger.summary` {limit?} -> {by_provider[], by_task[], totals, recent[]} (Decimal strings)
+- `models.download` {} -> ok; events models.download.progress {file,received_bytes,total_bytes,sha256_verified} / .failed {file,message} / .completed {ok,files}
+- `google.connect` {client_id?, client_secret?} -> ok; event google.connect.completed {ok,message}
+Settings keys: vault_dir, push_to_talk_hotkey, keep_audio(F=default OFF), disclosure_reminder,
+kill_switch, instant_execute_whitelist([], intents create_event/upsert_contact/draft_email/write_note),
+active_template, custom_templates, onboarding_complete.
+
+**ENGINE checklist:** E1 protocol exports · E2 keys gateway+dispatcher · E3 ledger surface (+by_task) ·
+E4 models.download surface + downloader progress ext · E5 google.connect surface · E6 server/handler/factory
+wiring · E7 keep-audio honored in capture + whitelist check in card/dictation-final flow · E8 tests.
+**UI checklist:** U1 wizard (welcome/vault-picker+capability/keys/models+google) · U2 Settings completion +
+retire mock · U3 App.tsx setup.status gating · U4 Playwright E2E.
+
+**RESUME POINTER (M7):** if cold, engine E1-E8 owned by orchestrator directly; UI lane dispatched to
+subagent (apps/ui/** only, disjoint). Check git log for last committed increment; continue next
+unchecked E-item. Full gate at end.
+
 ## Session decisions (settled — do not re-litigate)
 
 - **Providers: Groq + Gemini are the required pair.** Anthropic is an OPTIONAL third slot; router

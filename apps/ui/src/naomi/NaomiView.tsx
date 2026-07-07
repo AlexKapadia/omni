@@ -9,12 +9,19 @@
  * same one that moves the water — Naomi's voice IS the drive signal.
  */
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useReducer, useRef, useState } from "react";
 import { clampAffect, type Affect, IDLE_AFFECT } from "./naomi-affect-types";
+import { NaomiConversationPanel } from "./naomi-conversation-panel";
+import { useNaomiConversationControls } from "./naomi-conversation-controls";
+import {
+  initialNaomiConversationState,
+  naomiConversationReducer,
+} from "./naomi-conversation-store";
 import { NaomiDevTuningDrawer } from "./naomi-dev-tuning-drawer";
 import { NaomiEngineVoiceSocket } from "./naomi-engine-voice-socket";
 import { decodePcmFloat32Base64, NaomiVoicePlayback } from "./naomi-audio-playback";
 import { NaomiPoolRenderer, type RendererStats } from "./naomi-pool-renderer";
+import { affectForTurn } from "./naomi-turn-affect-presets";
 
 declare global {
   interface Window {
@@ -40,6 +47,8 @@ export function NaomiView() {
   const [ttfaMs, setTtfaMs] = useState<number | null>(null);
   const [caption, setCaption] = useState<string | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  // The turn-loop conversation state (pure reducer; the socket dispatches into it).
+  const [convo, dispatch] = useReducer(naomiConversationReducer, initialNaomiConversationState);
 
   // Lazily build the audio graph (AudioContext wants a user gesture first).
   const ensurePlayback = (): NaomiVoicePlayback => {
@@ -118,6 +127,12 @@ export function NaomiView() {
         if (done.reason === "error") setLastError(done.detail ?? "voice generation failed");
       },
       onTimestamps: (stamps) => setCaption(stamps.words.join(" ")),
+      // Turn-loop events fold into the pure conversation reducer (dispatch is stable).
+      onState: (event) => dispatch({ type: "state", event }),
+      onUserUtterance: (event) => dispatch({ type: "user_utterance", event }),
+      onReply: (event) => dispatch({ type: "reply", event }),
+      onTurnLatency: (event) => dispatch({ type: "latency", event }),
+      onTurnError: (event) => dispatch({ type: "turn_error", event }),
     });
     socketRef.current = socket;
     socket.connect();
@@ -127,6 +142,18 @@ export function NaomiView() {
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  // State-driven affect: the pool expresses the current turn state; a reply's
+  // own affect triple wins during speaking. Idle re-fires only on transition,
+  // so manual tuning-drawer control still works at rest.
+  useEffect(() => {
+    rendererRef.current?.setAffect(affectForTurn(convo.turnState, convo.affect));
+  }, [convo.turnState, convo.affect]);
+
+  // Honest failure: a turn/connection error switches the pool to its error look.
+  useEffect(() => {
+    rendererRef.current?.setErrorState(convo.error !== null);
+  }, [convo.error]);
 
   const applyAffect = (valence: number, arousal: number, laugh: boolean) => {
     const next = clampAffect(valence, arousal, laugh ? { kind: "laugh", intensity: 1 } : null);
@@ -174,6 +201,14 @@ export function NaomiView() {
     setSpeaking(false);
   };
 
+  // Push-to-talk + open-mic gestures → listen commands + reducer dispatches.
+  const controls = useNaomiConversationControls({
+    socketRef,
+    dispatch,
+    openMic: convo.openMic,
+    ensurePlayback,
+  });
+
   return (
     <div className="flex h-full flex-col bg-[var(--canvas)]">
       <div ref={stageRef} className="relative min-h-0 flex-1">
@@ -211,6 +246,14 @@ export function NaomiView() {
           </p>
         )}
       </div>
+      <NaomiConversationPanel
+        state={convo}
+        engineConnected={engineConnected}
+        pushToTalkHeld={controls.pushToTalkHeld}
+        onPushToTalkDown={controls.onPushToTalkDown}
+        onPushToTalkUp={controls.onPushToTalkUp}
+        onToggleOpenMic={controls.onToggleOpenMic}
+      />
       <NaomiDevTuningDrawer
         valence={affect.valence}
         arousal={affect.arousal}

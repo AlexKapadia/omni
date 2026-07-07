@@ -32,6 +32,7 @@ from engine.ask.ask_query_command_dispatcher import AskAnswerGateway
 from engine.audio.audio_device_listing import list_audio_devices
 from engine.audio.devices_list_command_dispatcher import DeviceLister
 from engine.enhance import MeetingFinalizationService
+from engine.naomi.naomi_turn_command_dispatcher import NaomiTurnControl
 from engine.protocol import EventBroadcastHub
 from engine.runtime_settings import LOOPBACK_HOST, EngineSettings, load_engine_settings
 from engine.stt.live_capture_service import LiveCaptureService
@@ -60,6 +61,7 @@ from engine.wiring.server_default_service_factories import (
     default_detection_wiring_factory,
     default_dictation_gateway_factory,
     default_finalization_service_factory,
+    default_naomi_loop_factory,
     default_spotter_wiring_factory,
     default_vault_watchdog_factory,
 )
@@ -80,6 +82,9 @@ DetectionWiringFactory = Callable[[EventBroadcastHub, LiveCaptureService], Detec
 SpotterWiringFactory = Callable[[EventBroadcastHub], LiveAnswersSpotterWiring]
 CardBuildWiringFactory = Callable[[EventBroadcastHub], ApprovalCardBuildWiring]
 VaultWatchdogFactory = Callable[[], VaultWatchdogServerWiring]
+# Return the structural control Protocol (not the concrete gateway) so tests
+# can inject a fake; the real gateway satisfies it (return-type covariance).
+NaomiLoopFactory = Callable[[EventBroadcastHub], NaomiTurnControl]
 
 
 def create_app(
@@ -95,6 +100,7 @@ def create_app(
     card_build_wiring_factory: CardBuildWiringFactory | None = None,
     vault_watchdog_factory: VaultWatchdogFactory | None = None,
     m7_surface: OnboardingSettingsCommandSurface | None = None,
+    naomi_loop_gateway_factory: NaomiLoopFactory | None = None,
 ) -> FastAPI:
     """Build the FastAPI app. Factory form keeps tests isolated per-app.
 
@@ -145,6 +151,12 @@ def create_app(
         )
     # M3 live vault watching (OS-event-driven — same rule).
     vault_watchdog = vault_watchdog_factory() if vault_watchdog_factory else None
+    # Naomi conversation loop: command-driven but heavy (loads STT models,
+    # opens the mic + persistent Cartesia socket on first listen), so wired
+    # ONLY when a factory is passed — hermetic tests get an honest refusal.
+    naomi_loop_gateway = (
+        naomi_loop_gateway_factory(event_hub) if naomi_loop_gateway_factory else None
+    )
 
     @contextlib.asynccontextmanager
     async def lifespan(app: FastAPI) -> AsyncIterator[None]:
@@ -193,6 +205,10 @@ def create_app(
         # Graceful shutdown: never orphan a speaking utterance either.
         with contextlib.suppress(Exception):
             await voice_streamer.shutdown()
+        # Naomi loop: stop capture, silence the speaker, close the socket.
+        if naomi_loop_gateway is not None:
+            with contextlib.suppress(Exception):
+                await naomi_loop_gateway.shutdown()
 
     app = FastAPI(
         title="omni-engine",
@@ -217,6 +233,7 @@ def create_app(
     app.state.card_build_wiring = card_build_wiring
     app.state.vault_watchdog = vault_watchdog
     app.state.m7_surface = m7
+    app.state.naomi_loop_gateway = naomi_loop_gateway
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -243,6 +260,7 @@ def create_app(
             detection_service=detection.service if detection is not None else None,
             device_lister=state.device_lister,
             m7_surface=state.m7_surface,
+            naomi_loop_control=state.naomi_loop_gateway,
         )
         await handler.run()
 
@@ -265,6 +283,7 @@ def build_uvicorn_config(settings: EngineSettings) -> uvicorn.Config:
             spotter_wiring_factory=default_spotter_wiring_factory,
             card_build_wiring_factory=default_card_build_wiring_factory,
             vault_watchdog_factory=default_vault_watchdog_factory,
+            naomi_loop_gateway_factory=default_naomi_loop_factory,
         ),
         # Local-only invariant: loopback constant, never a setting.
         host=LOOPBACK_HOST,

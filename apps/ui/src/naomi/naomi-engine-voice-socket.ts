@@ -30,6 +30,27 @@ import {
   type NaomiSayAffect,
   type NaomiSpeakingTimestampsPayload,
 } from "./naomi-voice-protocol";
+import {
+  NAOMI_LISTEN_START_COMMAND_NAME,
+  NAOMI_LISTEN_STOP_COMMAND_NAME,
+  NAOMI_REPLY_EVENT_NAME,
+  NAOMI_STATE_EVENT_NAME,
+  NAOMI_TURN_ERROR_EVENT_NAME,
+  NAOMI_TURN_LATENCY_EVENT_NAME,
+  NAOMI_USER_UTTERANCE_EVENT_NAME,
+  buildNaomiListenStartPayload,
+  buildNaomiListenStopPayload,
+  parseNaomiReplyPayload,
+  parseNaomiStatePayload,
+  parseNaomiTurnErrorPayload,
+  parseNaomiTurnLatencyPayload,
+  parseNaomiUserUtterancePayload,
+  type NaomiReplyEvent,
+  type NaomiStateEvent,
+  type NaomiTurnErrorEvent,
+  type NaomiTurnLatencyEvent,
+  type NaomiUserUtteranceEvent,
+} from "./naomi-turn-protocol";
 
 export interface NaomiVoiceEventHandlers {
   readonly onAudioChunk: (chunk: NaomiAudioChunkPayload) => void;
@@ -38,6 +59,12 @@ export interface NaomiVoiceEventHandlers {
   /** Structured engine refusals (kill switch, missing key) — shown honestly. */
   readonly onErrorReply: (message: string) => void;
   readonly onConnectionChange: (connected: boolean) => void;
+  // --- Turn-loop events (optional: the audio-only callers omit them) ---
+  readonly onState?: (event: NaomiStateEvent) => void;
+  readonly onUserUtterance?: (event: NaomiUserUtteranceEvent) => void;
+  readonly onReply?: (event: NaomiReplyEvent) => void;
+  readonly onTurnLatency?: (event: NaomiTurnLatencyEvent) => void;
+  readonly onTurnError?: (event: NaomiTurnErrorEvent) => void;
 }
 
 /** Route one raw frame to the handlers. Exported for direct unit testing. */
@@ -60,6 +87,21 @@ export function dispatchNaomiVoiceFrame(raw: unknown, handlers: NaomiVoiceEventH
   } else if (name === NAOMI_SPEAKING_TIMESTAMPS_EVENT_NAME) {
     const parsed = parseNaomiSpeakingTimestampsPayload(payload);
     if (parsed !== null) handlers.onTimestamps(parsed);
+  } else if (name === NAOMI_STATE_EVENT_NAME) {
+    const parsed = parseNaomiStatePayload(payload);
+    if (parsed !== null) handlers.onState?.(parsed);
+  } else if (name === NAOMI_USER_UTTERANCE_EVENT_NAME) {
+    const parsed = parseNaomiUserUtterancePayload(payload);
+    if (parsed !== null) handlers.onUserUtterance?.(parsed);
+  } else if (name === NAOMI_REPLY_EVENT_NAME) {
+    const parsed = parseNaomiReplyPayload(payload);
+    if (parsed !== null) handlers.onReply?.(parsed);
+  } else if (name === NAOMI_TURN_LATENCY_EVENT_NAME) {
+    const parsed = parseNaomiTurnLatencyPayload(payload);
+    if (parsed !== null) handlers.onTurnLatency?.(parsed);
+  } else if (name === NAOMI_TURN_ERROR_EVENT_NAME) {
+    const parsed = parseNaomiTurnErrorPayload(payload);
+    if (parsed !== null) handlers.onTurnError?.(parsed);
   }
   // Heartbeats and capture events on this socket are deliberately ignored.
 }
@@ -114,5 +156,21 @@ export class NaomiEngineVoiceSocket {
   /** Cancel the current utterance (the barge-in wire primitive). */
   cancel(): boolean {
     return this.send(NAOMI_CANCEL_COMMAND_NAME, {});
+  }
+
+  /**
+   * Open the mic loop. openMic=true keeps listening after each turn (VAD-gated
+   * conversation); false is push-to-talk (one utterance). Returns false offline.
+   */
+  listenStart(openMic: boolean): boolean {
+    return this.send(NAOMI_LISTEN_START_COMMAND_NAME, buildNaomiListenStartPayload(openMic));
+  }
+
+  /**
+   * Close the mic loop. flush=true forces the endpoint (push-to-talk release →
+   * pending speech becomes the turn); false discards pending audio → idle.
+   */
+  listenStop(flush: boolean): boolean {
+    return this.send(NAOMI_LISTEN_STOP_COMMAND_NAME, buildNaomiListenStopPayload(flush));
   }
 }

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: 💬 Questions & ideas (Discussions)
+    url: https://github.com/AlexKapadia/omni/discussions
+    about: Ask a question, share how you use Omni, or float an idea before filing an issue.
+  - name: 🔒 Report a security vulnerability
+    url: https://github.com/AlexKapadia/omni/blob/main/SECURITY.md
+    about: Please report vulnerabilities privately — do not open a public issue.
+  - name: 📖 Add a new ability — the tutorial
+    url: https://github.com/AlexKapadia/omni/blob/main/CONTRIBUTING.md#-add-a-new-ability-agent-tool
+    about: A concrete, code-accurate walkthrough of building a new agent tool end to end.

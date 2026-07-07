@@ -1,0 +1,127 @@
+/*
+ * Omni landing — base layer: reset, typography, header, hero, buttons, footer.
+ * Section/feature styles live in sections.css; tokens in tokens.css.
+ * Monochrome absolutism: no hue anywhere. The lone "accent" is motion —
+ * the breathing capture dot — never colour.
+ */
+
+*, *::before, *::after { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; scroll-behavior: smooth; }
+@media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+
+body {
+  margin: 0;
+  background: var(--canvas);
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--type-body);
+  line-height: 1.6;
+  font-weight: 400;
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+  overflow-x: hidden; /* CLS/parallax guard: page body never scrolls sideways */
+}
+
+img, video { max-width: 100%; display: block; }
+figure { margin: 0; } /* zero the UA figure margin (0 40px) so media fills its column */
+picture { display: block; }
+a { color: inherit; text-decoration: none; }
+:focus-visible { outline: 2px solid var(--ink); outline-offset: 3px; border-radius: 2px; }
+
+h1, h2, h3 { font-family: var(--font-display); font-weight: 600; margin: 0; }
+h1 { font-size: var(--type-hero); line-height: 1.0; letter-spacing: -0.04em; }
+h2 { font-size: var(--type-display); line-height: 1.08; letter-spacing: -0.03em; }
+h3 { font-size: var(--type-section); line-height: 1.2; letter-spacing: -0.02em; }
+
+.wrap { width: 100%; max-width: var(--max-page); margin-inline: auto; padding-inline: clamp(var(--space-6), 5vw, var(--space-16)); }
+
+.label {
+  font-family: var(--font-mono);
+  font-size: 0.6875rem; /* 11px */
+  font-weight: 500;
+  letter-spacing: var(--label-ls);
+  text-transform: uppercase;
+  color: var(--ink-secondary);
+}
+.mono { font-family: var(--font-mono); }
+.lead { font-size: var(--type-lead); line-height: 1.5; color: var(--grey-600); max-width: var(--max-prose); }
+
+/* ---- Omni mark ---- */
+.mark { display: block; }
+.mark svg { display: block; width: 100%; height: 100%; }
+.mark circle { fill: none; stroke: var(--ink); }
+
+/* Breathing capture dot — the only permanent animation (implies live capture) */
+.dot {
+  width: 8px; height: 8px; border-radius: 50%;
+  border: 2px solid var(--ink); box-sizing: border-box;
+  animation: omniBreathe var(--dur-breathe) var(--ease-in-out) infinite;
+}
+
+/* ---- Header ---- */
+.site-header {
+  position: sticky; top: 0; z-index: 50;
+  background: rgba(255, 255, 255, 0.82);
+  backdrop-filter: saturate(180%) blur(12px);
+  border-bottom: var(--hairline);
+}
+.site-header .wrap { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+.brand { display: flex; align-items: center; gap: var(--space-3); }
+.brand .mark { width: 22px; height: 22px; }
+.brand-name { font-family: var(--font-display); font-weight: 600; font-size: 1.125rem; letter-spacing: -0.02em; }
+.header-actions { display: flex; align-items: center; gap: var(--space-6); }
+.header-link { font-size: 0.9375rem; color: var(--grey-600); transition: color var(--dur-micro) var(--ease-out); }
+.header-link:hover { color: var(--ink); }
+@media (max-width: 620px) { .header-link.is-desktop { display: none; } }
+
+/* ---- Buttons ---- */
+.btn {
+  display: inline-flex; align-items: center; gap: var(--space-2);
+  font-family: var(--font-body); font-size: 0.9375rem; font-weight: 500;
+  padding: var(--space-3) var(--space-6); border-radius: var(--radius-control);
+  border: var(--ink-border); cursor: pointer; white-space: nowrap;
+  transition: transform var(--dur-micro) var(--ease-out), background var(--dur-micro) var(--ease-out), color var(--dur-micro) var(--ease-out);
+}
+.btn:active { transform: translateY(1px); }
+.btn-primary { background: var(--ink); color: var(--canvas); }
+.btn-primary:hover { background: #000; }
+.btn-ghost { background: transparent; color: var(--ink); border-color: var(--grey-300); }
+.btn-ghost:hover { border-color: var(--ink); }
+.btn-lg { font-size: 1rem; padding: var(--space-4) var(--space-8); }
+/* Inverted variants for the dark privacy band */
+.band-dark .btn-primary { background: var(--canvas); color: var(--ink); border-color: var(--canvas); }
+.band-dark .btn-ghost { color: var(--canvas); border-color: rgba(255,255,255,0.4); }
+.band-dark .btn-ghost:hover { border-color: var(--canvas); }
+
+/* ---- Hero ---- */
+.hero { padding-top: clamp(var(--space-16), 9vw, var(--space-32)); padding-bottom: clamp(var(--space-12), 6vw, var(--space-24)); text-align: center; }
+.hero-mark { width: clamp(56px, 9vw, 84px); height: clamp(56px, 9vw, 84px); margin: 0 auto var(--space-8); }
+.hero-mark.animate svg { transform-origin: 50px 50px; animation: omniAperture var(--dur-aperture) var(--ease-in-out) 1; }
+.hero h1 { max-width: 15ch; margin-inline: auto; }
+.hero .lead { margin: var(--space-6) auto 0; text-align: center; }
+.hero-cta { display: flex; gap: var(--space-3); justify-content: center; flex-wrap: wrap; margin-top: var(--space-8); }
+.hero-privacy {
+  display: inline-flex; align-items: center; gap: var(--space-3); flex-wrap: wrap; justify-content: center;
+  margin-top: var(--space-8); font-family: var(--font-mono); font-size: var(--type-meta);
+  color: var(--ink-secondary); letter-spacing: 0.02em;
+}
+.hero-privacy .sep { color: var(--grey-300); }
+
+/* Hero product video framed like an app window */
+.hero-stage { margin-top: clamp(var(--space-12), 6vw, var(--space-24)); }
+.device {
+  position: relative; border-radius: var(--radius-figure); border: var(--hairline);
+  background: var(--canvas); box-shadow: var(--shadow-lift); overflow: hidden;
+}
+.device video, .device img { width: 100%; height: auto; display: block; aspect-ratio: 8 / 5; object-fit: cover; }
+
+/* ---- Footer ---- */
+.site-footer { border-top: var(--hairline); padding: var(--space-16) 0 var(--space-12); margin-top: clamp(var(--space-16), 8vw, var(--space-32)); }
+.footer-grid { display: flex; flex-wrap: wrap; gap: var(--space-8) var(--space-16); align-items: flex-start; justify-content: space-between; }
+.footer-brand { display: flex; align-items: center; gap: var(--space-3); }
+.footer-brand .mark { width: 20px; height: 20px; }
+.footer-links { display: flex; flex-wrap: wrap; gap: var(--space-6); }
+.footer-links a { color: var(--grey-600); font-size: 0.9375rem; transition: color var(--dur-micro) var(--ease-out); }
+.footer-links a:hover { color: var(--ink); }
+.footer-note { margin-top: var(--space-8); color: var(--ink-secondary); font-size: 0.875rem; max-width: 52ch; }
+.footer-note a { color: var(--grey-600); text-decoration: underline; text-underline-offset: 2px; }

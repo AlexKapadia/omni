@@ -53,7 +53,14 @@ describe("App setup gate", () => {
   });
 
   it("does not trap the user in onboarding on a transient status error", async () => {
-    render(<App checkStatus={() => Promise.reject(new Error("engine starting"))} />);
+    // Zero retry budget: the first rejection is past the deadline, so the app
+    // gives up and shows the shell immediately (production default is 10 s).
+    render(
+      <App
+        checkStatus={() => Promise.reject(new Error("engine starting"))}
+        bootRetryBudgetMs={0}
+      />,
+    );
     await waitFor(() => expect(screen.getByRole("navigation")).toBeTruthy());
     expect(screen.queryByText("1 / 4")).toBeNull();
   });

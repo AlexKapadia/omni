@@ -34,5 +34,7 @@ export default defineConfig({
     // CSS is irrelevant to these tests and tokens.css is design-agent-owned;
     // never let a missing/changed stylesheet fail logic tests.
     css: false,
+    // e2e/ holds Playwright specs (own runner); vitest must not collect them.
+    exclude: ["**/node_modules/**", "**/dist/**", "e2e/**"],
   },
 });

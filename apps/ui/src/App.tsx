@@ -34,8 +34,12 @@ type Gate = "checking" | "onboarding" | "app";
  */
 export default function App({
   checkStatus = getSetupStatus,
+  bootRetryBudgetMs = 10_000,
 }: {
   readonly checkStatus?: () => Promise<SetupStatus>;
+  // Bounded retry window for the cold-boot setup.status probe. Injectable so
+  // tests can assert the give-up-and-show-shell path without a real 10 s wait.
+  readonly bootRetryBudgetMs?: number;
 } = {}) {
   const [gate, setGate] = useState<Gate>("checking");
 
@@ -49,7 +53,7 @@ export default function App({
     // can load. So we retry on a short cadence while the socket comes up, and
     // only commit to "app" once the engine is genuinely unreachable past a
     // bounded deadline (a returning user is never trapped on the loader).
-    const deadline = Date.now() + 10_000;
+    const deadline = Date.now() + bootRetryBudgetMs;
     const attempt = (): void => {
       void checkStatus()
         .then((status) => {
@@ -69,7 +73,7 @@ export default function App({
     return () => {
       cancelled = true;
     };
-  }, [checkStatus]);
+  }, [checkStatus, bootRetryBudgetMs]);
 
   if (gate === "checking") {
     return (

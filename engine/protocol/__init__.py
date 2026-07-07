@@ -43,7 +43,18 @@ from engine.protocol.device_listing_payloads import (
     build_devices_list_payload,
 )
 from engine.protocol.event_broadcast_hub import EventBroadcastHub
+from engine.protocol.google_connect_payloads import (
+    COMMAND_GOOGLE_CONNECT,
+    EVENT_GOOGLE_CONNECT_COMPLETED,
+    GoogleConnectCommandPayload,
+    build_google_connect_completed_payload,
+)
 from engine.protocol.heartbeat_payload import build_heartbeat_payload
+from engine.protocol.ledger_summary_payloads import (
+    COMMAND_LEDGER_SUMMARY,
+    DEFAULT_RECENT_ENTRIES_LIMIT,
+    LedgerSummaryCommandPayload,
+)
 from engine.protocol.meeting_finalization_payloads import (
     COMMAND_MEETING_FINALIZE,
     COMMAND_MEETING_GET,
@@ -57,6 +68,30 @@ from engine.protocol.meeting_finalization_payloads import (
     build_enhance_failed_payload,
     build_enhance_ready_payload,
     build_enhance_started_payload,
+)
+from engine.protocol.models_download_payloads import (
+    COMMAND_MODELS_DOWNLOAD,
+    EVENT_MODELS_DOWNLOAD_COMPLETED,
+    EVENT_MODELS_DOWNLOAD_FAILED,
+    EVENT_MODELS_DOWNLOAD_PROGRESS,
+    ModelsDownloadCommandPayload,
+    build_models_download_completed_payload,
+    build_models_download_failed_payload,
+    build_models_download_progress_payload,
+)
+from engine.protocol.provider_keys_payloads import (
+    COMMAND_KEYS_SAVE,
+    COMMAND_KEYS_VALIDATE,
+    KeysSaveCommandPayload,
+    KeysValidateCommandPayload,
+)
+from engine.protocol.settings_command_payloads import (
+    COMMAND_SETTINGS_GET,
+    COMMAND_SETTINGS_UPDATE,
+    COMMAND_SETUP_STATUS,
+    SettingsGetCommandPayload,
+    SettingsUpdateCommandPayload,
+    SetupStatusCommandPayload,
 )
 from engine.protocol.websocket_envelope import (
     MAX_MESSAGE_BYTES,
@@ -74,9 +109,18 @@ __all__ = [
     "COMMAND_CAPTURE_STOP",
     "COMMAND_DETECTION_DISMISS",
     "COMMAND_DEVICES_LIST",
+    "COMMAND_GOOGLE_CONNECT",
+    "COMMAND_KEYS_SAVE",
+    "COMMAND_KEYS_VALIDATE",
+    "COMMAND_LEDGER_SUMMARY",
     "COMMAND_MEETINGS_LIST",
     "COMMAND_MEETING_FINALIZE",
     "COMMAND_MEETING_GET",
+    "COMMAND_MODELS_DOWNLOAD",
+    "COMMAND_SETTINGS_GET",
+    "COMMAND_SETTINGS_UPDATE",
+    "COMMAND_SETUP_STATUS",
+    "DEFAULT_RECENT_ENTRIES_LIMIT",
     "EVENT_CAPTURE_DEVICE_CHANGED",
     "EVENT_CAPTURE_STARTED",
     "EVENT_CAPTURE_STOPPED",
@@ -84,7 +128,11 @@ __all__ = [
     "EVENT_ENHANCE_FAILED",
     "EVENT_ENHANCE_READY",
     "EVENT_ENHANCE_STARTED",
+    "EVENT_GOOGLE_CONNECT_COMPLETED",
     "EVENT_MEETING_DETECTED",
+    "EVENT_MODELS_DOWNLOAD_COMPLETED",
+    "EVENT_MODELS_DOWNLOAD_FAILED",
+    "EVENT_MODELS_DOWNLOAD_PROGRESS",
     "EVENT_TRANSCRIPT_FINAL",
     "EVENT_TRANSCRIPT_PARTIAL",
     "MAX_MESSAGE_BYTES",
@@ -98,11 +146,19 @@ __all__ = [
     "Envelope",
     "EnvelopeKind",
     "EventBroadcastHub",
+    "GoogleConnectCommandPayload",
+    "KeysSaveCommandPayload",
+    "KeysValidateCommandPayload",
+    "LedgerSummaryCommandPayload",
     "MeetingFinalizeCommandPayload",
     "MeetingGetCommandPayload",
     "MeetingsListCommandPayload",
+    "ModelsDownloadCommandPayload",
     "ProtocolError",
     "ProtocolErrorCode",
+    "SettingsGetCommandPayload",
+    "SettingsUpdateCommandPayload",
+    "SetupStatusCommandPayload",
     "build_capture_device_changed_payload",
     "build_capture_started_payload",
     "build_capture_stopped_payload",
@@ -111,8 +167,12 @@ __all__ = [
     "build_enhance_failed_payload",
     "build_enhance_ready_payload",
     "build_enhance_started_payload",
+    "build_google_connect_completed_payload",
     "build_heartbeat_payload",
     "build_meeting_detected_payload",
+    "build_models_download_completed_payload",
+    "build_models_download_failed_payload",
+    "build_models_download_progress_payload",
     "build_transcript_final_payload",
     "build_transcript_partial_payload",
     "error_reply",

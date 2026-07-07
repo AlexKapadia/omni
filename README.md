@@ -200,14 +200,14 @@ Omni ships with an [`evidence/`](evidence/) showcase — every number is a **rea
 | **Router cost** | Decimal-exact — 0 mismatches vs an independent rational cross-check |
 | **Router, live** | 15 real provider calls, **$0.00080723** total, 0 fallbacks |
 | **Determinism** | all 5 deterministic paths yield exactly 1 distinct output over repeated runs |
-| **Test suite** | **1,358** cases (950 Python + 408 TypeScript); 86.7% line / 78.2% branch coverage |
+| **Test suite** | **2,766** cases (1,974 Python + 792 TypeScript); engine **98.87% line / 94.74% branch** coverage |
 
 Tests are written to be **adversarial** — property-based, fuzzed, boundary-exact, determinism-checked — not happy-path. The suite is the evidence, not a rubber stamp.
 
 **Honest caveats** (the full list is in [`evidence/README.md`](evidence/README.md)):
 
 - **Dense retrieval isn't active on the measurement machine** — the `bge-small` weights are absent, so by the engine's fail-closed design retrieval collapses to **BM25 only**. Results are labelled accordingly; the paraphrase-query gap quantifies exactly what the dense tier recovers.
-- **Coverage is 86.7% line / 78.2% branch** — reported as measured, below the 90/85 target gate that is staged to land in CI.
+- **Engine coverage is 98.87% line / 94.74% branch** — measured with branch coverage, clearing the 90/85 gate. UI branch coverage clears 85%; UI line coverage is lower where WebGL/Canvas/Web-Audio rendering can only be exercised by the browser-driven E2E suite (jsdom can't run it), documented in [`evidence/coverage-report.md`](evidence/coverage-report.md).
 - **All test data is synthetic** (no real PII, no private conversations), per the project's data rules.
 
 ---

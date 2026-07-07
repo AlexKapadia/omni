@@ -18,6 +18,7 @@ from pathlib import Path
 
 from engine.ask.ask_query_command_dispatcher import AskAnswerGateway
 from engine.enhance import MeetingFinalizationService
+from engine.naomi.naomi_turn_gateway import NaomiTurnGateway
 from engine.protocol import EventBroadcastHub
 from engine.runtime_settings import load_engine_settings
 from engine.stt.live_capture_service import LiveCaptureService
@@ -50,6 +51,17 @@ def default_finalization_service_factory(hub: EventBroadcastHub) -> MeetingFinal
 def default_ask_gateway_factory() -> AskAnswerGateway:
     settings = load_engine_settings()  # Raises on bad env — fail closed.
     return AskAnswerGateway(db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
+
+
+def default_naomi_loop_factory(hub: EventBroadcastHub) -> NaomiTurnGateway:
+    """Real Naomi conversation loop over the settings database; production.
+
+    Construction is inert (no keys, no models, no mic, no socket): the first
+    ``naomi.listen.start`` lazily loads STT models and opens the persistent
+    Cartesia socket, so a missing key/model refuses THAT turn, never boot.
+    """
+    settings = load_engine_settings()  # Raises on bad env — fail closed.
+    return NaomiTurnGateway(hub, db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
 
 
 def default_dictation_gateway_factory(hub: EventBroadcastHub) -> DictationCommandGateway:

@@ -42,6 +42,11 @@ from engine.enhance import (
     MeetingFinalizationService,
     dispatch_meeting_command,
 )
+from engine.naomi.naomi_turn_command_dispatcher import (
+    NAOMI_LOOP_COMMAND_NAMES,
+    NaomiTurnControl,
+    dispatch_naomi_loop_command,
+)
 from engine.protocol import (
     PROTOCOL_VERSION,
     Envelope,
@@ -85,6 +90,7 @@ class WebSocketConnectionHandler:
         approval_gateway: ApprovalCardsGateway | None = None,
         detection_service: DetectionService | None = None,
         device_lister: DeviceLister | None = None,
+        naomi_loop_control: NaomiTurnControl | None = None,
     ) -> None:
         self._websocket = websocket
         self._started_monotonic = started_monotonic
@@ -101,6 +107,8 @@ class WebSocketConnectionHandler:
         self._approval_gateway = approval_gateway
         self._detection_service = detection_service
         self._device_lister = device_lister
+        # Optional additive surface: None → naomi.listen.* refuses honestly.
+        self._naomi_loop_control = naomi_loop_control
         # Multiple tasks write to one socket (heartbeat + replies + broadcast
         # events); the lock serialises sends so frames never interleave.
         self._send_lock = asyncio.Lock()
@@ -204,6 +212,11 @@ class WebSocketConnectionHandler:
             # Additive naomi.say / naomi.cancel surface (engine.voice owns
             # validation, refusal semantics, and replies).
             await dispatch_naomi_command(command, self._voice_streamer, self._send)
+            return
+        if command.name in NAOMI_LOOP_COMMAND_NAMES:
+            # Additive naomi.listen.start / naomi.listen.stop conversation-loop
+            # surface (engine.naomi dispatcher owns validation + replies).
+            await dispatch_naomi_loop_command(command, self._naomi_loop_control, self._send)
             return
         if command.name in MEETING_COMMAND_NAMES:
             # Additive meeting.finalize / meetings.list / meeting.get surface

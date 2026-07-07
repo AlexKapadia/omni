@@ -52,6 +52,8 @@ class NaomiTurnControl(Protocol):
 
     async def listen_stop(self, flush: bool) -> None: ...  # pragma: no cover - protocol
 
+    async def shutdown(self) -> None: ...  # pragma: no cover - protocol
+
     @property
     def state(self) -> object: ...  # pragma: no cover - protocol
 

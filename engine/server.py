@@ -32,7 +32,7 @@ from engine.ask.ask_query_command_dispatcher import AskAnswerGateway
 from engine.audio.audio_device_listing import list_audio_devices
 from engine.audio.devices_list_command_dispatcher import DeviceLister
 from engine.enhance import MeetingFinalizationService
-from engine.naomi.naomi_turn_gateway import NaomiTurnGateway
+from engine.naomi.naomi_turn_command_dispatcher import NaomiTurnControl
 from engine.protocol import EventBroadcastHub
 from engine.runtime_settings import LOOPBACK_HOST, EngineSettings, load_engine_settings
 from engine.stt.live_capture_service import LiveCaptureService
@@ -75,7 +75,9 @@ DetectionWiringFactory = Callable[[EventBroadcastHub, LiveCaptureService], Detec
 SpotterWiringFactory = Callable[[EventBroadcastHub], LiveAnswersSpotterWiring]
 CardBuildWiringFactory = Callable[[EventBroadcastHub], ApprovalCardBuildWiring]
 VaultWatchdogFactory = Callable[[], VaultWatchdogServerWiring]
-NaomiLoopFactory = Callable[[EventBroadcastHub], NaomiTurnGateway]
+# Return the structural control Protocol (not the concrete gateway) so tests
+# can inject a fake; the real gateway satisfies it (return-type covariance).
+NaomiLoopFactory = Callable[[EventBroadcastHub], NaomiTurnControl]
 
 
 def create_app(

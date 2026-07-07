@@ -24,6 +24,7 @@ import contextlib
 import logging
 from collections.abc import Awaitable, Callable
 from pathlib import Path
+from typing import Any
 
 from pydantic import ValidationError
 
@@ -106,17 +107,28 @@ class ModelsDownloadCommandGateway:
                 self._hub.broadcast_event(EVENT_MODELS_DOWNLOAD_PROGRESS, payload), loop
             )
 
-        kwargs: dict[str, object] = {
-            "models_dir": self._models_dir,
-            "manifest_path": self._manifest_path,
-            "fetch": self._fetch,
-        }
-        if self._specs is not None:
-            kwargs["specs"] = self._specs
-        try:
-            files = await asyncio.to_thread(
-                download_models_with_progress, on_progress, **kwargs
+        specs = self._specs
+
+        def _download() -> list[dict[str, Any]]:
+            # Explicit call (not **kwargs) so specs keeps its precise type and
+            # the module default applies when the gateway was not given a set.
+            if specs is not None:
+                return download_models_with_progress(
+                    on_progress,
+                    models_dir=self._models_dir,
+                    manifest_path=self._manifest_path,
+                    fetch=self._fetch,
+                    specs=specs,
+                )
+            return download_models_with_progress(
+                on_progress,
+                models_dir=self._models_dir,
+                manifest_path=self._manifest_path,
+                fetch=self._fetch,
             )
+
+        try:
+            files = await asyncio.to_thread(_download)
         except ModelIntegrityError as exc:
             # Honest per-file failure; the corrupt file was already deleted.
             await self._hub.broadcast_event(

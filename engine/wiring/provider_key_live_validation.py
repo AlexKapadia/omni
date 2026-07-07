@@ -28,7 +28,6 @@ from engine.router.completion_contract import (
     TaskType,
 )
 from engine.router.provider_client_registry import build_provider_clients
-from engine.router.provider_error_translation import translate_sdk_exception
 from engine.router.routing_table import ANTHROPIC_MODEL, GEMINI_FLASH_MODEL, GROQ_FAST_MODEL
 from engine.security.kill_switch import kill_switch_engaged
 from engine.security.provider_key_store import ProviderKeyStore
@@ -92,10 +91,10 @@ async def _validate_llm_key(provider: str, store: ProviderKeyStore) -> KeyValida
     try:
         await client.complete(request)
     except Exception as exc:
-        # Redaction-aware translation: the message names the error class,
-        # never any key material (the client boundary already scrubbed it).
-        error = translate_sdk_exception(provider_enum, request.model, exc)
-        return KeyValidationResult(provider, False, str(error), None)
+        # The provider client already raised a REDACTED ProviderCallError
+        # (key material scrubbed at the client boundary — provider_error_
+        # translation); surfacing its message can never leak a key.
+        return KeyValidationResult(provider, False, str(exc), None)
     latency_ms = int((time.monotonic() - started) * 1000)
     return KeyValidationResult(
         provider, True, f"key is valid — the model answered in {latency_ms} ms", latency_ms

@@ -22,11 +22,16 @@ from engine.protocol import EventBroadcastHub
 from engine.runtime_settings import load_engine_settings
 from engine.stt.live_capture_service import LiveCaptureService
 from engine.vault import VaultWriteError, resolve_vault_root
+from engine.wiring.app_settings_command_gateway import AppSettingsCommandGateway
 from engine.wiring.approval_card_build_server_wiring import ApprovalCardBuildWiring
 from engine.wiring.approval_cards_gateway import ApprovalCardsGateway
 from engine.wiring.detection_server_wiring import DetectionServerWiring
 from engine.wiring.dictation_command_dispatcher import DictationCommandGateway
+from engine.wiring.google_connect_command_dispatcher import GoogleConnectCommandGateway
+from engine.wiring.ledger_summary_command_dispatcher import LedgerSummaryCommandGateway
 from engine.wiring.live_answers_spotter_wiring import LiveAnswersSpotterWiring
+from engine.wiring.models_download_command_dispatcher import ModelsDownloadCommandGateway
+from engine.wiring.provider_keys_command_dispatcher import ProviderKeysCommandGateway
 from engine.wiring.vault_watchdog_server_wiring import VaultWatchdogServerWiring
 
 # The repo's migrations directory (packaging bundles it next to the engine).
@@ -62,6 +67,38 @@ def default_approval_gateway_factory(hub: EventBroadcastHub) -> ApprovalCardsGat
     # Construction is inert: registry/session/router resolve per command,
     # so a missing vault or Google account refuses THAT card, never boot.
     return ApprovalCardsGateway(hub=hub, db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
+
+
+def default_settings_gateway_factory() -> AppSettingsCommandGateway:
+    """Real app-settings gateway over the settings database; command-driven.
+
+    Construction is inert (no keys, no I/O): the key store, models directory,
+    and Google store all resolve per command, so a missing dependency refuses
+    THAT command honestly, never engine boot.
+    """
+    settings = load_engine_settings()  # Raises on bad env — fail closed.
+    return AppSettingsCommandGateway(db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
+
+
+def default_keys_gateway_factory() -> ProviderKeysCommandGateway:
+    """Real provider-key custody gateway (DPAPI store); command-driven, inert."""
+    return ProviderKeysCommandGateway()
+
+
+def default_ledger_gateway_factory() -> LedgerSummaryCommandGateway:
+    """Real router-ledger summary gateway over the settings database."""
+    settings = load_engine_settings()  # Raises on bad env — fail closed.
+    return LedgerSummaryCommandGateway(db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
+
+
+def default_models_gateway_factory(hub: EventBroadcastHub) -> ModelsDownloadCommandGateway:
+    """Real model-download gateway (pinned HTTPS sources); construction inert."""
+    return ModelsDownloadCommandGateway(hub=hub)
+
+
+def default_google_gateway_factory(hub: EventBroadcastHub) -> GoogleConnectCommandGateway:
+    """Real Google-connect gateway (desktop OAuth flow); construction inert."""
+    return GoogleConnectCommandGateway(hub=hub)
 
 
 def default_card_build_wiring_factory(hub: EventBroadcastHub) -> ApprovalCardBuildWiring:

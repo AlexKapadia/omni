@@ -37,11 +37,16 @@ from engine.runtime_settings import LOOPBACK_HOST, EngineSettings, load_engine_s
 from engine.stt.live_capture_service import LiveCaptureService
 from engine.voice import TtsPlaybackStreamer
 from engine.websocket_connection_handler import WebSocketConnectionHandler
+from engine.wiring.app_settings_command_gateway import AppSettingsCommandGateway
 from engine.wiring.approval_card_build_server_wiring import ApprovalCardBuildWiring
 from engine.wiring.approval_cards_gateway import ApprovalCardsGateway
 from engine.wiring.detection_server_wiring import DetectionServerWiring
 from engine.wiring.dictation_command_dispatcher import DictationCommandGateway
+from engine.wiring.google_connect_command_dispatcher import GoogleConnectCommandGateway
+from engine.wiring.ledger_summary_command_dispatcher import LedgerSummaryCommandGateway
 from engine.wiring.live_answers_spotter_wiring import LiveAnswersSpotterWiring
+from engine.wiring.models_download_command_dispatcher import ModelsDownloadCommandGateway
+from engine.wiring.provider_keys_command_dispatcher import ProviderKeysCommandGateway
 
 # The real, settings-driven service factories live in one module so this
 # file stays pure routing/lifecycle; tests inject fakes through the seams.
@@ -53,6 +58,11 @@ from engine.wiring.server_default_service_factories import (
     default_detection_wiring_factory,
     default_dictation_gateway_factory,
     default_finalization_service_factory,
+    default_google_gateway_factory,
+    default_keys_gateway_factory,
+    default_ledger_gateway_factory,
+    default_models_gateway_factory,
+    default_settings_gateway_factory,
     default_spotter_wiring_factory,
     default_vault_watchdog_factory,
 )
@@ -73,6 +83,11 @@ DetectionWiringFactory = Callable[[EventBroadcastHub, LiveCaptureService], Detec
 SpotterWiringFactory = Callable[[EventBroadcastHub], LiveAnswersSpotterWiring]
 CardBuildWiringFactory = Callable[[EventBroadcastHub], ApprovalCardBuildWiring]
 VaultWatchdogFactory = Callable[[], VaultWatchdogServerWiring]
+SettingsGatewayFactory = Callable[[], AppSettingsCommandGateway]
+KeysGatewayFactory = Callable[[], ProviderKeysCommandGateway]
+LedgerGatewayFactory = Callable[[], LedgerSummaryCommandGateway]
+ModelsGatewayFactory = Callable[[EventBroadcastHub], ModelsDownloadCommandGateway]
+GoogleGatewayFactory = Callable[[EventBroadcastHub], GoogleConnectCommandGateway]
 
 
 def create_app(
@@ -87,6 +102,11 @@ def create_app(
     spotter_wiring_factory: SpotterWiringFactory | None = None,
     card_build_wiring_factory: CardBuildWiringFactory | None = None,
     vault_watchdog_factory: VaultWatchdogFactory | None = None,
+    settings_gateway_factory: SettingsGatewayFactory | None = None,
+    keys_gateway_factory: KeysGatewayFactory | None = None,
+    ledger_gateway_factory: LedgerGatewayFactory | None = None,
+    models_gateway_factory: ModelsGatewayFactory | None = None,
+    google_gateway_factory: GoogleGatewayFactory | None = None,
 ) -> FastAPI:
     """Build the FastAPI app. Factory form keeps tests isolated per-app.
 
@@ -111,6 +131,14 @@ def create_app(
     ask_gateway = (ask_gateway_factory or default_ask_gateway_factory)()
     dictation_gateway = (dictation_gateway_factory or default_dictation_gateway_factory)(event_hub)
     approval_gateway = (approval_gateway_factory or default_approval_gateway_factory)(event_hub)
+    # M7 onboarding/settings surfaces: command-driven, inert construction
+    # (default ON). settings/keys/ledger read on demand; models/google run
+    # their long tasks in the background off the reply path.
+    settings_gateway = (settings_gateway_factory or default_settings_gateway_factory)()
+    keys_gateway = (keys_gateway_factory or default_keys_gateway_factory)()
+    ledger_gateway = (ledger_gateway_factory or default_ledger_gateway_factory)()
+    models_gateway = (models_gateway_factory or default_models_gateway_factory)(event_hub)
+    google_gateway = (google_gateway_factory or default_google_gateway_factory)(event_hub)
     # M6 detection + M3 live answers: event/timer-driven — wired only when a
     # factory is passed (see docstring). The detection wiring feeds off the
     # loopback VAD tap the capture service carries (probabilities only).
@@ -134,6 +162,11 @@ def create_app(
         app.state.started_monotonic = time.monotonic()
         preload_task: asyncio.Task[None] | None = None
         if preload_stt:
+            # Production marker: make persisted settings effective before the
+            # first command — a user-chosen vault and an engaged kill switch
+            # survive restarts (fail closed on egress across reboots).
+            with contextlib.suppress(Exception):
+                await settings_gateway.apply_persisted_settings_at_boot()
             # Background: heartbeats flow (stt_ready=false) while models load.
             preload_task = asyncio.create_task(capture_service.preload_models())
         if detection_wiring is not None:
@@ -157,6 +190,12 @@ def create_app(
         # In-flight card executions get a short grace, then cancel.
         with contextlib.suppress(Exception):
             await approval_gateway.shutdown()
+        # A running model download or Google consent flow is cancelled so no
+        # background task outlives the process.
+        with contextlib.suppress(Exception):
+            await models_gateway.shutdown()
+        with contextlib.suppress(Exception):
+            await google_gateway.shutdown()
         if preload_task is not None and not preload_task.done():
             preload_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -191,6 +230,11 @@ def create_app(
     app.state.spotter_wiring = spotter_wiring
     app.state.card_build_wiring = card_build_wiring
     app.state.vault_watchdog = vault_watchdog
+    app.state.settings_gateway = settings_gateway
+    app.state.keys_gateway = keys_gateway
+    app.state.ledger_gateway = ledger_gateway
+    app.state.models_gateway = models_gateway
+    app.state.google_gateway = google_gateway
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -216,6 +260,11 @@ def create_app(
             # detection.dismiss needs the service; None → honest refusal.
             detection_service=detection.service if detection is not None else None,
             device_lister=state.device_lister,
+            settings_gateway=state.settings_gateway,
+            keys_gateway=state.keys_gateway,
+            ledger_gateway=state.ledger_gateway,
+            models_gateway=state.models_gateway,
+            google_gateway=state.google_gateway,
         )
         await handler.run()
 

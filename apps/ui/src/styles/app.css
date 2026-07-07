@@ -29,6 +29,14 @@ body {
   /* "the only permanent animation" — only ever applied while capture is live */
   animation: omniBreathe var(--dur-breathe) ease-in-out infinite;
 }
+.omni-aperture {
+  /* "launch + onboarding only" — the aperture gesture on the welcome mark.
+   * Binds the omniAperture keyframe (tokens.css) at the doc's demo cadence;
+   * frozen under prefers-reduced-motion by the rule below. */
+  animation: omniAperture 5.6s var(--ease-in-out) infinite;
+  transform-origin: center;
+  display: inline-block;
+}
 .omni-shimmer {
   /* skeleton shimmer — "never a spinner on primary surfaces" */
   background: linear-gradient(90deg, var(--grey-50) 25%, var(--grey-200) 50%, var(--grey-50) 75%);

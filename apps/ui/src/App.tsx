@@ -9,25 +9,70 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { NavRail, type SectionId } from "./components/nav-rail";
+import { OmniMark } from "./components/omni-mark";
 import { StatusFooter } from "./components/status-footer";
 import { tokenDurationSeconds } from "./lib/design-token-motion";
 import { startLiveEngineConnection } from "./lib/live-engine-socket";
+import { getSetupStatus } from "./lib/setup-settings-repository";
+import type { SetupStatus } from "./lib/setup-settings-payloads";
 import { NaomiView } from "./naomi/NaomiView";
+import { OnboardingWizard } from "./screens/onboarding/onboarding-wizard";
 import { AskScreen } from "./screens/ask-screen";
 import { LibraryScreen } from "./screens/library-screen";
 import { LiveMeetingScreen } from "./screens/live-meeting-screen";
 import { SettingsScreen } from "./screens/settings-screen";
 
-export default function App() {
-  const [activeSection, setActiveSection] = useState<SectionId>("library");
-  const reducedMotion = useReducedMotion();
+/** Boot gate: first-run onboarding vs the main shell, from real setup.status. */
+type Gate = "checking" | "onboarding" | "app";
+
+/**
+ * App root. On boot it starts the single engine connection and asks the engine
+ * for the real setup.status: an incomplete setup renders the first-run wizard;
+ * otherwise the main shell. If the check cannot be reached the shell still
+ * loads (engine issues surface in the footer) — we never force a returning user
+ * back through onboarding on a transient error.
+ */
+export default function App({
+  checkStatus = getSetupStatus,
+}: {
+  readonly checkStatus?: () => Promise<SetupStatus>;
+} = {}) {
+  const [gate, setGate] = useState<Gate>("checking");
 
   useEffect(() => {
-    // Singleton with an idempotent start — safe under StrictMode double-mount.
-    // Deliberately not stopped on unmount: the connection lives as long as the
-    // window does, and the footer must stay live across any future remounts.
-    startLiveEngineConnection();
-  }, []);
+    startLiveEngineConnection(); // idempotent; safe under StrictMode double-mount
+    let cancelled = false;
+    void checkStatus()
+      .then((status) => {
+        if (cancelled) return;
+        setGate(status.onboardingComplete && status.setupComplete ? "app" : "onboarding");
+      })
+      .catch(() => {
+        if (!cancelled) setGate("app"); // transient engine error: don't trap the user
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [checkStatus]);
+
+  if (gate === "checking") {
+    return (
+      <div className="flex h-full items-center justify-center bg-[var(--canvas)]" aria-label="Starting Omni">
+        <span className="omni-breathe" aria-hidden>
+          <OmniMark size={64} />
+        </span>
+      </div>
+    );
+  }
+  if (gate === "onboarding") {
+    return <OnboardingWizard onComplete={() => setGate("app")} />;
+  }
+  return <MainShell />;
+}
+
+function MainShell() {
+  const [activeSection, setActiveSection] = useState<SectionId>("library");
+  const reducedMotion = useReducedMotion();
 
   return (
     <div className="flex h-full flex-col bg-[var(--canvas)] text-[var(--ink)]">

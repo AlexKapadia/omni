@@ -10,8 +10,7 @@ import {
   parseDevicesListPayload,
   refreshDevicesIntoSettings,
 } from "./engine-devices";
-import { buildMockInitialSettings } from "./mock-settings-data";
-import { createSettingsStore } from "./settings-store";
+import { createInitialSettingsState, createSettingsStore } from "./settings-store";
 
 const WIRE_DEVICES = [
   { id: "3:Headset Microphone", name: "Headset Microphone", kind: "capture", is_default: true },
@@ -73,7 +72,7 @@ describe("deriveDeviceSettings", () => {
 describe("refreshDevicesIntoSettings", () => {
   it("applies a real listing and keeps a still-valid user pick", async () => {
     const store = createSettingsStore({
-      ...buildMockInitialSettings(),
+      ...createInitialSettingsState(),
       devicesSource: "engine",
       microphone: "USB Mic", // the user's previous choice
       microphoneOptions: ["USB Mic"],
@@ -87,7 +86,7 @@ describe("refreshDevicesIntoSettings", () => {
   });
 
   it("an offline engine marks devices unavailable, never a fake list", async () => {
-    const store = createSettingsStore(buildMockInitialSettings());
+    const store = createSettingsStore(createInitialSettingsState());
     await refreshDevicesIntoSettings(store, async () => {
       throw new Error("The engine is offline.");
     });
@@ -98,7 +97,7 @@ describe("refreshDevicesIntoSettings", () => {
   });
 
   it("a malformed payload marks devices unavailable (fail closed)", async () => {
-    const store = createSettingsStore(buildMockInitialSettings());
+    const store = createSettingsStore(createInitialSettingsState());
     await refreshDevicesIntoSettings(store, async () => ({ devices: "corrupt" }));
     expect(store.getState().devicesSource).toBe("unavailable");
   });

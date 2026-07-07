@@ -1,55 +1,68 @@
 /**
- * Settings — two-column shell (components doc §10) composing the group
- * cards: Devices, Hotkey, Templates | AI router, Cost + latency, Privacy,
- * API keys. Owns the app-singleton settings store (mock initial data behind
- * real shapes) and the mock API-key vault; both swap for engine-backed
- * implementations without touching this screen.
+ * Settings — two-column shell (components doc §10) composing the group cards:
+ * Devices, Hotkey, Templates, Privacy, Instant execute | AI router,
+ * Cost + latency, API keys.
+ *
+ * Everything is REAL engine data: on mount the screen loads settings.get and
+ * ledger.summary and enumerates real devices; every control persists through
+ * settings.update. There is no mock data. The settings-backed cards show an
+ * honest loading shimmer / error until settings.get resolves.
  */
 import { useEffect } from "react";
+import { useStore } from "zustand";
 import { ApiKeysSection } from "../components/settings/api-keys-section";
-import {
-  DevicesSection,
-  HotkeySection,
-  TemplatesSection,
-} from "../components/settings/devices-hotkey-templates-sections";
+import { CostLatencyLedgerSection } from "../components/settings/cost-ledger-section";
+import { DevicesSection, HotkeySection } from "../components/settings/devices-and-hotkey-sections";
+import { InstantExecuteWhitelistSection } from "../components/settings/instant-execute-whitelist-section";
 import { PrivacySection } from "../components/settings/privacy-section";
-import {
-  CostLatencyLedgerSection,
-  RouterMatrixSection,
-} from "../components/settings/router-and-ledger-sections";
+import { RouterMatrixSection } from "../components/settings/router-matrix-section";
+import { TemplatesSection } from "../components/settings/templates-and-custom-editor-section";
+import { SkeletonShimmer } from "../components/skeleton-shimmer";
 import {
   apiKeysStore,
-  createMockApiKeyVault,
-  type ApiKeysStore,
+  createEngineApiKeyVault,
+  engineKeyValidator,
   type ApiKeyVault,
+  type ApiKeysStore,
+  type KeyValidator,
 } from "../lib/api-keys-store";
 import { refreshDevicesIntoSettings } from "../lib/engine-devices";
-import { buildMockInitialSettings } from "../lib/mock-settings-data";
+import { loadLedger, loadSettings, updateSetting, type SettingsUpdater } from "../lib/settings-actions";
 import { createSettingsStore, type SettingsStore } from "../lib/settings-store";
 
-/** The one settings store the running app uses (MOCK initial data). */
-export const appSettingsStore: SettingsStore = createSettingsStore(buildMockInitialSettings());
+/** The one settings store the running app uses (filled from the real engine). */
+export const appSettingsStore: SettingsStore = createSettingsStore();
 
-/** MOCK vault until the engine's DPAPI endpoint lands (same interface). */
-const defaultVault: ApiKeyVault = createMockApiKeyVault();
+/** Live bootstrap: load real settings + ledger + devices into the store. */
+function liveBootstrap(store: SettingsStore): void {
+  void loadSettings(store);
+  void loadLedger(store, 20);
+  void refreshDevicesIntoSettings(store);
+}
 
 export function SettingsScreen({
   store = appSettingsStore,
   keysStore = apiKeysStore,
-  vault = defaultVault,
-  refreshDevices = refreshDevicesIntoSettings,
+  vault = createEngineApiKeyVault(),
+  validator = engineKeyValidator,
+  update = (partial) => updateSetting(store, partial),
+  bootstrap = liveBootstrap,
 }: {
   readonly store?: SettingsStore;
   readonly keysStore?: ApiKeysStore;
   readonly vault?: ApiKeyVault;
-  /** Injectable for tests; the default asks the engine for real devices. */
-  readonly refreshDevices?: (store: SettingsStore) => Promise<void>;
+  readonly validator?: KeyValidator;
+  readonly update?: SettingsUpdater;
+  /** Injectable for tests; the default asks the engine for everything real. */
+  readonly bootstrap?: (store: SettingsStore) => void;
 }) {
-  // Real device enumeration on mount: devices.list fills the store, or the
-  // Devices card says honestly that the engine is unavailable.
   useEffect(() => {
-    void refreshDevices(store);
-  }, [store, refreshDevices]);
+    bootstrap(store);
+  }, [store, bootstrap]);
+
+  const phase = useStore(store, (s) => s.settingsPhase);
+  const error = useStore(store, (s) => s.settingsError);
+
   return (
     <div className="h-full overflow-y-auto" style={{ padding: "48px 64px 56px" }}>
       <h1
@@ -68,14 +81,31 @@ export function SettingsScreen({
       >
         <div className="flex min-w-0 flex-col gap-[var(--space-8)]">
           <DevicesSection store={store} />
-          <HotkeySection store={store} />
-          <TemplatesSection store={store} />
-          <PrivacySection store={store} />
+          {phase === "loading" ? (
+            <div aria-label="Loading settings" style={{ padding: "8px 0" }}>
+              <SkeletonShimmer lines={3} />
+            </div>
+          ) : phase === "error" ? (
+            <p
+              role="alert"
+              className="m-0 text-[var(--grey-600)]"
+              style={{ fontSize: "var(--text-body-size)" }}
+            >
+              {error ?? "The engine did not send your settings."}
+            </p>
+          ) : (
+            <>
+              <HotkeySection store={store} update={update} />
+              <TemplatesSection store={store} update={update} />
+              <PrivacySection store={store} update={update} />
+              <InstantExecuteWhitelistSection store={store} update={update} />
+            </>
+          )}
         </div>
         <div className="flex min-w-0 flex-col gap-[var(--space-8)]">
           <RouterMatrixSection store={store} />
           <CostLatencyLedgerSection store={store} />
-          <ApiKeysSection store={keysStore} vault={vault} />
+          <ApiKeysSection store={keysStore} vault={vault} validator={validator} />
         </div>
       </div>
     </div>

@@ -11,7 +11,6 @@ import {
   formatStartsIn,
   formatTokensCompact,
 } from "./format-quantities";
-import { ledgerTotals } from "./settings-store";
 
 describe("formatTokensCompact", () => {
   it.each<[number, string]>([
@@ -46,23 +45,6 @@ describe("formatCentsUsd is exact to the cent", () => {
 
   it("classic float trap: 0.1 + 0.2 dollars as cents is exactly $0.30", () => {
     expect(formatCentsUsd(10 + 20)).toBe("$0.30");
-  });
-});
-
-describe("ledgerTotals sums exactly", () => {
-  it("matches hand-computed integer sums", () => {
-    const totals = ledgerTotals([
-      { task: "a", calls: 92, tokens: 1_210_000, p50Seconds: 3.8, costCents: 412 },
-      { task: "b", calls: 214, tokens: 246_000, p50Seconds: 1.4, costCents: 96 },
-      { task: "c", calls: 68, tokens: 114_000, p50Seconds: 2.1, costCents: 91 },
-    ]);
-    expect(totals).toEqual({ calls: 374, tokens: 1_570_000, costCents: 599 });
-    expect(formatCentsUsd(totals.costCents)).toBe("$5.99");
-    expect(formatTokensCompact(totals.tokens)).toBe("1.57M");
-  });
-
-  it("empty ledger totals to exact zeros", () => {
-    expect(ledgerTotals([])).toEqual({ calls: 0, tokens: 0, costCents: 0 });
   });
 });
 

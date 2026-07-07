@@ -1,23 +1,36 @@
 /**
- * Settings — Privacy group card: the keep-audio toggle (default OFF — audio
- * is discarded after transcription, the local-only invariant), the
- * disclosure reminder, and the kill switch that halts every external call
- * (fail closed on egress; on-device capture and notes keep working).
+ * Settings — Privacy group card, wired to the REAL settings.update command.
+ *
+ * keep-audio defaults OFF (audio discarded after transcription — the
+ * local-only invariant); the kill switch halts every external call and its
+ * sub-caption reflects the engine's live engaged state. Each toggle updates
+ * optimistically and reverts with an honest message if the engine refuses.
  */
+import { useState } from "react";
 import { useStore } from "zustand";
 import { SettingsGroupCard, SettingsRow } from "./settings-group-card";
 import { ToggleSwitch } from "../toggle-switch";
-import {
-  setDisclosureReminder,
-  setKeepAudio,
-  setKillSwitch,
-  type SettingsStore,
-} from "../../lib/settings-store";
+import type { SettingsStore } from "../../lib/settings-store";
+import type { SettingsUpdater } from "../../lib/settings-actions";
 
-export function PrivacySection({ store }: { readonly store: SettingsStore }) {
-  const keepAudio = useStore(store, (s) => s.keepAudio);
-  const disclosureReminder = useStore(store, (s) => s.disclosureReminder);
-  const killSwitch = useStore(store, (s) => s.killSwitch);
+export function PrivacySection({
+  store,
+  update,
+}: {
+  readonly store: SettingsStore;
+  readonly update: SettingsUpdater;
+}) {
+  const keepAudio = useStore(store, (s) => s.settings?.keepAudio ?? false);
+  const disclosureReminder = useStore(store, (s) => s.settings?.disclosureReminder ?? false);
+  const killSwitch = useStore(store, (s) => s.settings?.killSwitch ?? false);
+  const killSwitchEngaged = useStore(store, (s) => s.killSwitchEngaged);
+  const [error, setError] = useState<string | null>(null);
+
+  const apply = async (partial: Parameters<SettingsUpdater>[0]): Promise<void> => {
+    const result = await update(partial);
+    setError(result.ok ? null : result.message);
+  };
+
   return (
     <SettingsGroupCard label="Privacy">
       <SettingsRow
@@ -30,7 +43,7 @@ export function PrivacySection({ store }: { readonly store: SettingsStore }) {
       >
         <ToggleSwitch
           checked={keepAudio}
-          onChange={(next) => setKeepAudio(store, next)}
+          onChange={(next) => void apply({ keepAudio: next })}
           label="Keep audio after transcription"
         />
       </SettingsRow>
@@ -40,25 +53,34 @@ export function PrivacySection({ store }: { readonly store: SettingsStore }) {
       >
         <ToggleSwitch
           checked={disclosureReminder}
-          onChange={(next) => setDisclosureReminder(store, next)}
+          onChange={(next) => void apply({ disclosureReminder: next })}
           label="Disclosure reminder"
         />
       </SettingsRow>
       <SettingsRow
         title="Kill switch"
         subCaption={
-          killSwitch
+          killSwitchEngaged
             ? "engaged: every external model call is refused"
             : "halts every external model call — capture and notes keep working on-device"
         }
-        last
+        last={error === null}
       >
         <ToggleSwitch
           checked={killSwitch}
-          onChange={(next) => setKillSwitch(store, next)}
+          onChange={(next) => void apply({ killSwitch: next })}
           label="Kill switch"
         />
       </SettingsRow>
+      {error !== null && (
+        <p
+          role="alert"
+          className="m-0 text-[var(--grey-600)]"
+          style={{ padding: "10px 0", fontSize: "var(--text-meta-size)" }}
+        >
+          {error}
+        </p>
+      )}
     </SettingsGroupCard>
   );
 }

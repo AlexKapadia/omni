@@ -1,0 +1,17 @@
+# ---------------------------------------------------------------------------
+# ANALYSIS-ONLY dependencies for the evidence/ showcase.
+#
+# CRITICAL (CLAUDE.md 3.10): these plotting / diagram libraries MUST NEVER be
+# added to the runtime manifest (pyproject.toml / uv.lock). They are installed
+# into a throwaway, isolated venv (evidence/.evidence-venv) used ONLY to render
+# figures and diagrams from the committed evidence/data/*.json — they are never
+# imported by the Omni engine and never shipped in the PyInstaller sidecar.
+#
+# Install:  python -m venv evidence/.evidence-venv
+#           evidence/.evidence-venv/Scripts/pip install -r evidence/requirements-analysis.txt
+# ---------------------------------------------------------------------------
+matplotlib>=3.9
+plotly>=5.24
+kaleido==0.2.1          # static PNG export for plotly (no browser needed)
+numpy>=1.26             # array math for the plotting scripts only
+cairosvg>=2.7           # rasterise hand-authored monochrome SVG diagrams -> PNG

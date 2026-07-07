@@ -1,0 +1,321 @@
+{
+  "component": "engine.router (real ProviderRouter, model_pricing, routing_table)",
+  "cost": {
+    "price_table_usd_per_million": {
+      "llama-3.3-70b-versatile": {
+        "input_usd_per_million": "0.59",
+        "output_usd_per_million": "0.79"
+      },
+      "gemini-2.5-flash": {
+        "input_usd_per_million": "0.30",
+        "output_usd_per_million": "2.50"
+      },
+      "gemini-2.5-pro": {
+        "input_usd_per_million": "1.25",
+        "output_usd_per_million": "10.00"
+      },
+      "claude-sonnet-4-5": {
+        "input_usd_per_million": "3.00",
+        "output_usd_per_million": "15.00"
+      }
+    },
+    "grid_points": 24,
+    "rational_mismatches": 0,
+    "cost_grid": [
+      {
+        "model": "claude-sonnet-4-5",
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cost_usd": "0.00",
+        "matches_rational": true
+      },
+      {
+        "model": "claude-sonnet-4-5",
+        "prompt_tokens": 1,
+        "completion_tokens": 1,
+        "cost_usd": "0.000018",
+        "matches_rational": true
+      },
+      {
+        "model": "claude-sonnet-4-5",
+        "prompt_tokens": 100,
+        "completion_tokens": 50,
+        "cost_usd": "0.00105",
+        "matches_rational": true
+      },
+      {
+        "model": "claude-sonnet-4-5",
+        "prompt_tokens": 1000,
+        "completion_tokens": 500,
+        "cost_usd": "0.0105",
+        "matches_rational": true
+      },
+      {
+        "model": "claude-sonnet-4-5",
+        "prompt_tokens": 8000,
+        "completion_tokens": 2000,
+        "cost_usd": "0.054",
+        "matches_rational": true
+      },
+      {
+        "model": "claude-sonnet-4-5",
+        "prompt_tokens": 128000,
+        "completion_tokens": 4096,
+        "cost_usd": "0.44544",
+        "matches_rational": true
+      },
+      {
+        "model": "gemini-2.5-flash",
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cost_usd": "0.00",
+        "matches_rational": true
+      },
+      {
+        "model": "gemini-2.5-flash",
+        "prompt_tokens": 1,
+        "completion_tokens": 1,
+        "cost_usd": "0.0000028",
+        "matches_rational": true
+      },
+      {
+        "model": "gemini-2.5-flash",
+        "prompt_tokens": 100,
+        "completion_tokens": 50,
+        "cost_usd": "0.000155",
+        "matches_rational": true
+      },
+      {
+        "model": "gemini-2.5-flash",
+        "prompt_tokens": 1000,
+        "completion_tokens": 500,
+        "cost_usd": "0.00155",
+        "matches_rational": true
+      },
+      {
+        "model": "gemini-2.5-flash",
+        "prompt_tokens": 8000,
+        "completion_tokens": 2000,
+        "cost_usd": "0.0074",
+        "matches_rational": true
+      },
+      {
+        "model": "gemini-2.5-flash",
+        "prompt_tokens": 128000,
+        "completion_tokens": 4096,
+        "cost_usd": "0.04864",
+        "matches_rational": true
+      },
+      {
+        "model": "gemini-2.5-pro",
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cost_usd": "0.00",
+        "matches_rational": true
+      },
+      {
+        "model": "gemini-2.5-pro",
+        "prompt_tokens": 1,
+        "completion_tokens": 1,
+        "cost_usd": "0.00001125",
+        "matches_rational": true
+      },
+      {
+        "model": "gemini-2.5-pro",
+        "prompt_tokens": 100,
+        "completion_tokens": 50,
+        "cost_usd": "0.000625",
+        "matches_rational": true
+      },
+      {
+        "model": "gemini-2.5-pro",
+        "prompt_tokens": 1000,
+        "completion_tokens": 500,
+        "cost_usd": "0.00625",
+        "matches_rational": true
+      },
+      {
+        "model": "gemini-2.5-pro",
+        "prompt_tokens": 8000,
+        "completion_tokens": 2000,
+        "cost_usd": "0.03",
+        "matches_rational": true
+      },
+      {
+        "model": "gemini-2.5-pro",
+        "prompt_tokens": 128000,
+        "completion_tokens": 4096,
+        "cost_usd": "0.20096",
+        "matches_rational": true
+      },
+      {
+        "model": "llama-3.3-70b-versatile",
+        "prompt_tokens": 0,
+        "completion_tokens": 0,
+        "cost_usd": "0.00",
+        "matches_rational": true
+      },
+      {
+        "model": "llama-3.3-70b-versatile",
+        "prompt_tokens": 1,
+        "completion_tokens": 1,
+        "cost_usd": "0.00000138",
+        "matches_rational": true
+      },
+      {
+        "model": "llama-3.3-70b-versatile",
+        "prompt_tokens": 100,
+        "completion_tokens": 50,
+        "cost_usd": "0.0000985",
+        "matches_rational": true
+      },
+      {
+        "model": "llama-3.3-70b-versatile",
+        "prompt_tokens": 1000,
+        "completion_tokens": 500,
+        "cost_usd": "0.000985",
+        "matches_rational": true
+      },
+      {
+        "model": "llama-3.3-70b-versatile",
+        "prompt_tokens": 8000,
+        "completion_tokens": 2000,
+        "cost_usd": "0.00630",
+        "matches_rational": true
+      },
+      {
+        "model": "llama-3.3-70b-versatile",
+        "prompt_tokens": 128000,
+        "completion_tokens": 4096,
+        "cost_usd": "0.07875584",
+        "matches_rational": true
+      }
+    ],
+    "task_type_examples_keyed_world": [
+      {
+        "task_type": "live_extraction",
+        "primary_provider": "groq",
+        "primary_model": "llama-3.3-70b-versatile",
+        "latency_budget_p95_ms": 1200,
+        "example_cost_usd_4000in_800out": "0.002992"
+      },
+      {
+        "task_type": "intent_parsing",
+        "primary_provider": "groq",
+        "primary_model": "llama-3.3-70b-versatile",
+        "latency_budget_p95_ms": 1200,
+        "example_cost_usd_4000in_800out": "0.002992"
+      },
+      {
+        "task_type": "enhanced_notes",
+        "primary_provider": "anthropic",
+        "primary_model": "claude-sonnet-4-5",
+        "latency_budget_p95_ms": 20000,
+        "example_cost_usd_4000in_800out": "0.024"
+      },
+      {
+        "task_type": "ask_synthesis",
+        "primary_provider": "anthropic",
+        "primary_model": "claude-sonnet-4-5",
+        "latency_budget_p95_ms": 3500,
+        "example_cost_usd_4000in_800out": "0.024"
+      },
+      {
+        "task_type": "long_context_bulk",
+        "primary_provider": "gemini",
+        "primary_model": "gemini-2.5-flash",
+        "latency_budget_p95_ms": 30000,
+        "example_cost_usd_4000in_800out": "0.0032"
+      },
+      {
+        "task_type": "agentic_tools",
+        "primary_provider": "anthropic",
+        "primary_model": "claude-sonnet-4-5",
+        "latency_budget_p95_ms": 8000,
+        "example_cost_usd_4000in_800out": "0.024"
+      },
+      {
+        "task_type": "dictation_cleanup",
+        "primary_provider": "groq",
+        "primary_model": "llama-3.3-70b-versatile",
+        "latency_budget_p95_ms": 800,
+        "example_cost_usd_4000in_800out": "0.002992"
+      }
+    ]
+  },
+  "ratelimit_backoff_seconds": 0.5,
+  "fallback_matrix": [
+    {
+      "scenario": "primary_first_try",
+      "final_provider": "groq",
+      "final_model": "llama-3.3-70b-versatile",
+      "total_attempts": 1,
+      "groq_calls": 1,
+      "gemini_calls": 0,
+      "backoff_delays_s": [],
+      "ledger_outcomes": [
+        "ok"
+      ],
+      "failed_rows_cost_zero": true
+    },
+    {
+      "scenario": "timeout_retry_then_ok",
+      "final_provider": "groq",
+      "final_model": "llama-3.3-70b-versatile",
+      "total_attempts": 2,
+      "groq_calls": 2,
+      "gemini_calls": 0,
+      "backoff_delays_s": [],
+      "ledger_outcomes": [
+        "error",
+        "ok"
+      ],
+      "failed_rows_cost_zero": true
+    },
+    {
+      "scenario": "ratelimit_backoff_then_ok",
+      "final_provider": "groq",
+      "final_model": "llama-3.3-70b-versatile",
+      "total_attempts": 2,
+      "groq_calls": 2,
+      "gemini_calls": 0,
+      "backoff_delays_s": [
+        0.5
+      ],
+      "ledger_outcomes": [
+        "error",
+        "ok"
+      ],
+      "failed_rows_cost_zero": true
+    },
+    {
+      "scenario": "auth_no_retry_cascade",
+      "final_provider": "gemini",
+      "final_model": "gemini-2.5-flash",
+      "total_attempts": 2,
+      "groq_calls": 1,
+      "gemini_calls": 1,
+      "backoff_delays_s": [],
+      "ledger_outcomes": [
+        "error",
+        "ok"
+      ],
+      "failed_rows_cost_zero": true
+    },
+    {
+      "scenario": "double_server_cascade",
+      "final_provider": "gemini",
+      "final_model": "gemini-2.5-flash",
+      "total_attempts": 3,
+      "groq_calls": 2,
+      "gemini_calls": 1,
+      "backoff_delays_s": [],
+      "ledger_outcomes": [
+        "error",
+        "error",
+        "ok"
+      ],
+      "failed_rows_cost_zero": true
+    }
+  ]
+}

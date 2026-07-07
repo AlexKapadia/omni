@@ -1,0 +1,195 @@
+{
+  "status": "measured",
+  "provider": "REAL provider calls via engine.router.ProviderRouter",
+  "keyed_providers": [
+    "gemini",
+    "groq"
+  ],
+  "absolute_cap_usd": "0.50",
+  "successful_calls": 15,
+  "ledger_attempts": 15,
+  "fallbacks_triggered": 0,
+  "call_failures": [],
+  "real_total_spend_usd": "0.00080723",
+  "overshot_cap": false,
+  "latency_ms": {
+    "p50": 136.0,
+    "p95": 1272.0,
+    "raw_ms": [
+      1272.0,
+      187.0,
+      128.0,
+      210.0,
+      134.0,
+      133.0,
+      210.0,
+      136.0,
+      155.0,
+      237.0,
+      127.0,
+      128.0,
+      227.0,
+      122.0,
+      102.0
+    ]
+  },
+  "by_provider": {
+    "groq": {
+      "calls": 15,
+      "total_cost_usd": "0.00080723",
+      "mean_latency_ms": 233.86666666666667
+    }
+  },
+  "calls": [
+    {
+      "task_type": "live_extraction",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 1272,
+      "attempts": 1,
+      "prompt_tokens": 57,
+      "completion_tokens": 62,
+      "cost_usd": "0.00008261"
+    },
+    {
+      "task_type": "dictation_cleanup",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 187,
+      "attempts": 1,
+      "prompt_tokens": 59,
+      "completion_tokens": 14,
+      "cost_usd": "0.00004587"
+    },
+    {
+      "task_type": "intent_parsing",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 128,
+      "attempts": 1,
+      "prompt_tokens": 54,
+      "completion_tokens": 6,
+      "cost_usd": "0.00003660"
+    },
+    {
+      "task_type": "live_extraction",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 210,
+      "attempts": 1,
+      "prompt_tokens": 57,
+      "completion_tokens": 62,
+      "cost_usd": "0.00008261"
+    },
+    {
+      "task_type": "dictation_cleanup",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 134,
+      "attempts": 1,
+      "prompt_tokens": 59,
+      "completion_tokens": 14,
+      "cost_usd": "0.00004587"
+    },
+    {
+      "task_type": "intent_parsing",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 133,
+      "attempts": 1,
+      "prompt_tokens": 54,
+      "completion_tokens": 6,
+      "cost_usd": "0.00003660"
+    },
+    {
+      "task_type": "live_extraction",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 210,
+      "attempts": 1,
+      "prompt_tokens": 57,
+      "completion_tokens": 62,
+      "cost_usd": "0.00008261"
+    },
+    {
+      "task_type": "dictation_cleanup",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 136,
+      "attempts": 1,
+      "prompt_tokens": 59,
+      "completion_tokens": 14,
+      "cost_usd": "0.00004587"
+    },
+    {
+      "task_type": "intent_parsing",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 155,
+      "attempts": 1,
+      "prompt_tokens": 54,
+      "completion_tokens": 5,
+      "cost_usd": "0.00003581"
+    },
+    {
+      "task_type": "live_extraction",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 237,
+      "attempts": 1,
+      "prompt_tokens": 57,
+      "completion_tokens": 43,
+      "cost_usd": "0.00006760"
+    },
+    {
+      "task_type": "dictation_cleanup",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 127,
+      "attempts": 1,
+      "prompt_tokens": 59,
+      "completion_tokens": 14,
+      "cost_usd": "0.00004587"
+    },
+    {
+      "task_type": "intent_parsing",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 128,
+      "attempts": 1,
+      "prompt_tokens": 54,
+      "completion_tokens": 5,
+      "cost_usd": "0.00003581"
+    },
+    {
+      "task_type": "live_extraction",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 227,
+      "attempts": 1,
+      "prompt_tokens": 57,
+      "completion_tokens": 62,
+      "cost_usd": "0.00008261"
+    },
+    {
+      "task_type": "dictation_cleanup",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 122,
+      "attempts": 1,
+      "prompt_tokens": 59,
+      "completion_tokens": 14,
+      "cost_usd": "0.00004587"
+    },
+    {
+      "task_type": "intent_parsing",
+      "provider": "groq",
+      "model": "llama-3.3-70b-versatile",
+      "latency_ms": 102,
+      "attempts": 1,
+      "prompt_tokens": 54,
+      "completion_tokens": 4,
+      "cost_usd": "0.00003502"
+    }
+  ]
+}

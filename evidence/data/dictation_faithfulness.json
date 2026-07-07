@@ -1,0 +1,21 @@
+{
+  "component": "engine.dictation.cleanup_output_is_faithful (real, deterministic)",
+  "method": "Hand-labelled accept/refuse table + seeded 500-iteration property sweep. Safety-positive class = 'refuse a hallucinated cleanup'.",
+  "hand_cases": 20,
+  "property_iterations": 500,
+  "confusion_matrix": {
+    "true_positive_caught_hallucination": 510,
+    "true_negative_accepted_faithful": 510,
+    "false_positive_refused_faithful": 0,
+    "false_negative_accepted_hallucination": 0
+  },
+  "misclassified_hand_labels": [],
+  "accuracy": {
+    "value": 1.0,
+    "ci95_low": 0.996247994464769,
+    "ci95_high": 0.9999999999999999,
+    "n": 1020
+  },
+  "hallucination_catch_rate": 1.0,
+  "false_negatives": 0
+}

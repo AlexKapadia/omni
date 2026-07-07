@@ -13,13 +13,18 @@
 auto-update pipeline; onboarding wizard; settings completion), M10 Naomi (foundation + full
 conversation loop — talk/retrieve/speak/barge-in/action-cards). North Star #1-5 all GREEN/pass.
 
-**RUNNING (Opus, worktrees, cap 3):**
-- evidence (#12) — feature/evidence @ C:\dev\Omni-evidence: peer-reviewed stats + B&W diagrams,
-  measures the real engine headless.
-- e2e-media (#14) — feature/e2e-and-media @ C:\dev\Omni-e2e: live Playwright E2E (§4.9 DoD) +
-  REAL product screenshots/video (§4.9.8, headed Chromium confirmed working) → feeds #13/#9.
-- (naomi live-latency probe bl1fpyd2e still running in C:\dev\Omni-naomi worktree — grab its
-  real TTFA/turn numbers when it notifies; code already merged.)
+**RUNNING (Opus, headless worktrees, cap 3):**
+- e2e-media (#14) — feature/e2e-and-media: HEADLESS-only Playwright (user actively working — headed
+  was banned after it stole focus 2026-07-07). Live E2E (§4.9 DoD) + real product media (§4.9.8).
+  Fixing a render bug (app shell needs a Tauri-API shim to mount in plain Chromium).
+- coverage-hardening — feature/coverage-hardening: evidence measured 86.7 line / 78.2 branch,
+  BELOW the §5.5 gate (90/85). Closing with adversarial tests + honest pragma-exclusion of true
+  hardware/external boundaries (documented). This is the last real quality gate before ship.
+
+DONE this session: evidence/ merged (#12 — retrieval p50 0.78ms, citation-exactness 1.000,
+dictation guard 1.000/1020 cases, router cost Decimal-exact). Naomi loop merged (#11).
+Note: 3 files sit AT exactly 300 lines on main (vault_indexer_service, live_capture_service,
+approval_cards_gateway) — compliant but zero headroom; preventive trim queued.
 
 **NEXT (in order):** merge evidence + e2e-media as they land (worktrees off main; disjoint dirs —
 clean merges expected) -> README #13 (insane, consumes real media) -> M9 landing page (consumes

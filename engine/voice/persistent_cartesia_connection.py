@@ -145,20 +145,23 @@ class PersistentCartesiaConnection:
     async def _reader_pump(self, ws: WsConnectionLike) -> None:
         """Route inbound frames to their utterance queue until the socket dies."""
         try:
-            while True:
-                raw = await ws.recv()
-                message = parse_cartesia_message(raw)
-                if message is None:
-                    continue  # untrusted/undecodable frame: drop, never crash
-                queue = self._context_queues.get(message.context_id)
-                if queue is not None:
-                    queue.put_nowait(message)
-                # Unknown context: a finished/cancelled utterance's stragglers
-                # or a foreign frame — dropped by design (deny by default).
-        except asyncio.CancelledError:
-            raise
-        except Exception:
-            pass  # torn socket: fall through to the honest cleanup below
+            # A torn socket (idle close, network drop) surfaces as an
+            # exception here; we suppress it and fall through to the honest
+            # cleanup in `finally`, which wakes every waiter and marks the
+            # socket dead so the NEXT utterance reconnects. CancelledError is
+            # a BaseException, so it is NOT suppressed by suppress(Exception)
+            # — cancellation propagates but STILL runs the finally cleanup.
+            with contextlib.suppress(Exception):
+                while True:
+                    raw = await ws.recv()
+                    message = parse_cartesia_message(raw)
+                    if message is None:
+                        continue  # untrusted/undecodable frame: drop, never crash
+                    queue = self._context_queues.get(message.context_id)
+                    if queue is not None:
+                        queue.put_nowait(message)
+                    # Unknown context: a finished/cancelled utterance's
+                    # stragglers or a foreign frame — dropped (deny by default).
         finally:
             if self._ws is ws:
                 self._ws = None  # next utterance reconnects

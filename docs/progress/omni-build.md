@@ -6,22 +6,42 @@
 > actions, tri-provider router (Groq / Gemini / optional Anthropic), NSIS installer, auto-update.
 > Open source on GitHub (AlexKapadia/omni) — no secrets ever committed.
 
-**RESUME HERE →** ✅ BATCH MERGE to main (North Star #4: MERGE GO — 4 GREEN / 2 AMBER bookkeeping).
-M0–M6 + dictation-excellence (beats-Wispr-Flow tier) + Naomi foundation are OFFICIAL on main.
-POST-MERGE QUEUE (in order):
-1. Cleanup lane (review #4 drift): split 4 files >300 lines (test_enhance__finalization_step_isolation 394,
-   test_server__approval_card_commands 380, test_dictation__finalization_flows_with_fakes 313,
-   engine/stt/live_capture_service.py 310); create engine/wiring/ package for the 13 root wiring
-   modules + ratify layout in claude.md §5.7.
-2. M7 SHIP: onboarding wizard (vault path, keys→DPAPI, model download w/ progress+SHA256, Google
-   connect, permissions), PyInstaller sidecar + NSIS installer + tauri-plugin-updater via GitHub
-   Releases, settings completion (real router ledger — retire last mock; hotkey config; templates
-   editor; keep-audio; disclosure), persistent Cartesia socket, Playwright live E2E (§4.9 UI DoD).
-3. Evidence/ + insane README w/ real product media (tasks #12/#13). 4. M9 landing page. 5. Naomi
-   full conversation loop. 6. M8 stretch.
-DEBTS (tracked): dense model BM25-only degradation; Google OAuth pending user creds; stranded-
-'executing' card on hard kill (docstring approval_cards_gateway — surface in a recovery sweep at
-engine boot during M7); instant-execute whitelist deliberately unimplemented until Settings UI.
+**RESUME HERE ->** HARD-BLOCKED 2026-07-07 ~00:4x: **MONTHLY SPEND LIMIT HIT** (raise at
+claude.ai/settings/usage). Three lanes killed mid-run; work checkpointed. Heartbeat crons deleted.
+Session may be dead by resume time — this file + git + task list are the complete state.
+
+**WHERE EVERYTHING STANDS (main is green and pushed):**
+- M0–M6 + dictation-excellence + Naomi foundation: DONE, merged, live-verified (North Star #4: GO).
+- M7 packaging: DONE on main — REAL installer built (Omni_0.1.0_x64-setup.exe 40.9MB + MSI),
+  sidecar boot-verified from installed layout, release pipeline ready (tag v* -> GitHub Release;
+  needs repo secret TAURI_SIGNING_PRIVATE_KEY from %LOCALAPPDATA%/Omni/updater-signing-key —
+  see packaging/README.md). Post-merge cleanup: DONE on main.
+- Repo gate at last verification: 1412 py + 645 ts green.
+
+**KILLED MID-RUN (respawn each as continuation agent when budget returns):**
+1. **m7-onboarding** — branch feature/m7-onboarding, partials checkpointed (protocol payloads,
+   app-settings repo/dispatchers, migrations/0009, key-store edits). Stop-point: settings
+   dispatcher + keys validation next; wizard UI NOT started. Brief: 4-step wizard per design §09
+   (welcome/privacy, vault picker -> settings.update, keys -> DPAPI keys.save w/ live per-provider
+   validation, model download w/ progress+SHA256 events + optional Google connect), setup.status
+   first-run gate in App.tsx, settings completion (real ledger.summary — retire mock-settings-data
+   entirely, hotkey, templates editor, keep-audio, disclosure, kill-switch UI, instant-execute
+   whitelist default-OFF w/ engine check honoring it + audit).
+2. **naomi-loop** — branch feature/naomi-loop (pushed; agent was still reading seams, likely no
+   new files). Brief: persistent Cartesia socket (warm TTFA vs 40-90ms budget), turn orchestrator
+   (listen -> VAD endpoint ~700ms -> verbatim utterance -> structured-first+RRF retrieval ->
+   router reply -> affect tag -> Cartesia speak w/ emotion), auto barge-in <50ms via mic VAD,
+   action intents -> approval cards ONLY (never direct execute), NaomiView wiring (push-to-talk +
+   open-mic, live latency table, captions, citations), live test w/ planted vault fact + measured
+   latency table vs 620ms p50 budget, full gate.
+3. **north-star #5** — ship-surface review (updater key hygiene, release workflow secrets,
+   install-script supply chain). Re-dispatch as-is.
+
+**AFTER THOSE:** Playwright live E2E (§4.9 UI DoD — covers wizard), stranded-'executing' recovery
+sweep at engine boot, evidence/ (#12), insane README w/ real product media (#13), M9 landing page,
+M8 stretch. USER ACTIONS available meanwhile: raise spend limit; Google OAuth client creds into
+.env (unlocks real M4/M6 ACs); set TAURI_SIGNING_PRIVATE_KEY repo secret; optionally tag
+v0.1.0-alpha after M7 completes for the first public release.
 
 ---
 

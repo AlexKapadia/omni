@@ -99,7 +99,7 @@ export function AskScreen({
             Ask across everything you know
           </h1>
           <QueryInput provider={provider} emphasized={false} />
-          <p className="m-0 text-[var(--grey-400)]" style={{ fontSize: 13 }}>
+          <p className="m-0 text-[var(--ink-secondary)]" style={{ fontSize: 13 }}>
             Answers come from your vault only. Nothing leaves this device.
           </p>
         </div>
@@ -118,7 +118,7 @@ export function AskScreen({
         {status === "thinking" && (
           <div className="flex flex-col gap-[var(--space-3)]">
             <p
-              className="m-0 italic text-[var(--grey-400)]"
+              className="m-0 italic text-[var(--ink-secondary)]"
               style={{ fontSize: 13 }}
             >
               “{question}”
@@ -162,7 +162,7 @@ export function AskScreen({
                   {span.strong ? <strong>{span.text}</strong> : span.text}
                   {span.citationMarker !== undefined && (
                     <sup
-                      className="font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+                      className="font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
                       style={{ fontSize: "var(--text-meta-size)" }}
                     >
                       {" "}
@@ -185,7 +185,7 @@ export function AskScreen({
             {answer.latency !== undefined && (
               <p
                 aria-label="Answer latency"
-                className="m-0 font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+                className="m-0 font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
                 style={{ fontSize: 11 }}
               >
                 {/* Engine-measured, rendered verbatim — speed is a showcase. */}

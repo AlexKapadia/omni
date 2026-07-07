@@ -26,7 +26,7 @@ export function OnboardingCardFrame({
     >
       <div className="flex min-h-0 flex-1 flex-col overflow-y-auto">{children}</div>
       <p
-        className="m-0 pt-[var(--space-4)] text-center font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+        className="m-0 pt-[var(--space-4)] text-center font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
         style={{ fontSize: 11, letterSpacing: "var(--label-ls)" }}
       >
         {step} / 4

@@ -218,7 +218,7 @@ export function NaomiView() {
             top: "var(--space-12)", left: "var(--space-12)",
             fontFamily: "var(--font-mono)", fontSize: 11,
             letterSpacing: "var(--label-ls)", textTransform: "uppercase",
-            color: "var(--grey-400)",
+            color: "var(--ink-secondary)",
           }}
         >
           Naomi

@@ -72,7 +72,7 @@ function KeyEntryRow({
           {KEY_PROVIDER_LABELS[provider]}
         </span>
         <span
-          className="font-[family-name:var(--font-mono)] uppercase text-[var(--grey-400)]"
+          className="font-[family-name:var(--font-mono)] uppercase text-[var(--ink-secondary)]"
           style={{ fontSize: 11, letterSpacing: "var(--label-ls)" }}
         >
           {required ? "required" : "optional"}
@@ -169,7 +169,7 @@ export function StepKeys({
           {errorMessage}
         </p>
       )}
-      <p className="mt-auto pt-[var(--space-4)] text-[var(--grey-400)]" style={{ fontSize: 11 }}>
+      <p className="mt-auto pt-[var(--space-4)] text-[var(--ink-secondary)]" style={{ fontSize: 11 }}>
         Keys are encrypted with Windows DPAPI and never leave this device.
       </p>
     </div>

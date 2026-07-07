@@ -16,7 +16,7 @@ import { ApprovalCard } from "./approval-card";
 const META_TEXT: React.CSSProperties = {
   fontFamily: "var(--font-mono)",
   fontSize: 12,
-  color: "var(--grey-400)",
+  color: "var(--ink-secondary)",
   margin: 0,
 };
 

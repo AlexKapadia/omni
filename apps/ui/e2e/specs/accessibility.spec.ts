@@ -4,25 +4,24 @@
  * serious/critical violation; this is the automated half of the UI a11y gate
  * (manual keyboard / focus / screen-reader checks live in the DoD checklist).
  *
- * KNOWN, DOCUMENTED EXCLUSION — `color-contrast`. The design brief mandates a
- * strictly monochrome system where secondary/meta text is a light grey
- * (grey-400 #A3A3A3 ≈ 2.6:1 on white), below the 4.5:1 AA contrast threshold.
- * That is a deliberate DESIGN decision, not a code defect, so it is surfaced
- * for the design owner (CDO) rather than silently "fixed" by overhauling the
- * whole palette here. This gate still guards every OTHER a11y regression —
- * roles, names, labels, ARIA, structure — which the app passes cleanly.
+ * `color-contrast` IS enforced. Secondary/meta text uses --ink-secondary
+ * (#6E6E6E — 5.10:1 on the #FFFFFF canvas, 4.76:1 on the #F7F7F7 surface, both
+ * clearing the 4.5:1 AA threshold) rather than the decorative --grey-400
+ * (#A3A3A3 ≈ 2.5:1, kept only for borders/dividers/dots that carry no text).
+ * The strictly-monochrome look is preserved while every text run meets AA, so
+ * this gate now guards contrast alongside roles, names, labels, ARIA and
+ * structure — no rules are disabled.
  */
 import { test, expect } from "../harness/fixtures";
 import AxeBuilder from "@axe-core/playwright";
 
 const WCAG_TAGS = ["wcag2a", "wcag2aa", "wcag21a", "wcag21aa", "wcag22aa"];
 
-/** Run axe on the current page and return only serious/critical violations,
- *  excluding the documented monochrome-palette contrast tension (see header). */
+/** Run axe on the current page and return only serious/critical violations.
+ *  color-contrast is enforced (see header) — no rules are disabled. */
 async function seriousViolations(page: import("@playwright/test").Page) {
   const results = await new AxeBuilder({ page })
     .withTags(WCAG_TAGS)
-    .disableRules(["color-contrast"]) // known design-brief tension — flagged for the CDO
     .analyze();
   return results.violations.filter((v) => v.impact === "serious" || v.impact === "critical");
 }

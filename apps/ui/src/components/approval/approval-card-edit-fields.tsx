@@ -42,7 +42,7 @@ export function ApprovalCardEditFields({
           style={{
             fontFamily: "var(--font-mono)",
             fontSize: 12,
-            color: "var(--grey-400)",
+            color: "var(--ink-secondary)",
             margin: 0,
           }}
         >
@@ -60,7 +60,7 @@ export function ApprovalCardEditFields({
                 fontSize: 11,
                 letterSpacing: "var(--label-ls)",
                 textTransform: "uppercase",
-                color: "var(--grey-400)",
+                color: "var(--ink-secondary)",
               }}
             >
               {key.replaceAll("_", " ")}

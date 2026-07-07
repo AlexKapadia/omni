@@ -45,7 +45,7 @@ const MONO_LABEL: React.CSSProperties = {
   fontSize: 11,
   letterSpacing: "var(--label-ls)",
   textTransform: "uppercase",
-  color: "var(--grey-400)",
+  color: "var(--ink-secondary)",
   margin: 0,
 };
 

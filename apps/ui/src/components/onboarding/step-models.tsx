@@ -99,7 +99,7 @@ export function StepModels({
             <span className="text-[var(--ink)]" style={{ fontSize: "var(--text-body-size)" }}>
               Connect Google
             </span>
-            <span className="text-[var(--grey-400)]" style={{ fontSize: "var(--text-meta-size)" }}>
+            <span className="text-[var(--ink-secondary)]" style={{ fontSize: "var(--text-meta-size)" }}>
               optional — calendar and contacts for context. never sends.
             </span>
           </div>
@@ -129,7 +129,7 @@ export function StepModels({
 
       <div className="mt-auto flex flex-col items-end gap-[var(--space-2)] pt-[var(--space-6)]">
         {!canFinish && finishBlockedReason !== null && (
-          <span className="text-[var(--grey-400)]" style={{ fontSize: "var(--text-meta-size)" }}>
+          <span className="text-[var(--ink-secondary)]" style={{ fontSize: "var(--text-meta-size)" }}>
             {finishBlockedReason}
           </span>
         )}

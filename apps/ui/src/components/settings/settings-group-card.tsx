@@ -2,7 +2,7 @@
  * Settings primitives (components doc §10): a labelled group card
  * (grey-200 hairline, card radius, 6px 20px padding) whose rows are
  * 14px labels over hairline dividers, values right-aligned; two-line rows
- * carry a 12px grey-400 sub-caption.
+ * carry a 12px ink-secondary sub-caption (AA-compliant; was grey-400).
  */
 import type { ReactNode } from "react";
 import { SectionLabel } from "../section-label";
@@ -48,7 +48,7 @@ export function SettingsRow({
           {title}
         </span>
         {subCaption !== undefined && (
-          <span className="text-[var(--grey-400)]" style={{ fontSize: "var(--text-meta-size)" }}>
+          <span className="text-[var(--ink-secondary)]" style={{ fontSize: "var(--text-meta-size)" }}>
             {subCaption}
           </span>
         )}

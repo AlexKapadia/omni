@@ -27,7 +27,7 @@ const labelStyle: React.CSSProperties = {
   fontSize: 11,
   letterSpacing: "var(--label-ls)",
   textTransform: "uppercase",
-  color: "var(--grey-400)",
+  color: "var(--ink-secondary)",
 };
 
 const monoStyle: React.CSSProperties = {
@@ -61,7 +61,7 @@ function LatencyTable({ latency }: { readonly latency: NaomiTurnLatencyEvent | n
         <tbody>
           {LATENCY_ROWS.map((row) => (
             <tr key={row.key}>
-              <td style={{ paddingRight: "var(--space-4)", color: "var(--grey-400)" }}>
+              <td style={{ paddingRight: "var(--space-4)", color: "var(--ink-secondary)" }}>
                 {row.label}
               </td>
               <td style={{ textAlign: "right", color: "var(--ink)" }}>
@@ -196,7 +196,7 @@ export function NaomiConversationPanel(props: NaomiConversationPanelProps) {
           <TurnCaption speaker="You" text={state.userText} textColor="var(--ink)" />
           <TurnCaption speaker="Naomi" text={state.replyText} textColor="var(--grey-600)" />
           {state.noAnswer && state.replyText !== null && (
-            <p className="m-0" style={{ ...monoStyle, color: "var(--grey-400)" }}>
+            <p className="m-0" style={{ ...monoStyle, color: "var(--ink-secondary)" }}>
               Not found in your notes.
             </p>
           )}

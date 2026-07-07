@@ -36,7 +36,7 @@ export function NotepadPane({
         </h1>
         {elapsedSeconds !== null && (
           <span
-            className="font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+            className="font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
             style={{ fontSize: "var(--text-meta-size)" }}
           >
             {formatMeetingClock(elapsedSeconds)}

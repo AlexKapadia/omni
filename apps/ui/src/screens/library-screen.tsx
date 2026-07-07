@@ -76,7 +76,7 @@ function MeetingRow({
         }}
       >
         <span
-          className={`font-[family-name:var(--font-mono)] ${upcoming ? "text-[var(--ink)]" : "text-[var(--grey-400)]"}`}
+          className={`font-[family-name:var(--font-mono)] ${upcoming ? "text-[var(--ink)]" : "text-[var(--ink-secondary)]"}`}
           style={{ fontSize: "var(--text-meta-size)" }}
         >
           {formatClockShort(meeting.startIso)}
@@ -86,13 +86,13 @@ function MeetingRow({
             {meeting.title}
           </span>
           {meeting.summary.length > 0 && (
-            <span className="truncate text-[var(--grey-400)]" style={{ fontSize: 13 }}>
+            <span className="truncate text-[var(--ink-secondary)]" style={{ fontSize: 13 }}>
               {meeting.summary}
             </span>
           )}
         </span>
         <span
-          className={`text-right font-[family-name:var(--font-mono)] ${upcoming ? "text-[var(--grey-600)]" : "text-[var(--grey-400)]"}`}
+          className={`text-right font-[family-name:var(--font-mono)] ${upcoming ? "text-[var(--grey-600)]" : "text-[var(--ink-secondary)]"}`}
           style={{ fontSize: "var(--text-meta-size)" }}
         >
           {upcoming ? startsIn : formatDurationMin(meeting.durationMin)}
@@ -174,7 +174,7 @@ export function LibraryScreen({
           </h1>
           {status === "ready" && meetings.length > 0 && (
             <span
-              className="font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+              className="font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
               style={{ fontSize: "var(--text-meta-size)" }}
             >
               {meetings.length} meetings · {formatDurationMin(capturedMin)} captured · all on this device
@@ -193,7 +193,7 @@ export function LibraryScreen({
           placeholder="Search meetings"
           value={query}
           onChange={(event) => setMeetingsQuery(meetingsStore, event.target.value)}
-          className="border border-[var(--grey-300)] bg-transparent text-[var(--ink)] outline-none placeholder:text-[var(--grey-400)] focus:border-[var(--ink)]"
+          className="border border-[var(--grey-300)] bg-transparent text-[var(--ink)] outline-none placeholder:text-[var(--ink-secondary)] focus:border-[var(--ink)]"
           style={{
             borderRadius: "var(--radius-control)",
             padding: "9px 14px",

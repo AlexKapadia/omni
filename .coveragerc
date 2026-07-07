@@ -1,0 +1,38 @@
+# Coverage configuration for the Omni engine test gate.
+#
+# This is TEST CONFIG ONLY — it declares nothing as a runtime dependency.
+# The coverage/pytest-cov tools are installed ad-hoc at measurement time
+# (`uv run --with pytest-cov --with coverage ...`) and are deliberately kept
+# out of pyproject.toml / uv.lock so the shipped engine stays lean.
+#
+# Gate (claude.md §5.5): line >= 90%, branch >= 85% on non-generated code.
+#
+# What is excluded and WHY (honest, conservative — only true un-fakeable
+# hardware/network/OS boundaries and non-runtime code; never real logic):
+#   - omit: manual live dev probes (real network calls, explicitly NOT part
+#     of the hermetic unit suite per their own module docstrings).
+#   - exclude_lines: standard non-runtime markers plus `# pragma: no cover`
+#     lines, each of which carries an inline justification at its call site
+#     naming the hardware/OS/network boundary it guards (real WASAPI/PortAudio
+#     device I/O, real NeMo/torch model load, real ONNX model file load, real
+#     Windows DPAPI syscalls, real ctypes user32 calls, real socket connect).
+#     These paths are exercised by the live smoke tests (`-m live_stt`) and the
+#     manual probes, not by the hermetic unit suite.
+
+[run]
+branch = True
+source = engine
+omit =
+    */naomi_ttfa_live_probe.py
+
+[report]
+# NOTE: setting exclude_lines replaces coverage.py's built-in default, so the
+# `pragma: no cover` marker is re-listed here explicitly.
+exclude_lines =
+    pragma: no cover
+    if __name__ == .__main__.:
+    if TYPE_CHECKING:
+    ^\s*\.\.\.\s*$
+    raise NotImplementedError
+    @(abc\.)?abstractmethod
+show_missing = True

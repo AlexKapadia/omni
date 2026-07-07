@@ -39,10 +39,19 @@ impl EngineSidecar {
         {
             let shutting_down = Arc::clone(&shutting_down);
             let child_slot = Arc::clone(&child_slot);
-            std::thread::Builder::new()
+            // Non-fatal: on the rare event the OS refuses a new thread (resource
+            // exhaustion), the shell must still launch. We log and continue with
+            // no supervisor — the app is usable offline; `shutdown()` stays a
+            // safe no-op (the child slot never fills).
+            if let Err(error) = std::thread::Builder::new()
                 .name("engine-sidecar-supervisor".into())
                 .spawn(move || run_supervisor(&shutting_down, &child_slot))
-                .expect("failed to spawn sidecar supervisor thread");
+            {
+                log::warn!(
+                    target: "engine",
+                    "could not start engine sidecar supervisor ({error}) — engine features disabled this session"
+                );
+            }
         }
         Self {
             shutting_down,

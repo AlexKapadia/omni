@@ -19,14 +19,25 @@
 //! wherever they were.
 
 use std::sync::atomic::{AtomicBool, Ordering};
+use std::sync::Mutex;
 
 use serde::Serialize;
 use tauri::{AppHandle, Emitter, Manager, PhysicalPosition, WebviewUrl, WebviewWindowBuilder};
 use tauri_plugin_global_shortcut::{GlobalShortcutExt, ShortcutState};
 
-/// The push-to-talk hold key. One configurable constant — Settings-driven
-/// rebinding is a later milestone and will feed this same registration.
-pub const DICTATION_HOLD_KEY: &str = "F9";
+use crate::dictation_hotkey_accelerator::{accelerator_from_keys, DEFAULT_DICTATION_HOLD_KEY};
+
+/// The currently-registered hold-key accelerator. Tracked in managed state so
+/// a rebind can drop the previous binding first and app exit can release the
+/// key — a stale, never-released binding is exactly what produced the
+/// "HotKey already registered" crash on the next launch.
+pub struct DictationHotkey(Mutex<String>);
+
+impl Default for DictationHotkey {
+    fn default() -> Self {
+        Self(Mutex::new(DEFAULT_DICTATION_HOLD_KEY.to_string()))
+    }
+}
 
 /// Window label the capability file and the pill webview both pin.
 pub const PILL_WINDOW_LABEL: &str = "pill";
@@ -92,7 +103,13 @@ fn capture_injection_target(app: &AppHandle) -> HoldPressedPayload {
 /// Called once from the app `setup` hook.
 pub fn setup_dictation_pill(app: &AppHandle) -> tauri::Result<()> {
     create_pill_window(app)?;
-    register_hold_shortcut(app)?;
+    // Bind the DEFAULT key at startup; the UI pushes the user's configured key
+    // moments later via `set_dictation_hotkey` (it reads the engine setting on
+    // boot), so a rebind takes effect on the same launch, not just the next.
+    // Non-fatal: a hotkey conflict must NEVER stop Omni from launching.
+    if let Err(e) = bind_hold_shortcut(app, DEFAULT_DICTATION_HOLD_KEY) {
+        log::warn!("dictation hold key '{DEFAULT_DICTATION_HOLD_KEY}' not registered: {e}");
+    }
     Ok(())
 }
 
@@ -120,40 +137,91 @@ fn create_pill_window(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-/// Bind the hold key with a Pressed/Released handler (repeat-guarded).
-fn register_hold_shortcut(app: &AppHandle) -> tauri::Result<()> {
-    // Defensive: drop any prior binding first (a stale earlier instance can
-    // still own the key at the OS level) so registration is idempotent.
-    let _ = app.global_shortcut().unregister(DICTATION_HOLD_KEY);
-    let result = app
-        .global_shortcut()
-        .on_shortcut(DICTATION_HOLD_KEY, |app, _shortcut, event| {
-            match event.state() {
-                ShortcutState::Pressed => {
-                    // Auto-repeat guard: only the first press acts.
-                    if !HOLD_ACTIVE.swap(true, Ordering::SeqCst) {
-                        // Capture the target BEFORE showing the pill: the
-                        // pill is unfocused, but the order still guarantees
-                        // the user's window is what gets snapshotted.
-                        let payload = capture_injection_target(app);
-                        show_pill_and_emit(app, EVENT_HOLD_PRESSED, payload);
-                    }
-                }
-                ShortcutState::Released => {
-                    if HOLD_ACTIVE.swap(false, Ordering::SeqCst) {
-                        emit_to_pill(app, EVENT_HOLD_RELEASED);
-                    }
-                }
-            }
-        });
-    // Non-fatal by design: if the hold key is already taken (another app, or a
-    // stale prior instance), dictation's hotkey just won't bind — Omni still
-    // launches normally. A hotkey conflict must NEVER crash the app; the key is
-    // rebindable in Settings.
-    if let Err(e) = result {
-        log::warn!("dictation hold key '{DICTATION_HOLD_KEY}' not registered: {e}");
+/// (Re)bind the global hold shortcut to `accelerator`, dropping whatever was
+/// bound before so registration is idempotent and can never trip "already
+/// registered" on a rebind or a dev hot-restart. Returns the tauri result so
+/// the Settings command can surface a rebind failure to the user; startup
+/// treats a failure as non-fatal (logs and continues).
+fn bind_hold_shortcut(
+    app: &AppHandle,
+    accelerator: &str,
+) -> Result<(), tauri_plugin_global_shortcut::Error> {
+    let shortcuts = app.global_shortcut();
+    // Drop the previously-tracked binding, then the target itself (a stale
+    // prior instance can still own the key at the OS level) — idempotent.
+    if let Some(state) = app.try_state::<DictationHotkey>() {
+        if let Ok(previous) = state.0.lock() {
+            let _ = shortcuts.unregister(previous.as_str());
+        }
+    }
+    let _ = shortcuts.unregister(accelerator);
+    shortcuts.on_shortcut(accelerator, |app, _shortcut, event| {
+        handle_hold_event(app, event.state());
+    })?;
+    // Record the live binding only after a successful register.
+    if let Some(state) = app.try_state::<DictationHotkey>() {
+        if let Ok(mut current) = state.0.lock() {
+            *current = accelerator.to_string();
+        }
     }
     Ok(())
+}
+
+/// Shared Pressed/Released body. Repeat-guarded: Windows key auto-repeat fires
+/// repeated Pressed events while the key is held, but only the first may start
+/// a session; only a real release ends one.
+fn handle_hold_event(app: &AppHandle, state: ShortcutState) {
+    match state {
+        ShortcutState::Pressed => {
+            // Auto-repeat guard: only the leading edge starts a session.
+            if claim_press(&HOLD_ACTIVE) {
+                // Capture the target BEFORE showing the pill: the pill is
+                // unfocused, but the order still guarantees the user's window
+                // is what gets snapshotted.
+                let payload = capture_injection_target(app);
+                show_pill_and_emit(app, EVENT_HOLD_PRESSED, payload);
+            }
+        }
+        ShortcutState::Released => {
+            if claim_release(&HOLD_ACTIVE) {
+                emit_to_pill(app, EVENT_HOLD_RELEASED);
+            }
+        }
+    }
+}
+
+/// Leading-edge guard: `true` only on the FIRST Pressed of a hold (Windows key
+/// auto-repeat delivers many while the key is down). Pure over the passed flag
+/// so the repeat-guard is unit-testable without a live shortcut / AppHandle.
+fn claim_press(active: &AtomicBool) -> bool {
+    !active.swap(true, Ordering::SeqCst)
+}
+
+/// Trailing-edge guard: `true` only on the release that actually ends an active
+/// hold — a stray Released with no matching press must not emit.
+fn claim_release(active: &AtomicBool) -> bool {
+    active.swap(false, Ordering::SeqCst)
+}
+
+/// Settings-driven rebind: the UI pushes the configured push-to-talk key (the
+/// recorded token list) on boot and whenever the user changes it, so a user
+/// whose default key is taken can rebind it in Settings and have it take
+/// effect live — no restart needed.
+#[tauri::command]
+pub fn set_dictation_hotkey(app: AppHandle, keys: Vec<String>) -> Result<(), String> {
+    let accelerator = accelerator_from_keys(&keys);
+    bind_hold_shortcut(&app, &accelerator).map_err(|error| error.to_string())
+}
+
+/// Release the hold-key binding on app exit so a stale global shortcut can
+/// never outlive the process and block the next launch (the original crash).
+pub fn unregister_hold_shortcut(app: &AppHandle) {
+    if let Some(state) = app.try_state::<DictationHotkey>() {
+        if let Ok(current) = state.0.lock() {
+            // Best-effort: releasing the OS-level binding on the way out.
+            let _ = app.global_shortcut().unregister(current.as_str());
+        }
+    }
 }
 
 fn show_pill_and_emit(app: &AppHandle, event: &str, payload: HoldPressedPayload) {
@@ -186,4 +254,46 @@ fn position_bottom_center(window: &tauri::WebviewWindow) {
         - height
         - (PILL_BOTTOM_MARGIN * scale) as i32;
     let _ = window.set_position(PhysicalPosition::new(x, y));
+}
+
+#[cfg(test)]
+mod tests {
+    use super::{claim_press, claim_release};
+    use std::sync::atomic::AtomicBool;
+
+    #[test]
+    fn only_the_first_press_of_a_hold_starts_a_session() {
+        let active = AtomicBool::new(false);
+        // Leading edge fires once; every auto-repeat Pressed after it is ignored.
+        assert!(claim_press(&active), "first press must start the session");
+        assert!(!claim_press(&active), "auto-repeat press must be ignored");
+        assert!(!claim_press(&active), "still held: no new session");
+    }
+
+    #[test]
+    fn release_ends_an_active_hold_exactly_once() {
+        let active = AtomicBool::new(false);
+        claim_press(&active); // start a session
+        assert!(claim_release(&active), "the matching release must end it");
+        assert!(!claim_release(&active), "a second release must not re-fire");
+    }
+
+    #[test]
+    fn a_stray_release_without_a_press_never_fires() {
+        // Defends the ordering invariant: a Released with no active hold (e.g.
+        // a shortcut re-bind mid-hold) must not emit a phantom end event.
+        let active = AtomicBool::new(false);
+        assert!(!claim_release(&active));
+    }
+
+    #[test]
+    fn press_release_cycles_are_independent() {
+        let active = AtomicBool::new(false);
+        for _ in 0..3 {
+            assert!(claim_press(&active));
+            assert!(!claim_press(&active));
+            assert!(claim_release(&active));
+            assert!(!claim_release(&active));
+        }
+    }
 }

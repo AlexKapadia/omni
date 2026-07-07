@@ -12,6 +12,7 @@ import { OmniButton } from "../button";
 import { SettingsGroupCard, SettingsRow } from "./settings-group-card";
 import { setMicrophone, type SettingsStore } from "../../lib/settings-store";
 import type { SettingsUpdater } from "../../lib/settings-actions";
+import { pushDictationHotkey } from "../../lib/sync-dictation-hotkey";
 
 const SELECT_CLASS =
   "cursor-pointer border-none bg-transparent font-[family-name:var(--font-mono)] text-[var(--grey-600)]";
@@ -138,9 +139,12 @@ export function HotkeySection({
             const combo = comboFromKeyEvent(event);
             if (combo !== null) {
               setRecording(false);
-              void update({ pushToTalkHotkey: combo }).then((r) =>
-                setError(r.ok ? null : r.message),
-              );
+              void update({ pushToTalkHotkey: combo }).then((r) => {
+                setError(r.ok ? null : r.message);
+                // On a persisted change, re-register the shell's global hold
+                // key live so the new combination works without a restart.
+                if (r.ok) void pushDictationHotkey(combo);
+              });
             }
           }}
         >

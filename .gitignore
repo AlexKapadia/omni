@@ -42,3 +42,10 @@ Thumbs.db
 .idea/
 .vscode/
 .claude/
+
+# packaging: track only the bundle-resource placeholder, not the built engine
+!packaging/dist/
+!packaging/dist/omni-engine/
+!packaging/dist/omni-engine/PLACEHOLDER.txt
+packaging/dist/omni-engine/*
+!packaging/dist/omni-engine/PLACEHOLDER.txt

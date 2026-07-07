@@ -4,8 +4,8 @@
 
 **Branch:** `feature/evidence` (worktree `C:\dev\Omni-evidence`). Runtime engine env: `C:\dev\Omni\.venv` (py3.11). Analysis env: `evidence/.evidence-venv` (isolated, plotting only).
 
-## Resume here
-Measurement layer COMPLETE (9 harnesses green, ruff+mypy strict clean, all data captured, committed). NEXT: build figures (evidence/figures/, PNG+HTML from committed data), then diagrams (evidence/diagrams/, monochrome HTML+PNG), then evidence/README.md.
+## STATUS: COMPLETE ✅
+All four deliverables shipped on feature/evidence (pushed): measurement harnesses + committed data, 12 figures (PNG+HTML), 8 monochrome diagrams (PNG+HTML), and evidence/README.md showcase index. ruff + mypy --strict clean; analysis deps isolated (pyproject/uv.lock unchanged). Nothing outstanding.
 
 ## Headline numbers (REAL, measured)
 - Retrieval BM25: Recall@5 overall 0.909 (lexical 1.0, paraphrase 0.667), MRR 0.853; latency p50 ~1-3ms (proves <20ms).
@@ -30,11 +30,11 @@ Measurement layer COMPLETE (9 harnesses green, ruff+mypy strict clean, all data 
 - [x] Harness: determinism proofs (chunk-merge, vad gating, cost, guard, retrieval)
 - [x] Harness: test/coverage stats (measured 86.7% line coverage)
 - [x] ruff + mypy strict clean on evidence/measure/*.py
-- [ ] Figures: PNG + interactive HTML each (means +/- 95% CI, labelled)
-- [ ] Diagrams: monochrome HTML+PNG per component + whole system
-- [ ] evidence/README.md showcase index (headline numbers, method, caveats)
-- [ ] Verify analysis deps absent from pyproject/uv.lock
-- [ ] Commit + push feature/evidence
+- [x] Figures: 12 figures, PNG + interactive HTML each (means +/- 95% CI, labelled)
+- [x] Diagrams: 8 monochrome HTML+PNG (7 components + whole system)
+- [x] evidence/README.md showcase index (headline numbers, method, caveats)
+- [x] Verified analysis deps absent from pyproject/uv.lock (unchanged vs HEAD)
+- [x] Commit + push feature/evidence (measurement, figures, diagrams gates)
 
 ## Key facts (from API maps)
 - Retrieval: hybrid RRF (structured-SQL-first then dense+lexical), MAX_CONTEXT_CHUNKS=8. Dense=bge-small via sqlite-vec — MUST verify if model present or BM25-only (index agent pending).

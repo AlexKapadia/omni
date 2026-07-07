@@ -6,42 +6,27 @@
 > actions, tri-provider router (Groq / Gemini / optional Anthropic), NSIS installer, auto-update.
 > Open source on GitHub (AlexKapadia/omni) — no secrets ever committed.
 
-**RESUME HERE ->** HARD-BLOCKED 2026-07-07 ~00:4x: **MONTHLY SPEND LIMIT HIT** (raise at
-claude.ai/settings/usage). Three lanes killed mid-run; work checkpointed. Heartbeat crons deleted.
-Session may be dead by resume time — this file + git + task list are the complete state.
+**RESUME HERE ->** Building on Opus 4.8 (Fable spend-limited 2026-07-07). Main is green:
+1550 py + 700+ ts passing, app compiles from fresh clone (bundle placeholder fix).
 
-**WHERE EVERYTHING STANDS (main is green and pushed):**
-- M0–M6 + dictation-excellence + Naomi foundation: DONE, merged, live-verified (North Star #4: GO).
-- M7 packaging: DONE on main — REAL installer built (Omni_0.1.0_x64-setup.exe 40.9MB + MSI),
-  sidecar boot-verified from installed layout, release pipeline ready (tag v* -> GitHub Release;
-  needs repo secret TAURI_SIGNING_PRIVATE_KEY from %LOCALAPPDATA%/Omni/updater-signing-key —
-  see packaging/README.md). Post-merge cleanup: DONE on main.
-- Repo gate at last verification: 1412 py + 645 ts green.
+**DONE + merged to main:** M0-M6, dictation-excellence, M7 (packaging: real 40.9MB installer +
+auto-update pipeline; onboarding wizard; settings completion), M10 Naomi (foundation + full
+conversation loop — talk/retrieve/speak/barge-in/action-cards). North Star #1-5 all GREEN/pass.
 
-**KILLED MID-RUN (respawn each as continuation agent when budget returns):**
-1. **m7-onboarding** — branch feature/m7-onboarding, partials checkpointed (protocol payloads,
-   app-settings repo/dispatchers, migrations/0009, key-store edits). Stop-point: settings
-   dispatcher + keys validation next; wizard UI NOT started. Brief: 4-step wizard per design §09
-   (welcome/privacy, vault picker -> settings.update, keys -> DPAPI keys.save w/ live per-provider
-   validation, model download w/ progress+SHA256 events + optional Google connect), setup.status
-   first-run gate in App.tsx, settings completion (real ledger.summary — retire mock-settings-data
-   entirely, hotkey, templates editor, keep-audio, disclosure, kill-switch UI, instant-execute
-   whitelist default-OFF w/ engine check honoring it + audit).
-2. **naomi-loop** — branch feature/naomi-loop (pushed; agent was still reading seams, likely no
-   new files). Brief: persistent Cartesia socket (warm TTFA vs 40-90ms budget), turn orchestrator
-   (listen -> VAD endpoint ~700ms -> verbatim utterance -> structured-first+RRF retrieval ->
-   router reply -> affect tag -> Cartesia speak w/ emotion), auto barge-in <50ms via mic VAD,
-   action intents -> approval cards ONLY (never direct execute), NaomiView wiring (push-to-talk +
-   open-mic, live latency table, captions, citations), live test w/ planted vault fact + measured
-   latency table vs 620ms p50 budget, full gate.
-3. **north-star #5** — ship-surface review (updater key hygiene, release workflow secrets,
-   install-script supply chain). Re-dispatch as-is.
+**RUNNING (Opus, worktrees, cap 3):**
+- evidence (#12) — feature/evidence @ C:\dev\Omni-evidence: peer-reviewed stats + B&W diagrams,
+  measures the real engine headless.
+- e2e-media (#14) — feature/e2e-and-media @ C:\dev\Omni-e2e: live Playwright E2E (§4.9 DoD) +
+  REAL product screenshots/video (§4.9.8, headed Chromium confirmed working) → feeds #13/#9.
+- (naomi live-latency probe bl1fpyd2e still running in C:\dev\Omni-naomi worktree — grab its
+  real TTFA/turn numbers when it notifies; code already merged.)
 
-**AFTER THOSE:** Playwright live E2E (§4.9 UI DoD — covers wizard), stranded-'executing' recovery
-sweep at engine boot, evidence/ (#12), insane README w/ real product media (#13), M9 landing page,
-M8 stretch. USER ACTIONS available meanwhile: raise spend limit; Google OAuth client creds into
-.env (unlocks real M4/M6 ACs); set TAURI_SIGNING_PRIVATE_KEY repo secret; optionally tag
-v0.1.0-alpha after M7 completes for the first public release.
+**NEXT (in order):** merge evidence + e2e-media as they land (worktrees off main; disjoint dirs —
+clean merges expected) -> README #13 (insane, consumes real media) -> M9 landing page (consumes
+real media; scroll-animated; GitHub Pages) -> small debts (stranded-'executing' recovery sweep at
+boot; migrations double-ship cleanup) -> optionally tag v0.1.0-alpha for first public release ->
+M8 stretch. USER ACTIONS available: raise Fable limit (or stay on Opus); Google OAuth creds ->
+.env (real M4/M6 ACs); TAURI_SIGNING_PRIVATE_KEY repo secret (packaging/README.md) for releases.
 
 ---
 

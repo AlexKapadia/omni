@@ -1,0 +1,11 @@
+# Self-contained ruff config for the evidence/ showcase (keeps the folder
+# separable from the runtime package). Mirrors the repo's engine rule set. The
+# only relaxation is S311: the measurement harnesses use SEEDED pseudo-random
+# generators to build deterministic synthetic corpora — the same justification
+# the root config applies to tests/** — nothing here is cryptographic.
+line-length = 100
+target-version = "py311"
+
+[lint]
+select = ["E", "F", "W", "I", "UP", "B", "SIM", "C4", "RUF", "S"]
+ignore = ["S311"]

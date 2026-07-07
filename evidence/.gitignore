@@ -1,0 +1,9 @@
+# Isolated analysis venv — plotting/diagram deps only, never committed (3.10).
+.evidence-venv/
+# Ad-hoc coverage artifacts: the multi-MB raw report and coverage.py data file
+# are regenerated on demand; only the small committed coverage_summary.json ships.
+data/coverage_raw.json
+.coverage
+# Python bytecode from running the harnesses.
+__pycache__/
+*.pyc

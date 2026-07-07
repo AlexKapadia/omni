@@ -1,0 +1,51 @@
+{
+  "method": "AST count of def test_* (Python) and it()/test() blocks (TypeScript) over the real repository; coverage from coverage.py when measured.",
+  "python": {
+    "test_files": 117,
+    "test_functions": 950,
+    "test_loc": 19269,
+    "files_by_rigour_marker": {
+      "exact": 8,
+      "fail_closed": 5,
+      "fuzz": 1,
+      "injection": 2,
+      "kill_switch": 3,
+      "property": 2,
+      "race": 2,
+      "toctou": 1
+    },
+    "files_touching_a_rigour_marker": 21
+  },
+  "typescript": {
+    "test_files": 51,
+    "test_cases": 408,
+    "test_loc": 6637
+  },
+  "engine_source": {
+    "source_files": 185,
+    "source_loc": 23394,
+    "files_over_300_line_limit": [
+      "engine/index/vault_indexer_service.py",
+      "engine/stt/live_capture_service.py",
+      "engine/wiring/approval_cards_gateway.py"
+    ]
+  },
+  "total_test_cases": 1358,
+  "coverage": {
+    "status": "measured",
+    "line_coverage_pct": 86.73,
+    "branch_coverage_pct": 78.24,
+    "covered_lines": 7748,
+    "num_statements": 8754,
+    "num_branches": 1838,
+    "covered_branches": 1438,
+    "num_files": 185,
+    "tool": "coverage.py 7.15.0 --branch --source=engine over the real pytest suite (950 tests, 0 failures, 1 skipped)"
+  },
+  "coverage_gate_target": {
+    "line_pct": 90,
+    "branch_pct": 85,
+    "source": "CLAUDE.md 5.5 \u2014 target gate; CI currently enforces lint + mypy strict + full pytest (no network); coverage/mutation gates staged to land."
+  },
+  "mutation_readiness": "Tests are written adversarially (property/fuzz/determinism/injection/boundary suites present); mutation scoring is batched to the hardening gate on Linux CI per CLAUDE.md 7.2, not run on this box."
+}

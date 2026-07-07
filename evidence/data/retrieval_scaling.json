@@ -1,0 +1,79 @@
+{
+  "component": "engine.index.HybridRrfRetriever BM25 tier (SQLite FTS5)",
+  "method": "Index vaults of increasing size; measure retrieval latency at each. Sub-linear latency growth vs note-count growth evidences inverted-index scaling.",
+  "points": [
+    {
+      "notes_indexed": 30,
+      "chunks": 30,
+      "measurements": 1100,
+      "mean_ms": 0.9916638183957812,
+      "ci95_low_ms": 0.969685818259181,
+      "ci95_high_ms": 1.0160223623229698,
+      "p50_ms": 0.9027000050991774,
+      "p95_ms": 1.5349999302998185
+    },
+    {
+      "notes_indexed": 60,
+      "chunks": 60,
+      "measurements": 1100,
+      "mean_ms": 1.0205713635183533,
+      "ci95_low_ms": 0.9997623623348773,
+      "ci95_high_ms": 1.0432025451551785,
+      "p50_ms": 0.9358000243082643,
+      "p95_ms": 1.562100020237267
+    },
+    {
+      "notes_indexed": 110,
+      "chunks": 110,
+      "measurements": 1100,
+      "mean_ms": 1.1075542716902087,
+      "ci95_low_ms": 1.0699549974577331,
+      "ci95_high_ms": 1.1476617273662917,
+      "p50_ms": 0.9100999450311065,
+      "p95_ms": 2.0970000186935067
+    },
+    {
+      "notes_indexed": 210,
+      "chunks": 210,
+      "measurements": 1100,
+      "mean_ms": 1.1458211817609316,
+      "ci95_low_ms": 1.1250206363514403,
+      "ci95_high_ms": 1.168193728451363,
+      "p50_ms": 1.0705000022426248,
+      "p95_ms": 1.7494999337941408
+    },
+    {
+      "notes_indexed": 410,
+      "chunks": 410,
+      "measurements": 1100,
+      "mean_ms": 1.3615980003537103,
+      "ci95_low_ms": 1.3332835462113672,
+      "ci95_high_ms": 1.3908278186466883,
+      "p50_ms": 1.2591000413522124,
+      "p95_ms": 2.1944999461993575
+    },
+    {
+      "notes_indexed": 810,
+      "chunks": 810,
+      "measurements": 1100,
+      "mean_ms": 2.176119908796285,
+      "ci95_low_ms": 2.0972755426456304,
+      "ci95_high_ms": 2.273144089955498,
+      "p50_ms": 1.9579000072553754,
+      "p95_ms": 3.5447999835014343
+    },
+    {
+      "notes_indexed": 1610,
+      "chunks": 1610,
+      "measurements": 1100,
+      "mean_ms": 3.386844454375519,
+      "ci95_low_ms": 3.3220537286251783,
+      "ci95_high_ms": 3.4530941816046834,
+      "p50_ms": 3.214100026525557,
+      "p95_ms": 5.476900027133524
+    }
+  ],
+  "corpus_growth_factor": 53.666666666666664,
+  "p50_latency_growth_factor": 3.5605406096928425,
+  "sub_linear": true
+}

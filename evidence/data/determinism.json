@@ -1,0 +1,32 @@
+{
+  "method": "Each deterministic path is run on fixed inputs many times; the number of distinct outputs must be exactly 1.",
+  "runs_per_check": 200,
+  "checks": {
+    "stt_chunk_merge": {
+      "runs": 200,
+      "distinct_outputs": 1,
+      "deterministic": true
+    },
+    "vad_gating_state_machine": {
+      "runs": 200,
+      "distinct_outputs": 1,
+      "deterministic": true
+    },
+    "router_cost_decimal": {
+      "runs": 200,
+      "distinct_outputs": 1,
+      "deterministic": true
+    },
+    "dictation_faithfulness_guard": {
+      "runs": 200,
+      "distinct_outputs": 1,
+      "deterministic": true
+    },
+    "bm25_retrieval_ranking": {
+      "repeats": 20,
+      "distinct_outputs": 1,
+      "deterministic": true
+    }
+  },
+  "all_paths_deterministic": true
+}

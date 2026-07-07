@@ -1,0 +1,94 @@
+name: "✨ New ability (agent tool)"
+description: Propose something new Naomi and the approval system can do
+title: "[Ability]: "
+labels: ["ability", "enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        This is our favourite kind of issue. Omni's approval system is built to
+        grow new abilities — "Naomi, set a timer", weather, web search, Spotify,
+        smart-home, Notion, Slack, reminders. Sketch your idea here and we'll help
+        shape it, or you can build it yourself with the
+        [Add a new ability tutorial](https://github.com/AlexKapadia/omni/blob/main/CONTRIBUTING.md#-add-a-new-ability-agent-tool).
+
+        There are no wrong ideas here — even if an ability needs a draft-only or
+        approval tweak, we'd rather hear it and find the safe shape together.
+  - type: input
+    id: name
+    attributes:
+      label: What should the ability be called?
+      placeholder: create_reminder — save a reminder to the vault
+    validations:
+      required: true
+  - type: textarea
+    id: does
+    attributes:
+      label: What should it do?
+      description: Describe the action in plain language, end to end.
+      placeholder: >
+        When I ask, save a reminder ("call the dentist") with an optional
+        due-time, so it shows up in my vault Inbox.
+    validations:
+      required: true
+  - type: input
+    id: utterance
+    attributes:
+      label: Example utterance
+      description: What would you actually say to Naomi (or dictate) to trigger it?
+      placeholder: '"Naomi, remind me to call the dentist tomorrow morning."'
+    validations:
+      required: true
+  - type: textarea
+    id: api
+    attributes:
+      label: What does it need to work?
+      description: >
+        A tool, an API, or a local capability. If it talks to a service, name it
+        (and whether that service needs an API key). "Just the vault" is a great
+        answer — those are the easiest to add.
+      placeholder: >
+        Nothing external — it writes to the vault using the same primitives as
+        the note tool. (Or: needs the OpenWeatherMap API + a key.)
+    validations:
+      required: true
+  - type: dropdown
+    id: egress
+    attributes:
+      label: Does it send any data off the machine?
+      description: Omni is local-first — this decides how careful the wiring needs to be.
+      options:
+        - "No — fully local (works offline / with the kill-switch on)"
+        - "Yes — it reads from an external service (e.g. weather, search)"
+        - "Yes — it would act on the user's behalf (post, message, send)"
+        - "Not sure"
+    validations:
+      required: true
+  - type: dropdown
+    id: approval
+    attributes:
+      label: Should it need approval before it runs?
+      description: >
+        Almost everything in Omni does — that's the default. Anything that leaves
+        the machine as the user, or changes something outside Omni, must be
+        approval-carded (and anything outbound-to-a-person is draft-only).
+      options:
+        - "Yes — propose it as an approval card the user confirms"
+        - "It only reads / answers, so it could be a live answer (no action)"
+        - "Not sure — happy to be advised"
+    validations:
+      required: true
+  - type: textarea
+    id: notes
+    attributes:
+      label: Anything else?
+      description: Edge cases, prior art, links, or how you'd want the preview to read.
+    validations:
+      required: false
+  - type: checkboxes
+    id: offer
+    attributes:
+      label: Want to build it?
+      options:
+        - label: I'd like to try building this myself (we'll help — see CONTRIBUTING.md)
+          required: false

@@ -1,0 +1,56 @@
+name: Feature request
+description: Suggest an improvement to Omni (not a new voice ability — use that form)
+title: "[Feature]: "
+labels: ["enhancement"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for the idea. This form is for improvements to Omni's existing
+        surfaces — capture, notes, Ask, the router, onboarding, and so on.
+
+        Proposing a **new thing Naomi or the approval system can do** (a timer,
+        weather, web search, Spotify…)? Use the **New ability** form instead —
+        it asks the right questions for a tool.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem does this solve?
+      description: Describe the need or friction, not just the solution you have in mind.
+      placeholder: I can't tell at a glance which meetings still have un-actioned cards.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What would you like to see?
+      description: Your proposed change. Sketches, flows, and examples all help.
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you've considered
+      description: Other ways this could work, and why you'd choose yours.
+    validations:
+      required: false
+  - type: checkboxes
+    id: fit
+    attributes:
+      label: Does it fit Omni's promise?
+      description: >
+        Omni is local-first, zero-telemetry, approval-before-execute, and
+        draft-only. Confirm your idea can live inside those lines (or note in the
+        description where it's uncertain — we're happy to help find a shape).
+      options:
+        - label: This keeps everything local — no new data leaves the machine except an explicit, user-configured call
+          required: false
+        - label: This doesn't execute anything on the user's behalf without approval
+          required: false
+  - type: checkboxes
+    id: checks
+    attributes:
+      label: Before submitting
+      options:
+        - label: I searched existing issues and this isn't a duplicate
+          required: true

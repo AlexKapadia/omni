@@ -77,7 +77,10 @@ async def read_setting(connection: aiosqlite.Connection, key: str) -> object | N
     await cursor.close()
     if row is None:
         return None
-    return json.loads(str(row[0]))
+    # json.loads is typed Any; pin it to object so callers get the strict
+    # `object | None` contract (they type-narrow before use).
+    decoded: object = json.loads(str(row[0]))
+    return decoded
 
 
 async def read_setting_bool(

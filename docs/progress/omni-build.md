@@ -6,30 +6,31 @@
 > actions, tri-provider router (Groq / Gemini / optional Anthropic), NSIS installer, auto-update.
 > Open source on GitHub (AlexKapadia/omni) — no secrets ever committed.
 
-**RESUME HERE ->** Building on Opus 4.8 (Fable spend-limited 2026-07-07). Main is green:
-1550 py + 700+ ts passing, app compiles from fresh clone (bundle placeholder fix).
+**STATUS: BUILD COMPLETE (2026-07-07).** All 14 tracked tasks done and merged to main.
+Main green: 1974 py + 792 ts tests, engine coverage 98.87% line / 94.74% branch. Watchdog + review
+crons stood down. Worktrees cleaned. Delivered: M0-M7 (installer + auto-update + onboarding +
+settings), M10 Naomi (full voice loop), evidence/ showcase, premium README + real product media,
+scroll-animated landing page (site/), MIT license, full contributor on-ramp (CONTRIBUTING w/
+add-an-ability tutorial, CoC, SECURITY, templates, ability-ideas). 5 North Star reviews all
+GREEN/passed. WCAG AA enforced in CI.
 
-**DONE + merged to main:** M0-M6, dictation-excellence, M7 (packaging: real 40.9MB installer +
-auto-update pipeline; onboarding wizard; settings completion), M10 Naomi (foundation + full
-conversation loop — talk/retrieve/speak/barge-in/action-cards). North Star #1-5 all GREEN/pass.
+**REMAINING = OPTIONAL, USER-TRIGGERED (nothing blocks a working product):**
+1. Enable GitHub Pages (Settings → Pages → Source: "GitHub Actions") → landing publishes at
+   alexkapadia.github.io/omni. (Landing download CTAs 404 until a release exists — see #2.)
+2. First release: add repo secret TAURI_SIGNING_PRIVATE_KEY (from %LOCALAPPDATA%/Omni/
+   updater-signing-key, see packaging/README.md), then `git tag v0.1.0-alpha && git push --tags`
+   → release.yml builds + publishes the installer.
+3. Google OAuth client creds → .env (GOOGLE_OAUTH_CLIENT_ID/SECRET) to light up real
+   calendar/contacts/Gmail-draft actions (built + tested vs fakes today).
+4. Raise/reset the Fable spend limit for future design work (this session ran on Opus 4.8 after
+   Fable limited out).
 
-**RUNNING (Opus, headless worktree):**
-- a11y-contrast — feature/a11y-contrast: user chose "darken secondary TEXT only" (keep grey-400
-  decoration); introduces an AA-compliant secondary-text grey (>=4.5:1 on white). Last §4.9 UI
-  DoD item. When it lands -> M7 fully done + tokens ready for the landing page.
-
-DONE this session (all merged to main, 1974 py + 792 ts green): Naomi loop (#11), evidence (#12),
-E2E+media (#14, 2 real bugs fixed), README (#13, real media + refreshed to final numbers),
-coverage-hardening (engine 98.87 line / 94.74 branch — §5.5 gate PASSED, +408 adversarial tests),
-build-path placeholder fix (fresh clone compiles), WCAG contrast decision made.
-
-**NEXT (in order):** merge a11y-contrast -> mark M7 done -> **M9 landing page** (#9, LAST
-creative piece — scroll-animated, real media, GitHub Pages, built on the AA-corrected tokens) ->
-optional `v0.1.0-alpha` release tag (needs TAURI_SIGNING_PRIVATE_KEY repo secret from
-%LOCALAPPDATA%/Omni/updater-signing-key) -> minor debts (stranded-'executing' recovery sweep;
-migrations double-ship cleanup; 3 files at exactly-300 preventive trim) -> M8 stretch (diarization,
-MCP server, weekly digest). USER ACTIONS available: raise Fable limit; Google OAuth creds -> .env
-(real M4/M6 ACs); set the signing secret for releases.
+**KNOWN MINOR DEBTS (non-blocking, for a future pass):** stranded-'executing' card recovery sweep
+at engine boot; migrations double-ship cleanup in packaging; 3 files at exactly-300 lines
+(preventive trim). **NOT BUILT (deliberate, for a NEW chat):** the "Projects" feature — arbitrary
+document upload + project grouping + per-project persona + project-scoped Naomi/Ask. Architecture
+supports it additively (project_id filter on retrieval, per-project prompt frame, doc-ingest layer
+beside the vault indexer). M8 stretch (diarization, MCP server, weekly digest) also unbuilt.
 
 ---
 

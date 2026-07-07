@@ -33,8 +33,21 @@ ad-hoc (not in pyproject/uv.lock).
 - [ ] Commit + push feature/coverage-hardening
 
 ## Resume here
-Dispatching T1-T9 test-writing agents (each owns disjoint NEW tests/ files).
-Orchestrator owns all engine/ source pragma edits + coverage config.
+T1-T10 test-writing agents dispatched (each owns disjoint NEW tests/ files).
+`.coveragerc` created (omit live probe + standard exclude_lines). UI pnpm install running.
+Waiting on agent returns -> then integrate boundary pragmas, run consolidated --cov, close gate.
+
+## Agent ledger (test-writing; each creates disjoint new tests/ files, no engine/ edits)
+- T1 wiring settings validation + gateway/dispatcher
+- T2 agents tools (free-slot/mapper/contacts/card builders)
+- T3 index (vec store/embedder/watchdog/indexer/chunker/router/frontmatter)
+- T4 naomi/voice (turn gateway/speaker/mic source/orchestrator/cartesia conn/dispatchers)
+- T5 router provider clients (fake SDK) + provider_key_live_validation
+- T6 google (oauth flow/session/gateway/token store)
+- T7 stt (parakeet/vad fake model, weights/keep_audio/live_capture/capture_model_loading)
+- T8 audio+detect (pyaudio backend/device listing/desktop snapshot/mic detector)
+- T9 server + wiring dispatchers error paths
+- T10 security redaction/dpapi + dictation session + ask dispatchers
 
 ## Decisions
 - Tooling ad-hoc via `uv run --with pytest-cov --with coverage` — NOT added to pyproject/uv.lock.

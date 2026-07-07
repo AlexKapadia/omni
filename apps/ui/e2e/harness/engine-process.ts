@@ -104,7 +104,25 @@ export function assertRealAskWorks(): void {
   }
 }
 
+/** Is a healthy engine already listening on the pinned port? (reuse guard). */
+async function isEngineHealthy(): Promise<boolean> {
+  try {
+    const res = await fetch(`${ENGINE_HTTP}/health`, { signal: AbortSignal.timeout(2000) });
+    return res.ok;
+  } catch {
+    return false;
+  }
+}
+
 export async function bootEngine(): Promise<void> {
+  // Fast-iteration reuse: OMNI_E2E_REUSE_ENGINE=1 keeps one seeded engine up
+  // across runs so we skip the ~2-min torch/nemo cold boot each time. Never on
+  // CI (always a clean boot there) — this is a local developer convenience.
+  if (process.env.OMNI_E2E_REUSE_ENGINE === "1" && !process.env.CI && (await isEngineHealthy())) {
+    console.log("[e2e] reusing the already-healthy engine (OMNI_E2E_REUSE_ENGINE=1)");
+    assertRealAskWorks();
+    return;
+  }
   killPort(ENGINE_PORT);
   seedDatabase();
   mkdirSync(RUN_DIR, { recursive: true });
@@ -124,6 +142,11 @@ export async function bootEngine(): Promise<void> {
 }
 
 export function stopEngine(): void {
+  // Under the reuse guard we leave the engine up for the next run.
+  if (process.env.OMNI_E2E_REUSE_ENGINE === "1" && !process.env.CI) {
+    console.log("[e2e] leaving engine up for reuse (OMNI_E2E_REUSE_ENGINE=1)");
+    return;
+  }
   if (existsSync(ENGINE_PID_FILE)) {
     const pid = Number(readFileSync(ENGINE_PID_FILE, "utf8").trim());
     if (Number.isFinite(pid) && pid > 0) {

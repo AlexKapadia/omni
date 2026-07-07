@@ -42,14 +42,30 @@ export default function App({
   useEffect(() => {
     startLiveEngineConnection(); // idempotent; safe under StrictMode double-mount
     let cancelled = false;
-    void checkStatus()
-      .then((status) => {
-        if (cancelled) return;
-        setGate(status.onboardingComplete && status.setupComplete ? "app" : "onboarding");
-      })
-      .catch(() => {
-        if (!cancelled) setGate("app"); // transient engine error: don't trap the user
-      });
+    // The engine WebSocket takes a beat to open on a cold boot, so the very
+    // first setup.status can fail simply because the socket is not open yet.
+    // Falling straight to "app" on that transient failure would (a) skip a
+    // first-run user past onboarding and (b) render the shell before its data
+    // can load. So we retry on a short cadence while the socket comes up, and
+    // only commit to "app" once the engine is genuinely unreachable past a
+    // bounded deadline (a returning user is never trapped on the loader).
+    const deadline = Date.now() + 10_000;
+    const attempt = (): void => {
+      void checkStatus()
+        .then((status) => {
+          if (cancelled) return;
+          setGate(status.onboardingComplete && status.setupComplete ? "app" : "onboarding");
+        })
+        .catch(() => {
+          if (cancelled) return;
+          if (Date.now() < deadline) {
+            window.setTimeout(attempt, 400); // socket still opening — try again
+          } else {
+            setGate("app"); // engine truly unreachable: don't trap the user
+          }
+        });
+    };
+    attempt();
     return () => {
       cancelled = true;
     };

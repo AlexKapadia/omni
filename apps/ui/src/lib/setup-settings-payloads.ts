@@ -44,7 +44,10 @@ export interface RoutingRow {
   readonly task: string;
   readonly onDevice: boolean;
   readonly attempts: readonly RoutingAttempt[];
-  readonly budgetMs: number;
+  // null for on-device tasks (transcription/embeddings) — no latency budget
+  // applies; the engine sends budget_ms: null for these. Cloud tasks carry a
+  // finite millisecond budget.
+  readonly budgetMs: number | null;
 }
 
 export interface TemplateOption {
@@ -127,11 +130,15 @@ function parseRoutingRow(value: unknown): RoutingRow | null {
   if (!isPlainObject(value)) return null;
   const task = asNonEmptyString(value["task"]);
   const onDevice = asBoolean(value["on_device"]);
-  const budgetMs = asFiniteNumber(value["budget_ms"]);
+  // budget_ms is nullable in the engine contract (on-device tasks have no
+  // budget). Accept null; reject only a present-but-non-numeric value.
+  const rawBudget = value["budget_ms"];
+  const budgetMs = rawBudget === null ? null : asFiniteNumber(rawBudget);
   const attemptsRaw = value["attempts"];
-  if (task === null || onDevice === null || budgetMs === null || !Array.isArray(attemptsRaw)) {
+  if (task === null || onDevice === null || !Array.isArray(attemptsRaw)) {
     return null;
   }
+  if (rawBudget !== null && budgetMs === null) return null; // corrupt budget
   const attempts: RoutingAttempt[] = [];
   for (const raw of attemptsRaw) {
     if (!isPlainObject(raw)) return null;

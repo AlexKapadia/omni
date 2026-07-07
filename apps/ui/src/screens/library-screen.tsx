@@ -18,6 +18,7 @@ import {
   formatDurationMin,
   formatStartsIn,
 } from "../lib/format-quantities";
+import { useEngineStatus } from "../lib/engine-status-store";
 import {
   meetingsDetailStore,
   openMeetingDetail,
@@ -117,6 +118,7 @@ export function LibraryScreen({
   const query = useMeetings((s) => s.query);
   const errorMessage = useMeetings((s) => s.errorMessage);
   const selectedId = useMeetingsDetail((s) => s.selectedId);
+  const engineStatus = useEngineStatus((s) => s.status);
 
   useEffect(() => {
     // Load once per app session (mount-only by design); the error state's
@@ -126,6 +128,18 @@ export function LibraryScreen({
       void loadMeetings(meetingsStore, repository);
     }
   }, [repository]);
+
+  useEffect(() => {
+    // Cold-boot race recovery: the Library is the default screen, so it mounts
+    // before the engine WebSocket has finished opening — the first meetings.list
+    // then fails "offline" even though the engine is fine. When the connection
+    // comes up, re-load once so the user never sees a false offline state and
+    // never has to click Retry. Only re-loads out of the error state (a healthy
+    // ready/loading state is left untouched — no redundant refetch).
+    if (engineStatus === "connected" && meetingsStore.getState().status === "error") {
+      void loadMeetings(meetingsStore, repository);
+    }
+  }, [engineStatus, repository]);
 
   const visible = useMemo(() => filterMeetings(meetings, query), [meetings, query]);
   const groups = useMemo(() => {

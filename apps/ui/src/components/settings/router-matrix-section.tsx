@@ -85,7 +85,9 @@ export function RouterMatrixSection({ store }: { readonly store: SettingsStore }
               <span className="min-w-0">
                 {row.onDevice ? <span className="text-[var(--ink)]">on-device</span> : <AttemptChain row={row} />}
               </span>
-              <span className="text-right text-[var(--grey-400)]">{row.budgetMs} ms</span>
+              <span className="text-right text-[var(--grey-400)]">
+                {row.budgetMs === null ? "—" : `${row.budgetMs} ms`}
+              </span>
             </div>
           ))}
           {killSwitchEngaged && (

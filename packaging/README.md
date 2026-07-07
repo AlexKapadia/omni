@@ -241,10 +241,12 @@ The key has an empty password (generated with `--ci`), so
 - **Code signing (Authenticode):** installers are minisign-signed for the
   updater but not Authenticode-signed — SmartScreen will warn on first
   download until a certificate is bought and wired into the bundler.
-- **`pyproject.toml` still says `license = Proprietary`** while the repo
-  root now carries the MIT placeholder LICENSE the ship brief mandated —
-  reconcile in a follow-up (pyproject is owned by another lane this phase).
+- **Cosmetic exe name:** the Cargo package is `omni-ui`, so the raw build
+  artifact is `omni-ui.exe`; the installed launcher is `Omni.exe`
+  (`productName`). Sidecar resolution is name-independent, so this is
+  purely cosmetic — left as-is.
 - The engine bundles `migrations/` at BOTH `_internal/migrations` and
-  `_internal/engine/migrations` so the queued `engine/wiring/` package
-  move cannot strand the migrations path — remove the stale copy once the
-  wiring move lands and pins its resolution.
+  `_internal/engine/migrations` as a belt-and-braces margin for the
+  `engine/wiring/` package move (now landed, path pinned to repo root in
+  `server_default_service_factories.py` + regression test). The dual copy
+  is harmless; a follow-up can drop the redundant one.

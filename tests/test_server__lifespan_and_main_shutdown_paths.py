@@ -14,6 +14,7 @@ from pathlib import Path
 from typing import Any
 
 import pytest
+import uvicorn
 from starlette.testclient import TestClient
 
 import engine.server as server_module
@@ -120,7 +121,9 @@ def test_main_configures_logging_loads_settings_and_serves(
         return sentinel_config
 
     monkeypatch.setattr(server_module, "build_uvicorn_config", fake_build)
-    monkeypatch.setattr(server_module.uvicorn, "Server", _FakeServer)
+    # engine.server references the module-global ``uvicorn``; patching the
+    # shared module object patches what ``main`` will call.
+    monkeypatch.setattr(uvicorn, "Server", _FakeServer)
 
     server_module.main()
 

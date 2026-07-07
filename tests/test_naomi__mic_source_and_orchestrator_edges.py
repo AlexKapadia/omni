@@ -22,6 +22,7 @@ import pytest
 
 from engine.audio.audio_frame_types import PIPELINE_SAMPLE_RATE, AudioFrame, StreamLabel
 from engine.audio.dual_stream_capture_controller import CaptureDeviceSpec
+from engine.naomi import naomi_mic_capture_source as mic_source
 from engine.naomi.naomi_action_intent_flow import NaomiActionResult
 from engine.naomi.naomi_mic_capture_source import start_naomi_mic_capture
 from engine.naomi.naomi_turn_orchestrator import NaomiTurnOrchestrator
@@ -145,16 +146,22 @@ async def test_mic_capture_empty_chunk_yields_no_frame() -> None:
     assert frames == []
 
 
-async def test_mic_capture_stop_flushes_tail_and_is_idempotent() -> None:
+async def test_mic_capture_stop_flushes_tail_and_is_idempotent(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
     """stop() drains the un-pumped tail and can be called twice without error."""
+    # Widen the drain cadence so the pump can NOT reach the tail — proving the
+    # tail is flushed by stop() itself, not by an incidental pump tick.
+    monkeypatch.setattr(mic_source, "_DRAIN_INTERVAL_S", 30.0)
     frames: list[AudioFrame] = []
     sink = await _collect_frames(frames)
     backend = FakeMicBackend()
 
     stop = await start_naomi_mic_capture(sink, backend_factory=lambda: backend)
     assert backend.on_chunk is not None
-    # Append immediately, then stop before the 50 ms pump fires: the tail must
-    # still be flushed by stop() (the end of the utterance is never dropped).
+    await asyncio.sleep(0)  # let the drain task park on its (now 30 s) sleep
+    # Append immediately, then stop: the tail must be flushed by stop(), never
+    # dropped (the end of the utterance always reaches the sink).
     backend.on_chunk(_pcm16([16384] * 32), 0.5)
     await stop()
     assert len(frames) == 1  # flushed on stop, not by the pump
@@ -240,7 +247,9 @@ class CountingCapture:
         self.starts = 0
         self.stops = 0
 
-    async def __call__(self, _sink: Callable[[AudioFrame], Awaitable[None]]) -> Callable[[], Awaitable[None]]:
+    async def __call__(
+        self, _sink: Callable[[AudioFrame], Awaitable[None]]
+    ) -> Callable[[], Awaitable[None]]:
         self.starts += 1
 
         async def stop() -> None:

@@ -267,14 +267,18 @@ async def test_cancel_over_absent_live_and_dead_sockets() -> None:
         credentials_loader=lambda: CREDS, connect_factory=_socket_factory(live_sockets)
     )
     await _drive_utterance(live, "ctx-x", [_chunk("ctx-x"), _done("ctx-x")], live_sockets)
-    assert live.is_connected
-    assert await live.cancel("ctx-x") is True
+    connected_before = live.is_connected
+    assert connected_before is True
+    cancel_ok = await live.cancel("ctx-x")
+    assert cancel_ok is True
     assert any("cancel" in frame for frame in live_sockets[0].sent)
 
     # Faulting send on cancel: the socket is torn and cancel reports False.
     live_sockets[0]._send_error = ConnectionResetError("gone")
-    assert await live.cancel("ctx-x") is False
-    assert not live.is_connected
+    cancel_failed = await live.cancel("ctx-x")
+    assert cancel_failed is False
+    connected_after = live.is_connected
+    assert connected_after is False
     await live.close()
 
 
@@ -304,7 +308,9 @@ class FakeStreamer:
 
 
 def _command(name: str, payload: dict[str, Any], cid: str = "c1") -> Envelope:
-    return Envelope(v=PROTOCOL_VERSION, kind=EnvelopeKind.COMMAND, name=name, id=cid, payload=payload)
+    return Envelope(
+        v=PROTOCOL_VERSION, kind=EnvelopeKind.COMMAND, name=name, id=cid, payload=payload
+    )
 
 
 async def _dispatch(command: Envelope, streamer: object) -> list[Envelope]:
@@ -434,12 +440,18 @@ def test_reply_payload_carries_burst_only_when_present() -> None:
     )
     assert with_burst["affect"] == {"v": 0.6, "a": 0.5, "burst": "laugh"}
     assert with_burst["action_card_id"] == 9
-    assert with_burst["citations"][0]["note_path"] == "N.md"
+    citations = with_burst["citations"]
+    assert isinstance(citations, list)
+    first_citation = citations[0]
+    assert isinstance(first_citation, dict)
+    assert first_citation["note_path"] == "N.md"
 
     without = build_naomi_reply_payload(
         "t2", "spoken", (0.6, 0.5, None), (), no_answer=True, action_card_id=None
     )
-    assert "burst" not in without["affect"]  # burst absent → key omitted
+    without_affect = without["affect"]
+    assert isinstance(without_affect, dict)
+    assert "burst" not in without_affect  # burst absent → key omitted
     assert "action_card_id" not in without  # no card prepared → key omitted
 
 

@@ -22,7 +22,6 @@ from pathlib import Path
 from typing import Any
 
 import numpy as np
-import numpy.typing as npt
 import pytest
 
 from engine.audio.audio_frame_types import AudioFrame, StreamLabel
@@ -117,7 +116,9 @@ async def test_gateway_listen_start_delegates_through_injected_capture(
     """listen.start drives the built orchestrator; the REAL mic seam is faked."""
     started: list[str] = []
 
-    async def fake_capture(_sink: Callable[[AudioFrame], Awaitable[None]]) -> Callable[[], Awaitable[None]]:
+    async def fake_capture(
+        _sink: Callable[[AudioFrame], Awaitable[None]],
+    ) -> Callable[[], Awaitable[None]]:
         started.append("open")
 
         async def stop() -> None:
@@ -138,13 +139,17 @@ async def test_gateway_listen_start_delegates_through_injected_capture(
     gateway = _make_gateway(hub, tmp_path)
 
     await gateway.listen_start(open_mic=True)
-    assert gateway.state is NaomiTurnState.LISTENING  # command reached the orchestrator
+    state_after_start = gateway.state
+    assert state_after_start is NaomiTurnState.LISTENING  # command reached orchestrator
     assert started == ["open"]
     await gateway.feed_audio_frame(
         AudioFrame(stream=StreamLabel.ME, samples=np.zeros(4, np.float32), t_start_monotonic=0.0)
     )
+    await gateway.listen_stop(flush=False)  # delegates to the built orchestrator
+    state_after_stop = gateway.state
+    assert state_after_stop is NaomiTurnState.IDLE  # discard-stop settled to idle
     await gateway.shutdown()
-    assert "stop" in started  # capture was torn down on shutdown
+    assert "stop" in started  # capture was torn down
 
 
 async def test_gateway_build_stt_vad_factory_and_transcribe_deps_missing(
@@ -354,16 +359,19 @@ async def test_speaker_cancel_is_the_barge_in_wire() -> None:
 
     context_id = await speaker.speak(["Hello there."], None)
     await asyncio.sleep(0)  # let the relay task reach the park point
-    assert speaker.active_context_id == context_id
+    active = speaker.active_context_id
+    assert active == context_id
 
     cancelled = await speaker.cancel()
     assert cancelled == context_id
     assert connection.cancelled == [context_id]  # cancel frame sent to the wire
     done = recorder.one("naomi.audio.done")
     assert done["reason"] == "cancelled" and done["context_id"] == context_id
-    assert speaker.active_context_id is None
+    after_cancel_ctx = speaker.active_context_id
+    assert after_cancel_ctx is None
     # Idempotent: a second cancel with nothing speaking is a clean None.
-    assert await speaker.cancel() is None
+    second_cancel = await speaker.cancel()
+    assert second_cancel is None
 
 
 async def test_speaker_speak_cancels_the_previous_utterance_first() -> None:
@@ -391,6 +399,29 @@ async def test_speaker_shutdown_silences_and_closes_the_socket() -> None:
     await asyncio.sleep(0)
     await speaker.shutdown()
     assert connection.closed is True  # socket closed on process shutdown
+
+
+async def test_speaker_without_finished_callback_still_relays_and_completes() -> None:
+    """No callback wired yet: a chunk with no first-audio hook still relays."""
+    hub = EventBroadcastHub()
+    recorder = EventRecorder(hub)
+    messages: list[CartesiaMessage] = [
+        CartesiaAudioChunk(context_id="wire", data_b64="A0"),
+        CartesiaDone(context_id="wire"),
+    ]
+    # Constructed WITHOUT a finished callback and spoken WITHOUT on_first_audio.
+    speaker = NaomiTurnSpeaker(hub, FakeConnection(messages), clock=_Clock((0.0,)))  # type: ignore[arg-type]
+    await speaker.speak(["Hi."], None)  # on_first_audio omitted → skips the hook
+    for _ in range(200):  # wait for the relay to finish (no callback to await on)
+        if speaker.active_context_id is None:
+            break
+        await asyncio.sleep(0)
+
+    chunks = recorder.payloads("naomi.audio.chunk")
+    # seq 0 still MEASURES the warm TTFA (clock 0.0→0.0 = 0 ms); only the
+    # optional first-audio hook is skipped when no callback was supplied.
+    assert len(chunks) == 1 and chunks[0]["ttfa_ms"] == 0
+    assert recorder.one("naomi.audio.done")["reason"] == "completed"
 
 
 async def test_speaker_cancel_returns_none_when_tracked_task_already_finished() -> None:

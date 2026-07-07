@@ -9,27 +9,25 @@ replaced by an in-process fake, and every gateway runs over a tmp database.
 
 import asyncio
 import logging
-from collections.abc import Awaitable, Callable, Coroutine
+from collections.abc import Awaitable, Callable, Coroutine, Iterable
 from pathlib import Path
 
 import aiosqlite
 import pytest
 
-import engine.wiring.approval_card_build_server_wiring as build_mod
 import engine.wiring.approval_cards_gateway as gateway_mod
 import engine.wiring.models_download_command_dispatcher as models_mod
 from engine.dictation.dictation_finalization import DictationFinalResult
 from engine.dictation.dictation_mode_splitter import DictationMode
 from engine.protocol import (
+    EVENT_ENHANCE_READY,
     Envelope,
     EnvelopeKind,
     EventBroadcastHub,
 )
-from engine.protocol import (
-    EVENT_ENHANCE_READY,
-)
 from engine.router.fallback_executor import ProviderRouter
 from engine.storage import apply_migrations, open_sqlite_connection
+from engine.stt.model_weights_downloader import ModelIntegrityError
 from engine.vault import VaultNotConfiguredError
 from engine.wiring.approval_card_build_server_wiring import ApprovalCardBuildWiring
 from engine.wiring.approval_cards_gateway import ApprovalCardsGateway, CardCommandRefused
@@ -74,6 +72,18 @@ def _cmd(name: str, payload: dict[str, object], cid: str = "c1") -> Envelope:
     return Envelope(v=1, kind=EnvelopeKind.COMMAND, name=name, id=cid, payload=payload)
 
 
+async def _sleep_forever() -> None:
+    await asyncio.Event().wait()
+
+
+async def _wait_all_pending(
+    tasks: Iterable[asyncio.Task[None]], timeout: float | None = None
+) -> tuple[set[asyncio.Task[None]], set[asyncio.Task[None]]]:
+    """Test double for ``asyncio.wait``: the grace window elapses with every
+    task still pending, so ``shutdown`` must fall through to cancellation."""
+    return set(), set(tasks)
+
+
 def _build_gateway(
     tmp_db: Path,
     vault_root: Path,
@@ -106,8 +116,8 @@ def test_default_router_factory_builds_a_provider_router(
     async def recorder(entry: object) -> None:
         return None
 
-    router = gateway_mod._default_router_factory(recorder)  # type: ignore[arg-type]
-    assert isinstance(router, gateway_mod.ProviderRouter)
+    router = gateway_mod._default_router_factory(recorder)
+    assert isinstance(router, ProviderRouter)
 
 
 async def test_resolve_vault_root_returns_none_when_unconfigured(
@@ -163,16 +173,9 @@ async def test_shutdown_cancels_a_straggler_execution(
     tmp_db_path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     gateway = _build_gateway(tmp_db_path, tmp_path)
-    hanging = asyncio.create_task(asyncio.Event().wait())
+    hanging: asyncio.Task[None] = asyncio.create_task(_sleep_forever())
     gateway._execution_tasks.add(hanging)
-
-    async def fake_wait(
-        tasks: object, timeout: float | None = None
-    ) -> tuple[set[object], set[object]]:
-        # Simulate the grace window elapsing with the task still in flight.
-        return set(), set(tasks)  # type: ignore[arg-type]
-
-    monkeypatch.setattr(gateway_mod.asyncio, "wait", fake_wait)
+    monkeypatch.setattr("engine.wiring.approval_cards_gateway.asyncio.wait", _wait_all_pending)
     await gateway.shutdown()
     assert hanging.cancelled()  # the straggler was really cancelled
 
@@ -321,15 +324,11 @@ async def test_build_wiring_shutdown_cancels_a_straggler_build(
 ) -> None:
     hub = EventBroadcastHub()
     wiring = ApprovalCardBuildWiring(hub, tmp_db_path, MIGRATIONS)
-    hanging = asyncio.create_task(asyncio.Event().wait())
+    hanging: asyncio.Task[None] = asyncio.create_task(_sleep_forever())
     wiring._tasks.add(hanging)
-
-    async def fake_wait(
-        tasks: object, timeout: float | None = None
-    ) -> tuple[set[object], set[object]]:
-        return set(), set(tasks)  # type: ignore[arg-type]
-
-    monkeypatch.setattr(build_mod.asyncio, "wait", fake_wait)
+    monkeypatch.setattr(
+        "engine.wiring.approval_card_build_server_wiring.asyncio.wait", _wait_all_pending
+    )
     await wiring.shutdown()
     assert hanging.cancelled()
 
@@ -406,7 +405,7 @@ async def test_models_download_reports_integrity_failure_per_file(
     def fake_download(
         on_progress: object, *, models_dir: object, manifest_path: object, fetch: object
     ) -> list[dict[str, object]]:
-        raise models_mod.ModelIntegrityError("bge-small.bin", "expected", "actual")
+        raise ModelIntegrityError("bge-small.bin", "expected", "actual")
 
     monkeypatch.setattr(models_mod, "download_models_with_progress", fake_download)
     hub = EventBroadcastHub()

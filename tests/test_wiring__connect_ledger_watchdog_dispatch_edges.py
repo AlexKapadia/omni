@@ -30,6 +30,7 @@ from engine.detect import (
     SustainedLoopbackVadTrigger,
 )
 from engine.dictation.dictation_finalization import DictationReleaseFinalizer
+from engine.dictation.dictation_mode_splitter import DictationMode
 from engine.protocol import (
     EVENT_CAPTURE_STARTED,
     EVENT_CAPTURE_STOPPED,
@@ -219,7 +220,7 @@ def _inert_detection_service(
         vad_trigger=trigger,
         rules_engine=AutoStartRulesEngine(),
         is_capture_active=lambda: False,
-        on_decision=on_decision,  # type: ignore[arg-type]
+        on_decision=on_decision,
     )
 
 
@@ -287,7 +288,7 @@ async def test_default_spotter_factory_builds_a_spotter(
         async def emit(hit: object) -> None:
             return None
 
-        spotter = wiring._default_factory(connection, emit)  # type: ignore[arg-type]
+        spotter = wiring._default_factory(connection, emit)
         assert hasattr(spotter, "on_final_segment") and hasattr(spotter, "flush")
     finally:
         await connection.close()
@@ -350,7 +351,9 @@ async def test_build_finalizer_with_a_configured_vault(
     await apply_migrations(tmp_db_path, MIGRATIONS)
     connection = await open_sqlite_connection(tmp_db_path)
     try:
-        gateway = DictationCommandGateway(hub=EventBroadcastHub(), db_path=tmp_db_path, migrations_dir=MIGRATIONS)
+        gateway = DictationCommandGateway(
+            hub=EventBroadcastHub(), db_path=tmp_db_path, migrations_dir=MIGRATIONS
+        )
         finalizer = gateway._build_finalizer(connection)
         assert isinstance(finalizer, DictationReleaseFinalizer)
     finally:
@@ -366,12 +369,33 @@ async def test_build_finalizer_without_a_vault_degrades_to_no_indexer(
     await apply_migrations(tmp_db_path, MIGRATIONS)
     connection = await open_sqlite_connection(tmp_db_path)
     try:
-        gateway = DictationCommandGateway(hub=EventBroadcastHub(), db_path=tmp_db_path, migrations_dir=MIGRATIONS)
+        gateway = DictationCommandGateway(
+            hub=EventBroadcastHub(), db_path=tmp_db_path, migrations_dir=MIGRATIONS
+        )
         # No configured vault: construction still succeeds (command/inject work).
         finalizer = gateway._build_finalizer(connection)
         assert isinstance(finalizer, DictationReleaseFinalizer)
     finally:
         await connection.close()
+
+
+async def test_default_release_finalize_note_mode_preserves_verbatim_text(
+    tmp_db_path: Path, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The per-call default finalizer runs its whole I/O lifecycle: with no
+    provider keys the LLM cleanup/title steps degrade to raw fallback, and a
+    non-command utterance lands as a NOTE with the verbatim transcript intact."""
+    monkeypatch.setattr(dictation_mod, "build_provider_clients", lambda store: {})
+    monkeypatch.setattr(dictation_mod, "ProviderKeyStore", lambda: object())
+    monkeypatch.setenv("OMNI_VAULT_DIR", str(tmp_path))
+    gateway = DictationCommandGateway(
+        hub=EventBroadcastHub(), db_path=tmp_db_path, migrations_dir=MIGRATIONS
+    )
+    result = await gateway._default_release_finalize("remember to water the plants", False, 120)
+    assert result.mode is DictationMode.NOTE
+    assert result.text == "remember to water the plants"  # verbatim ground truth
+    assert result.intent_row_id is None  # note mode records no command intent
+    assert result.flush_ms == 120  # the speed-showcase stamp is carried through
 
 
 async def test_dictation_broadcast_partial_emits_the_pinned_event(
@@ -397,7 +421,9 @@ async def test_keys_save_failure_reports_a_generic_error_only() -> None:
     """A save failure must never echo key-adjacent text (deny by default)."""
     gateway = ProviderKeysCommandGateway(key_store=_RaisingKeyStore())
     sent, send = _collector()
-    await dispatch_keys_command(_cmd("keys.save", {"provider": "groq", "key": "abcd1234"}), gateway, send)
+    await dispatch_keys_command(
+        _cmd("keys.save", {"provider": "groq", "key": "abcd1234"}), gateway, send
+    )
     assert sent[0].name == "error"
     assert sent[0].payload["code"] == "keys_error"
     assert sent[0].payload["message"] == "the key could not be saved"

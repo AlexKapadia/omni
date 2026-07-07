@@ -1,4 +1,11 @@
-# Coverage Hardening — Progress Tracker
+# Coverage Hardening — Progress Tracker — ✅ COMPLETE
+
+## RESULT (authoritative, full suite green)
+- LINE:   87.49% → **98.87%** (9491/9599)  — PASS (≥90)
+- BRANCH: 76.31% → **94.74%** (1908/2014) — PASS (≥85)
+- 1974 tests total (1 live_stt deselected); +408 new adversarial test fns across 27 files.
+- ruff + mypy(strict) clean; coverage tooling ad-hoc only (absent from pyproject/uv.lock).
+- No per-line pragmas added; gate met with genuine tests + .coveragerc standard exclusions.
 
 ## North Star
 Raise engine test coverage to the CI gate (line ≥90% / branch ≥85%) with GENUINE
@@ -19,26 +26,22 @@ ad-hoc (not in pyproject/uv.lock).
 - [x] Build gap map (missing lines/branches per file)
 - [x] T1 wiring/settings_value_validation + onboarding + app_settings gateway (55 tests, 0 excl)
 - [x] T2 agents tools (60 tests; flagged approval_card_builder L148-150,174-176 unreachable ValidationError)
-- [ ] T3 index (sqlite_vec, embedder, watchdog, indexer, chunker, sql lookup)
-- [ ] T4 naomi/voice (turn gateway/orchestrator/speaker, cartesia conn, dispatchers)
+- [x] T3 index (36 tests; flagged markdown chunker L157 unreachable)
+- [x] T4 naomi/voice (40 tests; real-model/hw boundaries noted, not excluded — gate met)
 - [x] T5 router provider clients + provider_key_live_validation (30 tests, 0 new excl)
 - [x] T6 google (oauth flow, session, gateway, token store) (32 tests, 0 excl — real loopback)
-- [ ] T7 stt (weights downloader, keep_audio, live_capture, capture_model_loading, VAD, parakeet)
-- [ ] T8 audio+detect (pyaudio backend, device listing, mic detector, desktop snapshot)
-- [ ] T9 server + wiring dispatchers + security/secret_redaction + misc
-- [ ] Add coverage config (.coveragerc) + justified pragmas for true boundaries
-- [ ] Consolidated coverage re-run: line ≥90 / branch ≥85
-- [ ] ruff + mypy clean on new tests; suite green
-- [ ] evidence/coverage-report.md documenting final numbers + exclusions
-- [ ] Commit + push feature/coverage-hardening
+- [x] T7 stt (50 tests; boundaries handled by config __main__ exclude)
+- [x] T8 audio+detect (47 tests; pyaudio backend 0%→full, 0 excl)
+- [x] T9 server + wiring dispatchers (43 tests; integration-only closures noted)
+- [x] Add coverage config (.coveragerc) — omit live probe + standard exclude_lines only
+- [x] Consolidated coverage re-run: line 98.87 / branch 94.74 — PASS
+- [x] ruff + mypy(strict) clean on new tests; full suite green (1974 tests)
+- [x] evidence/coverage-report.md documenting final numbers + exclusions
+- [x] Commit + push feature/coverage-hardening
 
 ## Resume here
-PRELIMINARY consolidated coverage (T1-T3,T5-T8,T10 committed; T4/T9 files present, not yet in run):
-  LINE 96.59% / BRANCH 91.61% — GATE ALREADY MET (>=90 / >=85), no candidate pragmas needed yet.
-Next: await T4+T9 completion notifications, verify their files green, run AUTHORITATIVE final --cov
-(whole suite), confirm gate, finalize evidence report, ruff+mypy on new tests, commit+push.
-If resuming cold: all test files are under tests/ (committed batch 2c766db + T4/T9 files); run
-`uv run --with pytest-cov --with coverage pytest --cov=engine --cov-branch` from C:/dev/Omni-cov.
+DONE — nothing left. Gate met (line 98.87 / branch 94.74), suite green, ruff+mypy clean,
+tooling ad-hoc, evidence report written. Branch feature/coverage-hardening pushed.
 
 ## UI (vitest) — measured, honest
 792 tests green / 53 files. Statements/Lines 75.2%, Branches 88.92% (clears 85), Functions 81.06%.

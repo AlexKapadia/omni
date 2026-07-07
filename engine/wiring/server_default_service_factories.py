@@ -35,7 +35,10 @@ from engine.wiring.provider_keys_command_dispatcher import ProviderKeysCommandGa
 from engine.wiring.vault_watchdog_server_wiring import VaultWatchdogServerWiring
 
 # The repo's migrations directory (packaging bundles it next to the engine).
-MIGRATIONS_DIR = Path(__file__).resolve().parent.parent / "migrations"
+# This module lives at engine/wiring/, so the repo root is THREE parents up
+# (engine/wiring -> engine -> repo root); a wrong count silently points at a
+# non-existent dir and every table-creating boot fails closed.
+MIGRATIONS_DIR = Path(__file__).resolve().parent.parent.parent / "migrations"
 
 
 def default_capture_service_factory(hub: EventBroadcastHub) -> LiveCaptureService:

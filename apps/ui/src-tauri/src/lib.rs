@@ -62,7 +62,11 @@ pub fn run() {
                 updater_launch_check::spawn_launch_check(app.handle());
             }
             // M5: hold-F9 dictation pill (window + global shortcut binding).
-            dictation_pill_window::setup_dictation_pill(app.handle())?;
+            // Non-fatal: dictation setup must never prevent Omni from
+            // launching — log and continue on any failure.
+            if let Err(e) = dictation_pill_window::setup_dictation_pill(app.handle()) {
+                log::warn!("dictation pill setup skipped: {e}");
+            }
             // Start supervising the engine sidecar immediately; the supervisor
             // tolerates the engine being absent (retry loop, never a crash).
             let sidecar = engine_sidecar::EngineSidecar::spawn_supervised();

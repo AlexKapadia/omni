@@ -122,7 +122,11 @@ fn create_pill_window(app: &AppHandle) -> tauri::Result<()> {
 
 /// Bind the hold key with a Pressed/Released handler (repeat-guarded).
 fn register_hold_shortcut(app: &AppHandle) -> tauri::Result<()> {
-    app.global_shortcut()
+    // Defensive: drop any prior binding first (a stale earlier instance can
+    // still own the key at the OS level) so registration is idempotent.
+    let _ = app.global_shortcut().unregister(DICTATION_HOLD_KEY);
+    let result = app
+        .global_shortcut()
         .on_shortcut(DICTATION_HOLD_KEY, |app, _shortcut, event| {
             match event.state() {
                 ShortcutState::Pressed => {
@@ -141,8 +145,14 @@ fn register_hold_shortcut(app: &AppHandle) -> tauri::Result<()> {
                     }
                 }
             }
-        })
-        .map_err(|e| tauri::Error::Anyhow(e.into()))?;
+        });
+    // Non-fatal by design: if the hold key is already taken (another app, or a
+    // stale prior instance), dictation's hotkey just won't bind — Omni still
+    // launches normally. A hotkey conflict must NEVER crash the app; the key is
+    // rebindable in Settings.
+    if let Err(e) = result {
+        log::warn!("dictation hold key '{DICTATION_HOLD_KEY}' not registered: {e}");
+    }
     Ok(())
 }
 

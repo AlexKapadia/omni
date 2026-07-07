@@ -1,23 +1,17 @@
 /**
- * Settings — the Devices, Hotkey and Templates group cards. Grouped in one
- * file because each is a thin, single-card binding of settings-store state
- * to the shared row primitives; the store logic they drive lives (and is
- * tested) in settings-store.ts.
+ * Settings — the Devices and Hotkey group cards.
  *
- * Devices are REAL: the engine's devices.list enumeration fills the store
- * (engine-devices.ts) with honest pending/unavailable states — never mock
- * names. Hotkey capture is real (records an actual key combination).
+ * Devices are REAL: the engine's devices.list enumeration fills the store with
+ * honest pending/unavailable states — never mock names. The push-to-talk
+ * hotkey capture records a real key combination and persists it through the
+ * REAL settings.update command (optimistic, reverts with an honest message).
  */
 import { useState } from "react";
 import { useStore } from "zustand";
 import { OmniButton } from "../button";
 import { SettingsGroupCard, SettingsRow } from "./settings-group-card";
-import {
-  setActiveTemplate,
-  setMicrophone,
-  setPushToTalkKeys,
-  type SettingsStore,
-} from "../../lib/settings-store";
+import { setMicrophone, type SettingsStore } from "../../lib/settings-store";
+import type { SettingsUpdater } from "../../lib/settings-actions";
 
 const SELECT_CLASS =
   "cursor-pointer border-none bg-transparent font-[family-name:var(--font-mono)] text-[var(--grey-600)]";
@@ -102,7 +96,7 @@ function Keycap({ label }: { readonly label: string }) {
 }
 
 /** Build the display combo from a real keydown — modifiers first, then key. */
-function comboFromKeyEvent(event: React.KeyboardEvent): readonly string[] | null {
+export function comboFromKeyEvent(event: React.KeyboardEvent): readonly string[] | null {
   const key = event.key;
   if (key === "Control" || key === "Shift" || key === "Alt" || key === "Meta") return null;
   const combo: string[] = [];
@@ -113,15 +107,24 @@ function comboFromKeyEvent(event: React.KeyboardEvent): readonly string[] | null
   return combo;
 }
 
-export function HotkeySection({ store }: { readonly store: SettingsStore }) {
-  const keys = useStore(store, (s) => s.pushToTalkKeys);
+export function HotkeySection({
+  store,
+  update,
+}: {
+  readonly store: SettingsStore;
+  readonly update: SettingsUpdater;
+}) {
+  const keys = useStore(store, (s) => s.settings?.pushToTalkHotkey ?? []);
   const [recording, setRecording] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   return (
     <SettingsGroupCard label="Hotkey">
       <SettingsRow
         title="Push to talk"
-        subCaption={recording ? "press the new combination — Esc cancels" : "hold to dictate anywhere"}
-        last
+        subCaption={
+          recording ? "press the new combination — Esc cancels" : "hold to dictate anywhere"
+        }
+        last={error === null}
       >
         <div
           className="flex items-center gap-[var(--space-2)]"
@@ -134,8 +137,10 @@ export function HotkeySection({ store }: { readonly store: SettingsStore }) {
             }
             const combo = comboFromKeyEvent(event);
             if (combo !== null) {
-              setPushToTalkKeys(store, combo);
               setRecording(false);
+              void update({ pushToTalkHotkey: combo }).then((r) =>
+                setError(r.ok ? null : r.message),
+              );
             }
           }}
         >
@@ -147,30 +152,15 @@ export function HotkeySection({ store }: { readonly store: SettingsStore }) {
           </OmniButton>
         </div>
       </SettingsRow>
-    </SettingsGroupCard>
-  );
-}
-
-export function TemplatesSection({ store }: { readonly store: SettingsStore }) {
-  const active = useStore(store, (s) => s.activeTemplate);
-  const options = useStore(store, (s) => s.templateOptions);
-  return (
-    <SettingsGroupCard label="Templates">
-      <SettingsRow title="Note template" subCaption="shapes how enhanced notes are laid out" last>
-        <select
-          aria-label="Note template"
-          value={active}
-          onChange={(e) => setActiveTemplate(store, e.target.value)}
-          className={SELECT_CLASS}
-          style={{ fontSize: "var(--text-meta-size)" }}
+      {error !== null && (
+        <p
+          role="alert"
+          className="m-0 text-[var(--grey-600)]"
+          style={{ padding: "10px 0", fontSize: "var(--text-meta-size)" }}
         >
-          {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
-            </option>
-          ))}
-        </select>
-      </SettingsRow>
+          {error}
+        </p>
+      )}
     </SettingsGroupCard>
   );
 }

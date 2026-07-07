@@ -129,6 +129,100 @@ def _print_progress(name: str) -> Callable[[int, int | None], None]:
     return progress
 
 
+class ModelIntegrityError(Exception):
+    """A downloaded file's sha256 did not match the pinned manifest.
+
+    Carries the offending filename so the caller can report an honest,
+    per-file failure. The corrupt file is deleted before this is raised so
+    a retry re-fetches from scratch (fail closed: a bad model never loads).
+    """
+
+    def __init__(self, filename: str, expected: str, actual: str) -> None:
+        super().__init__(
+            f"integrity check failed for {filename}: "
+            f"expected sha256 {expected}, got {actual}"
+        )
+        self.filename = filename
+
+
+def load_pinned_sha256_by_filename(manifest_path: Path | None = None) -> dict[str, str]:
+    """Expected sha256 per filename from the committed manifest (integrity pin).
+
+    A missing manifest or entry means there is no pin for that file, so a
+    download can be completed but NOT positively verified — reported honestly
+    (``sha256_verified`` is False, never a guessed True).
+    """
+    path = manifest_path if manifest_path is not None else default_manifest_path()
+    if not path.is_file():
+        return {}
+    data = json.loads(path.read_text(encoding="utf-8"))
+    result: dict[str, str] = {}
+    for entry in data.get("models", []):
+        name = entry.get("name")
+        sha = entry.get("sha256")
+        if isinstance(name, str) and isinstance(sha, str):
+            result[name] = sha
+    return result
+
+
+# on_progress(file, received_bytes, total_bytes|None, sha256_verified|None):
+# a beat while downloading has sha256_verified=None; the final per-file beat
+# carries the honest True/False verification outcome.
+ProgressFn = Callable[[str, int, int | None, bool | None], None]
+
+
+def download_models_with_progress(
+    on_progress: ProgressFn,
+    models_dir: Path | None = None,
+    specs: tuple[ModelSpec, ...] = MODEL_SPECS,
+    manifest_path: Path | None = None,
+    fetch: FetchFn = _https_fetch,
+) -> list[dict[str, Any]]:
+    """Ensure each model is present AND integrity-verified, emitting progress.
+
+    Present files are re-hashed and verified, never re-fetched — so the same
+    call is the download, the retry, AND the integrity check. On a sha256
+    mismatch against the pinned manifest the corrupt file is deleted and
+    :class:`ModelIntegrityError` is raised (fail closed). Returns per-file
+    result dicts (file / bytes / sha256 / sha256_verified).
+    """
+    target_dir = models_dir if models_dir is not None else models_directory()
+    target_dir.mkdir(parents=True, exist_ok=True)
+    pinned = load_pinned_sha256_by_filename(manifest_path)
+    results: list[dict[str, Any]] = []
+    for spec in specs:
+        final_path = target_dir / spec.filename
+        if not final_path.is_file():
+            partial_path = target_dir / (spec.filename + ".partial")
+
+            def _beat(done: int, total: int | None, _name: str = spec.filename) -> None:
+                # Mid-download: verification not yet known (None), not a guess.
+                on_progress(_name, done, total, None)
+
+            fetch(spec.url, partial_path, _beat)
+            # Atomic completion gate: a torn download never gets the real name.
+            partial_path.replace(final_path)
+        size = final_path.stat().st_size
+        digest = sha256_of_file(final_path)
+        expected = pinned.get(spec.filename)
+        if expected is not None and digest != expected:
+            # Corrupt/tampered: delete so a retry starts clean, then fail loudly.
+            final_path.unlink(missing_ok=True)
+            raise ModelIntegrityError(spec.filename, expected, digest)
+        # verified True ONLY on a matched pin; an unpinned file stays unverified.
+        verified = expected is not None and digest == expected
+        on_progress(spec.filename, size, size, verified)
+        results.append(
+            {
+                "file": spec.filename,
+                "bytes": size,
+                "sha256": digest,
+                "sha256_verified": verified,
+            }
+        )
+    return results
+
+
 def ensure_models_downloaded(
     models_dir: Path | None = None,
     specs: tuple[ModelSpec, ...] = MODEL_SPECS,

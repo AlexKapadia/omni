@@ -24,7 +24,7 @@ Security invariants:
 import asyncio
 import contextlib
 import logging
-from collections.abc import Coroutine
+from collections.abc import Awaitable, Callable, Coroutine
 from datetime import UTC, datetime
 from pathlib import Path
 
@@ -45,6 +45,10 @@ from engine.protocol import (
     Envelope,
     EnvelopeKind,
     EventBroadcastHub,
+)
+from engine.storage.app_settings_repository import (
+    SETTING_INSTANT_EXECUTE_WHITELIST,
+    read_setting,
 )
 from engine.storage.extraction_results_repository import latest_extraction_row
 from engine.storage.sqlite_connection import open_sqlite_connection
@@ -69,6 +73,11 @@ class ApprovalCardBuildWiring:
         self._unsubscribe = hub.subscribe(self._on_event)
         # Strong refs so a build task is never GC'd mid-flight.
         self._tasks: set[asyncio.Task[None]] = set()
+        # Instant-execute whitelist seam (set by the server after both the
+        # approval gateway and this wiring exist). None => the feature is off
+        # and EVERY dictation card stays PENDING (approval-before-execute is
+        # the default; the whitelist is the only opt-in, deny by default).
+        self.auto_execute_whitelisted: Callable[[int], Awaitable[None]] | None = None
         # Builds run one at a time: the builder's duplicate check is
         # check-then-insert, so concurrent passes over the same source row
         # could each see "no duplicate" (idempotency is per-pass, not racy).
@@ -153,8 +162,31 @@ class ApprovalCardBuildWiring:
                     connection, record=record, created_at=_utc_now_iso()
                 )
                 await self._broadcast_created(connection, built.created_card_ids)
+                whitelisted = await self._intent_is_whitelisted(connection, record.intent_type)
             finally:
                 await connection.close()
+        # Instant-execute whitelist (deny by default): only a user-whitelisted
+        # intent type executes without an approval click — and it still runs
+        # the exact same audited approve->execute path (ledger + card history),
+        # never a side channel. Done AFTER the connection closes so the
+        # separate execution connection sees the committed card.
+        if whitelisted and self.auto_execute_whitelisted is not None:
+            for card_id in built.created_card_ids:
+                await self.auto_execute_whitelisted(card_id)
+
+    async def _intent_is_whitelisted(
+        self, connection: aiosqlite.Connection, intent_type: str
+    ) -> bool:
+        """True only when this intent type is in the persisted whitelist.
+
+        Fail closed: any read error, a missing setting, or a wrong-typed
+        value means NOT whitelisted (the card stays pending for approval).
+        """
+        try:
+            stored = await read_setting(connection, SETTING_INSTANT_EXECUTE_WHITELIST)
+        except Exception:
+            return False
+        return isinstance(stored, list) and intent_type in stored
 
     # -------------------------------------------------------------- shared
     async def _broadcast_created(

@@ -43,6 +43,13 @@ from engine.wiring.detection_server_wiring import DetectionServerWiring
 from engine.wiring.dictation_command_dispatcher import DictationCommandGateway
 from engine.wiring.live_answers_spotter_wiring import LiveAnswersSpotterWiring
 
+# The M7 onboarding/settings command surface (5 gateways) is built and owned
+# as one unit so this file stays pure routing/lifecycle.
+from engine.wiring.onboarding_settings_command_surface import (
+    OnboardingSettingsCommandSurface,
+    build_onboarding_settings_command_surface,
+)
+
 # The real, settings-driven service factories live in one module so this
 # file stays pure routing/lifecycle; tests inject fakes through the seams.
 from engine.wiring.server_default_service_factories import (
@@ -87,6 +94,7 @@ def create_app(
     spotter_wiring_factory: SpotterWiringFactory | None = None,
     card_build_wiring_factory: CardBuildWiringFactory | None = None,
     vault_watchdog_factory: VaultWatchdogFactory | None = None,
+    m7_surface: OnboardingSettingsCommandSurface | None = None,
 ) -> FastAPI:
     """Build the FastAPI app. Factory form keeps tests isolated per-app.
 
@@ -111,6 +119,9 @@ def create_app(
     ask_gateway = (ask_gateway_factory or default_ask_gateway_factory)()
     dictation_gateway = (dictation_gateway_factory or default_dictation_gateway_factory)(event_hub)
     approval_gateway = (approval_gateway_factory or default_approval_gateway_factory)(event_hub)
+    # M7 onboarding/settings surfaces: command-driven, inert construction
+    # (default ON), owned as one unit; tests inject a fake surface directly.
+    m7 = m7_surface or build_onboarding_settings_command_surface(event_hub)
     # M6 detection + M3 live answers: event/timer-driven — wired only when a
     # factory is passed (see docstring). The detection wiring feeds off the
     # loopback VAD tap the capture service carries (probabilities only).
@@ -125,6 +136,13 @@ def create_app(
     card_build_wiring = card_build_wiring_factory(event_hub) if card_build_wiring_factory else None
     if card_build_wiring is not None:
         dictation_gateway.on_final_result = card_build_wiring.on_dictation_final
+
+        # Instant-execute whitelist seam: a whitelisted dictation card runs the
+        # SAME audited approve->execute path (never a bypass of the audit); the
+        # whitelist itself is read per intent from app_settings (deny default).
+        card_build_wiring.auto_execute_whitelisted = (
+            lambda card_id: approval_gateway.approve(card_id, None)
+        )
     # M3 live vault watching (OS-event-driven — same rule).
     vault_watchdog = vault_watchdog_factory() if vault_watchdog_factory else None
 
@@ -134,6 +152,10 @@ def create_app(
         app.state.started_monotonic = time.monotonic()
         preload_task: asyncio.Task[None] | None = None
         if preload_stt:
+            # Production marker: make persisted settings effective before the
+            # first command — a user-chosen vault and an engaged kill switch
+            # survive restarts (fail closed on egress across reboots).
+            await m7.apply_persisted_settings_at_boot()
             # Background: heartbeats flow (stt_ready=false) while models load.
             preload_task = asyncio.create_task(capture_service.preload_models())
         if detection_wiring is not None:
@@ -157,6 +179,9 @@ def create_app(
         # In-flight card executions get a short grace, then cancel.
         with contextlib.suppress(Exception):
             await approval_gateway.shutdown()
+        # A running model download or Google consent flow is cancelled so no
+        # background task outlives the process.
+        await m7.shutdown()
         if preload_task is not None and not preload_task.done():
             preload_task.cancel()
             with contextlib.suppress(asyncio.CancelledError):
@@ -191,6 +216,7 @@ def create_app(
     app.state.spotter_wiring = spotter_wiring
     app.state.card_build_wiring = card_build_wiring
     app.state.vault_watchdog = vault_watchdog
+    app.state.m7_surface = m7
 
     @app.get("/health")
     async def health() -> dict[str, Any]:
@@ -216,6 +242,7 @@ def create_app(
             # detection.dismiss needs the service; None → honest refusal.
             detection_service=detection.service if detection is not None else None,
             device_lister=state.device_lister,
+            m7_surface=state.m7_surface,
         )
         await handler.run()
 

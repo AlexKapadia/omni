@@ -53,6 +53,18 @@ class ProviderLedgerSummary:
     avg_latency_ms: float
 
 
+@dataclass(frozen=True)
+class TaskLedgerSummary:
+    """Per-task aggregates for the Settings ledger table (one row per task)."""
+
+    task_type: str
+    total_calls: int
+    prompt_tokens: int
+    completion_tokens: int
+    total_cost_usd: Decimal
+    avg_latency_ms: float
+
+
 async def insert_router_ledger_entry(
     connection: aiosqlite.Connection, entry: RouterLedgerEntry
 ) -> None:
@@ -118,6 +130,47 @@ async def summarize_router_ledger_by_provider(
             completion_tokens=int(row[5]),
             total_cost_usd=cost_by_provider.get(str(row[0]), Decimal(0)),
             avg_latency_ms=float(row[6]),
+        )
+        for row in aggregate_rows
+    ]
+
+
+async def summarize_router_ledger_by_task(
+    connection: aiosqlite.Connection,
+) -> list[TaskLedgerSummary]:
+    """Aggregate the ledger per task_type (Settings ledger table rows).
+
+    Same Decimal-exact cost discipline as the per-provider summary: counts,
+    tokens, and latency aggregate in SQL; COST is summed in Python
+    ``Decimal`` from the exact stored strings (never SQLite's float SUM).
+    """
+    cursor = await connection.execute(
+        "SELECT task_type, "
+        "       COUNT(*), "
+        "       SUM(prompt_tokens), "
+        "       SUM(completion_tokens), "
+        "       AVG(latency_ms) "
+        "FROM router_ledger GROUP BY task_type ORDER BY task_type"
+    )
+    aggregate_rows = await cursor.fetchall()
+    await cursor.close()
+    cursor = await connection.execute("SELECT task_type, est_cost_usd FROM router_ledger")
+    cost_rows = await cursor.fetchall()
+    await cursor.close()
+    cost_by_task: dict[str, Decimal] = {}
+    for task_type, cost_text in cost_rows:
+        # Decimal(text) reproduces the stored value exactly — no float hop.
+        cost_by_task[str(task_type)] = cost_by_task.get(
+            str(task_type), Decimal(0)
+        ) + Decimal(str(cost_text))
+    return [
+        TaskLedgerSummary(
+            task_type=str(row[0]),
+            total_calls=int(row[1]),
+            prompt_tokens=int(row[2]),
+            completion_tokens=int(row[3]),
+            total_cost_usd=cost_by_task.get(str(row[0]), Decimal(0)),
+            avg_latency_ms=float(row[4]),
         )
         for row in aggregate_rows
     ]

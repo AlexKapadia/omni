@@ -40,6 +40,9 @@ pub fn run() {
                 .build(),
         )
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        // M7 onboarding: native folder picker for the vault step (open() only;
+        // scoped to the main window by capabilities/onboarding.json).
+        .plugin(tauri_plugin_dialog::init())
         // M7: auto-update from GitHub Releases (signature-verified) + the
         // process plugin backing the post-install relaunch.
         .plugin(tauri_plugin_updater::Builder::new().build())

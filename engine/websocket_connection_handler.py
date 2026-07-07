@@ -67,6 +67,11 @@ from engine.wiring.dictation_command_dispatcher import (
     DictationCommandGateway,
     dispatch_dictation_command,
 )
+from engine.wiring.onboarding_settings_command_surface import (
+    M7_COMMAND_NAMES,
+    OnboardingSettingsCommandSurface,
+    dispatch_m7_command,
+)
 
 
 class WebSocketConnectionHandler:
@@ -85,6 +90,7 @@ class WebSocketConnectionHandler:
         approval_gateway: ApprovalCardsGateway | None = None,
         detection_service: DetectionService | None = None,
         device_lister: DeviceLister | None = None,
+        m7_surface: OnboardingSettingsCommandSurface | None = None,
     ) -> None:
         self._websocket = websocket
         self._started_monotonic = started_monotonic
@@ -101,6 +107,10 @@ class WebSocketConnectionHandler:
         self._approval_gateway = approval_gateway
         self._detection_service = detection_service
         self._device_lister = device_lister
+        # M7 onboarding/settings surfaces (additive): the whole surface, or
+        # None when unwired — each dispatcher then refuses honestly (deny by
+        # default). Gateways are read off the surface at dispatch time.
+        self._m7_surface = m7_surface
         # Multiple tasks write to one socket (heartbeat + replies + broadcast
         # events); the lock serialises sends so frames never interleave.
         self._send_lock = asyncio.Lock()
@@ -229,6 +239,12 @@ class WebSocketConnectionHandler:
         if command.name in DEVICES_COMMAND_NAMES:
             # Additive devices.list surface (engine.audio dispatcher).
             await dispatch_devices_command(command, self._device_lister, self._send)
+            return
+        if command.name in M7_COMMAND_NAMES:
+            # M7 onboarding/settings: settings.* / setup.status / keys.* /
+            # ledger.summary / models.download / google.connect. The surface
+            # module owns the routing (None surface → each refuses honestly).
+            await dispatch_m7_command(command, self._m7_surface, self._send)
             return
         # Deny by default: anything unrecognised is an explicit error.
         await self._send(

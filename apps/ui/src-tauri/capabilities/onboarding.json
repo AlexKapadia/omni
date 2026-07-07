@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "onboarding",
+  "description": "Least-privilege capability for the first-run onboarding vault picker (M7): only the dialog plugin's open() (folder selection) on the main window. No save, no fs — deny by default; the engine still validates and persists the path.",
+  "windows": ["main"],
+  "permissions": ["dialog:allow-open"]
+}

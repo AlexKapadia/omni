@@ -55,9 +55,18 @@ wiring · E7 keep-audio honored in capture + whitelist check in card/dictation-f
 **UI checklist:** U1 wizard (welcome/vault-picker+capability/keys/models+google) · U2 Settings completion +
 retire mock · U3 App.tsx setup.status gating · U4 Playwright E2E.
 
-**RESUME POINTER (M7):** if cold, engine E1-E8 owned by orchestrator directly; UI lane dispatched to
-subagent (apps/ui/** only, disjoint). Check git log for last committed increment; continue next
-unchecked E-item. Full gate at end.
+**RESUME POINTER (M7):** ✅ LANE COMPLETE (2026-07-07). All engine E1-E8 + UI U1-U4 landed and
+verified on feature/m7-onboarding. Full gate GREEN: ruff clean, mypy 308 files clean, pytest 1452
+passed / 1 skipped (baseline 1412 + 39 M7 + migrations regression); UI tsc green, 724 vitest passed
+/ 51 files, mock-settings-data.ts deleted. REAL boot check passed (TestClient WS): setup.status
+truthful, settings.update round-trip, ledger.summary real ('0' exact string), keys.validate made a
+REAL 780ms Groq call -> valid True (key never printed). CRITICAL PRE-EXISTING FIX: MIGRATIONS_DIR
+resolved to nonexistent engine/migrations (cleanup-lane parent-count bug, prod-breaking, invisible
+to suite) -> fixed to repo-root + regression test. CONTRACT NOTE: create_vault_dir flag rides
+INSIDE settings.update values (not top-level). REMAINING (not M7 scope): Playwright browser not
+installable in this env (UI used running-app vitest fallback); Rust tauri-plugin-dialog wiring
+complete but not compiled (needs portable-MSVC); real 2.4GB models.download proven via fake-fetch
+suite, not a live fetch.
 
 ## Session decisions (settled — do not re-litigate)
 

@@ -56,11 +56,6 @@ from engine.protocol import (
 from engine.runtime_settings import HEARTBEAT_INTERVAL_SECONDS
 from engine.stt.live_capture_service import LiveCaptureService
 from engine.voice import NAOMI_COMMAND_NAMES, TtsPlaybackStreamer, dispatch_naomi_command
-from engine.wiring.app_settings_command_dispatcher import (
-    SETTINGS_COMMAND_NAMES,
-    dispatch_settings_command,
-)
-from engine.wiring.app_settings_command_gateway import AppSettingsCommandGateway
 from engine.wiring.approval_cards_gateway import ApprovalCardsGateway
 from engine.wiring.approval_command_dispatcher import (
     APPROVAL_COMMAND_NAMES,
@@ -72,25 +67,10 @@ from engine.wiring.dictation_command_dispatcher import (
     DictationCommandGateway,
     dispatch_dictation_command,
 )
-from engine.wiring.google_connect_command_dispatcher import (
-    GOOGLE_COMMAND_NAMES,
-    GoogleConnectCommandGateway,
-    dispatch_google_command,
-)
-from engine.wiring.ledger_summary_command_dispatcher import (
-    LEDGER_COMMAND_NAMES,
-    LedgerSummaryCommandGateway,
-    dispatch_ledger_command,
-)
-from engine.wiring.models_download_command_dispatcher import (
-    MODELS_COMMAND_NAMES,
-    ModelsDownloadCommandGateway,
-    dispatch_models_command,
-)
-from engine.wiring.provider_keys_command_dispatcher import (
-    KEYS_COMMAND_NAMES,
-    ProviderKeysCommandGateway,
-    dispatch_keys_command,
+from engine.wiring.onboarding_settings_command_surface import (
+    M7_COMMAND_NAMES,
+    OnboardingSettingsCommandSurface,
+    dispatch_m7_command,
 )
 
 
@@ -110,11 +90,7 @@ class WebSocketConnectionHandler:
         approval_gateway: ApprovalCardsGateway | None = None,
         detection_service: DetectionService | None = None,
         device_lister: DeviceLister | None = None,
-        settings_gateway: AppSettingsCommandGateway | None = None,
-        keys_gateway: ProviderKeysCommandGateway | None = None,
-        ledger_gateway: LedgerSummaryCommandGateway | None = None,
-        models_gateway: ModelsDownloadCommandGateway | None = None,
-        google_gateway: GoogleConnectCommandGateway | None = None,
+        m7_surface: OnboardingSettingsCommandSurface | None = None,
     ) -> None:
         self._websocket = websocket
         self._started_monotonic = started_monotonic
@@ -131,13 +107,10 @@ class WebSocketConnectionHandler:
         self._approval_gateway = approval_gateway
         self._detection_service = detection_service
         self._device_lister = device_lister
-        # M7 onboarding/settings surfaces (additive): each dispatcher refuses
-        # honestly when its gateway is None — deny by default.
-        self._settings_gateway = settings_gateway
-        self._keys_gateway = keys_gateway
-        self._ledger_gateway = ledger_gateway
-        self._models_gateway = models_gateway
-        self._google_gateway = google_gateway
+        # M7 onboarding/settings surfaces (additive): the whole surface, or
+        # None when unwired — each dispatcher then refuses honestly (deny by
+        # default). Gateways are read off the surface at dispatch time.
+        self._m7_surface = m7_surface
         # Multiple tasks write to one socket (heartbeat + replies + broadcast
         # events); the lock serialises sends so frames never interleave.
         self._send_lock = asyncio.Lock()
@@ -267,25 +240,11 @@ class WebSocketConnectionHandler:
             # Additive devices.list surface (engine.audio dispatcher).
             await dispatch_devices_command(command, self._device_lister, self._send)
             return
-        if command.name in SETTINGS_COMMAND_NAMES:
-            # M7 settings.get / settings.update / setup.status (server-layer).
-            await dispatch_settings_command(command, self._settings_gateway, self._send)
-            return
-        if command.name in KEYS_COMMAND_NAMES:
-            # M7 keys.save / keys.validate — DPAPI custody + live validation.
-            await dispatch_keys_command(command, self._keys_gateway, self._send)
-            return
-        if command.name in LEDGER_COMMAND_NAMES:
-            # M7 ledger.summary — real router-ledger cost/latency view.
-            await dispatch_ledger_command(command, self._ledger_gateway, self._send)
-            return
-        if command.name in MODELS_COMMAND_NAMES:
-            # M7 models.download — event-driven progress (pinned HTTPS sources).
-            await dispatch_models_command(command, self._models_gateway, self._send)
-            return
-        if command.name in GOOGLE_COMMAND_NAMES:
-            # M7 google.connect — background desktop OAuth consent flow.
-            await dispatch_google_command(command, self._google_gateway, self._send)
+        if command.name in M7_COMMAND_NAMES:
+            # M7 onboarding/settings: settings.* / setup.status / keys.* /
+            # ledger.summary / models.download / google.connect. The surface
+            # module owns the routing (None surface → each refuses honestly).
+            await dispatch_m7_command(command, self._m7_surface, self._send)
             return
         # Deny by default: anything unrecognised is an explicit error.
         await self._send(

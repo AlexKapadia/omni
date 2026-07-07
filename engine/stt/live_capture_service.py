@@ -53,6 +53,10 @@ from engine.stt.capture_model_loading import (
     CaptureServiceError,
     VadFactory,
 )
+from engine.stt.keep_audio_recorder import (
+    KeepAudioRecorder,
+    create_keep_audio_recorder_if_enabled,
+)
 from engine.stt.loopback_vad_probability_tap import LoopbackVadTap, wrap_vad_with_loopback_tap
 from engine.stt.parakeet_nemo_transcriber import ParakeetNemoTranscriber
 from engine.stt.per_stream_transcription_pipeline import PerStreamTranscriptionPipeline
@@ -115,6 +119,9 @@ class LiveCaptureService:
         self._connection: aiosqlite.Connection | None = None  # Open during a session.
         self._anchor_monotonic = 0.0
         self._emitter: TranscriptEventEmitter | None = None  # Per-session.
+        # Opt-in raw-audio retention (default OFF): None unless the user's
+        # keep_audio setting is True for this session (audio-discard default).
+        self._keep_audio_recorder: KeepAudioRecorder | None = None
 
     @property
     def is_stt_ready(self) -> bool:
@@ -169,6 +176,11 @@ class LiveCaptureService:
         self._pipelines = {
             label: self._build_pipeline(label) for label in (StreamLabel.THEM, StreamLabel.ME)
         }
+        # keep-audio opt-in: recorder constructed ONLY when the user's setting
+        # is True (default OFF -> None -> audio discarded after transcription).
+        self._keep_audio_recorder = await create_keep_audio_recorder_if_enabled(
+            connection, meeting_id
+        )
         self._tasks = [
             asyncio.create_task(self._drain_loop(ring_buffer)),
             asyncio.create_task(self._stats_loop()),
@@ -202,6 +214,9 @@ class LiveCaptureService:
                 await task
         for pipeline in self._pipelines.values():
             await pipeline.finalize()  # Emits any in-flight finals.
+        if self._keep_audio_recorder is not None:
+            self._keep_audio_recorder.close()  # finalise WAV headers; no more frames
+            self._keep_audio_recorder = None
         await mark_meeting_ended(self._connection, meeting_id, utc_now_iso())
         await self._connection.close()
         if self._emitter is not None:
@@ -260,6 +275,9 @@ class LiveCaptureService:
         """
         while True:
             for frame in ring_buffer.drain():
+                # keep-audio opt-in: persist BEFORE the pipeline consumes it.
+                if self._keep_audio_recorder is not None:
+                    self._keep_audio_recorder.write_frame(frame)
                 pipeline = self._pipelines.get(frame.stream)
                 if pipeline is not None:
                     await pipeline.feed(frame)

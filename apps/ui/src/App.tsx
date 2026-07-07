@@ -14,6 +14,7 @@ import { StatusFooter } from "./components/status-footer";
 import { tokenDurationSeconds } from "./lib/design-token-motion";
 import { startLiveEngineConnection } from "./lib/live-engine-socket";
 import { getSetupStatus } from "./lib/setup-settings-repository";
+import { syncConfiguredDictationHotkey } from "./lib/sync-dictation-hotkey";
 import type { SetupStatus } from "./lib/setup-settings-payloads";
 import { NaomiView } from "./naomi/NaomiView";
 import { OnboardingWizard } from "./screens/onboarding/onboarding-wizard";
@@ -45,6 +46,10 @@ export default function App({
 
   useEffect(() => {
     startLiveEngineConnection(); // idempotent; safe under StrictMode double-mount
+    // Apply the user's configured push-to-talk key to the shell's global hold
+    // binding (the shell boots on the default F9 until this lands). No-op
+    // outside the Tauri shell; non-fatal if the engine is not up yet.
+    void syncConfiguredDictationHotkey();
     let cancelled = false;
     // The engine WebSocket takes a beat to open on a cold boot, so the very
     // first setup.status can fail simply because the socket is not open yet.

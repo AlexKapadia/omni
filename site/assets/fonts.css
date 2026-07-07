@@ -1,0 +1,61 @@
+/*
+ * Self-hosted webfonts for the Omni landing site.
+ * Local-only invariant mirrors the app: NO external font CDN — every face is
+ * bundled as a latin-subset woff2 under assets/fonts/ and served from the same
+ * origin, so the page renders identically offline and leaks nothing.
+ *
+ * Families + weights match apps/ui/src/styles/tokens.css exactly:
+ *   Space Grotesk 600  — display / brand (the only weight the app uses)
+ *   Inter 400/500/600  — body / UI
+ *   JetBrains Mono 400/500 — data, meta, paths, ledgers ("machine evidence")
+ *
+ * Fonts are all SIL Open Font License 1.1 (Space Grotesk © Florian Karsten;
+ * Inter © Rasmus Andersson; JetBrains Mono © JetBrains) — redistribution
+ * bundled with the app is permitted. font-display: swap keeps text visible
+ * during load (falls back to the same system stacks the app declares).
+ */
+
+@font-face {
+  font-family: 'Space Grotesk';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('fonts/space-grotesk-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/inter-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('fonts/inter-500.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'Inter';
+  font-style: normal;
+  font-weight: 600;
+  font-display: swap;
+  src: url('fonts/inter-600.woff2') format('woff2');
+}
+
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 400;
+  font-display: swap;
+  src: url('fonts/jetbrains-mono-400.woff2') format('woff2');
+}
+@font-face {
+  font-family: 'JetBrains Mono';
+  font-style: normal;
+  font-weight: 500;
+  font-display: swap;
+  src: url('fonts/jetbrains-mono-500.woff2') format('woff2');
+}

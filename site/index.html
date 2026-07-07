@@ -1,0 +1,331 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Omni — local-first, bot-free meeting intelligence for Windows</title>
+  <meta name="description" content="Omni captures your meetings without a bot, transcribes on-device, enhances your notes, and answers from your own vault with exact citations. Local-first, zero telemetry, Windows." />
+  <meta name="theme-color" content="#ffffff" />
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'%3E%3Ccircle cx='50' cy='50' r='38' fill='none' stroke='%230A0A0A' stroke-width='11' stroke-dasharray='29.8 9.99' transform='rotate(-8 50 50)'/%3E%3C/svg%3E" />
+  <meta property="og:title" content="Omni — local-first, bot-free meeting intelligence" />
+  <meta property="og:description" content="Captures without a bot, transcribes on-device, answers from your own vault with exact citations. Nothing leaves your machine unless you send it." />
+  <meta property="og:type" content="website" />
+  <meta property="og:image" content="assets/shots/03-ask-answer.png" />
+  <meta name="twitter:card" content="summary_large_image" />
+  <link rel="preload" href="assets/fonts/space-grotesk-600.woff2" as="font" type="font/woff2" crossorigin />
+  <link rel="stylesheet" href="assets/fonts.css" />
+  <link rel="stylesheet" href="assets/tokens.css" />
+  <link rel="stylesheet" href="assets/base.css" />
+  <link rel="stylesheet" href="assets/sections.css" />
+</head>
+<body>
+  <a href="#capture" class="btn btn-ghost" style="position:absolute;left:-9999px;top:8px;z-index:100" onfocus="this.style.left='8px'" onblur="this.style.left='-9999px'">Skip to content</a>
+
+  <!-- ============ HEADER ============ -->
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="#top" aria-label="Omni — home">
+        <span class="mark" aria-hidden="true"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" stroke-width="11" stroke-dasharray="29.8 9.99" transform="rotate(-8 50 50)"/></svg></span>
+        <span class="brand-name">Omni</span>
+      </a>
+      <nav class="header-actions" aria-label="Primary">
+        <a class="header-link is-desktop" href="#privacy">Privacy</a>
+        <a class="header-link is-desktop" href="https://github.com/AlexKapadia/omni">GitHub</a>
+        <a class="btn btn-primary" href="https://github.com/AlexKapadia/omni/releases/latest">Download</a>
+      </nav>
+    </div>
+  </header>
+
+  <main id="top">
+    <!-- ============ HERO ============ -->
+    <section class="hero">
+      <div class="wrap">
+        <span class="mark hero-mark animate" aria-hidden="true"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" stroke-width="11" stroke-dasharray="29.8 9.99" transform="rotate(-8 50 50)"/></svg></span>
+        <h1>The meeting companion that never joins the call.</h1>
+        <p class="lead">Omni runs entirely on your Windows machine. It captures meetings without a bot, transcribes on-device, turns your rough notes into clean ones, and answers from your own vault. Nothing leaves your machine unless you send it.</p>
+        <div class="hero-cta">
+          <a class="btn btn-primary btn-lg" href="https://github.com/AlexKapadia/omni/releases/latest">Download for Windows</a>
+          <a class="btn btn-ghost btn-lg" href="https://github.com/AlexKapadia/omni">View on GitHub</a>
+        </div>
+        <p class="hero-privacy">
+          <span class="dot" aria-hidden="true"></span>
+          No bot joins your calls
+          <span class="sep">·</span> Audio discarded after transcription
+          <span class="sep">·</span> Zero telemetry
+        </p>
+      </div>
+      <div class="wrap">
+        <figure class="device hero-stage" data-reveal="media">
+          <video autoplay muted loop playsinline width="1440" height="900" poster="assets/shots/hero-poster.webp" aria-label="A short screen recording of Omni in use: the meeting library, a meeting note, an Ask answer with citations, the AI router, and Naomi.">
+            <source src="assets/omni-demo.mp4" type="video/mp4" />
+            <img src="assets/shots/03-ask-answer.png" alt="Omni answering a question from the user's vault with inline citations." />
+          </video>
+        </figure>
+      </div>
+    </section>
+
+    <div class="section-mark" aria-hidden="true"><i></i><i></i><i></i></div>
+
+    <!-- ============ CAPTURE ============ -->
+    <section class="feature" id="capture">
+      <div class="wrap">
+        <div class="feature-copy" data-reveal="copy">
+          <span class="label">Capture</span>
+          <h2>Every meeting, quietly captured.</h2>
+          <p>No bot in the call, no invite, no upload. Omni records two clean, labelled streams — the room over WASAPI loopback and your microphone — so it hears everyone, and keeps working through headphones where single-stream capture hears nothing.</p>
+          <ul class="notes">
+            <li>Them and Me stay separate, so notes and transcripts always know who said what.</li>
+            <li>Starts on your command — it never auto-joins and never dials in.</li>
+          </ul>
+        </div>
+        <figure class="figure feature-media" data-reveal="media">
+          <picture>
+            <source type="image/webp" srcset="assets/shots/01-library.webp" />
+            <img src="assets/shots/01-library.png" width="1600" height="1000" loading="lazy" decoding="async" alt="Omni's Library screen: meetings grouped by day — Quarterly Planning, Atlas Onboarding Sync, Northwind Renewal — with a live engine heartbeat in the footer." />
+          </picture>
+          <figcaption>Library · every meeting on this device</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ ENHANCED NOTES ============ -->
+    <section class="feature reverse">
+      <div class="wrap">
+        <div class="feature-copy" data-reveal="copy">
+          <span class="label">Enhanced notes</span>
+          <h2>Your rough notes, made clean — and still yours.</h2>
+          <p>Omni fuses your in-meeting scribbles with the transcript into structured notes: decisions, commitments, risks. Your own words stay primary and untouched; the AI settles its lines around yours, inside clearly-marked managed regions it can rewrite and you can trust.</p>
+          <ul class="notes">
+            <li>Decision, commitments, risk and suggested actions, drawn straight from what was said.</li>
+            <li>When there's nothing to do, it says so — no invented follow-ups.</li>
+          </ul>
+        </div>
+        <figure class="figure feature-media" data-reveal="media">
+          <picture>
+            <source type="image/webp" srcset="assets/shots/02-meeting-detail.webp" />
+            <img src="assets/shots/02-meeting-detail.png" width="1600" height="1000" loading="lazy" decoding="async" alt="A meeting detail for Northwind Renewal: enhanced notes with Decision, Commitments and Risk, the verbatim user notes below, an honest 'Nothing to approve', and the real transcript segments labelled Them and Me." />
+          </picture>
+          <figcaption>Meeting note · your words stay yours</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ ASK (flagship) ============ -->
+    <section class="feature" id="ask">
+      <div class="wrap">
+        <div class="feature-copy" data-reveal="copy">
+          <span class="label">Ask</span>
+          <h2>Ask anything. Every answer cites the exact line.</h2>
+          <p>A local index over your Obsidian vault and every past transcript answers questions during and after a call. Each claim carries an inline citation that resolves to a real note and line range — never a hand-wave, never a hallucinated source.</p>
+          <ul class="notes">
+            <li>Retrieval runs in single-digit milliseconds, on-device.</li>
+            <li>Answers come from your vault only — nothing else is consulted.</li>
+          </ul>
+        </div>
+        <figure class="figure feature-media" data-reveal="media">
+          <picture>
+            <source type="image/webp" srcset="assets/shots/03-ask-answer.webp" />
+            <img src="assets/shots/03-ask-answer.png" width="1600" height="1000" loading="lazy" decoding="async" alt="Ask Omni answering a question about the Northwind renewal, with superscript citations in the prose and a source list resolving each to a note path and line range such as Meetings/Northwind Renewal.md · L11–13." />
+          </picture>
+          <figcaption>Ask Omni · answers with exact citations</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ AI ROUTER ============ -->
+    <section class="feature reverse">
+      <div class="wrap">
+        <div class="feature-copy" data-reveal="copy">
+          <span class="label">AI router</span>
+          <h2>One router, the right model, every call on the ledger.</h2>
+          <p>Transcription and embeddings run on-device. Everything else is routed to the provider that fits the task — fast work, long-context bulk, or agentic tool use — each with a budget and a fallback. A running cost-and-latency ledger shows exactly what every call spent.</p>
+          <ul class="notes">
+            <li>Groq for instant work, Gemini for long context, Claude for agentic synthesis.</li>
+            <li>Tokens, latency and cost, tallied per task — no surprise bills.</li>
+          </ul>
+        </div>
+        <figure class="figure feature-media" data-reveal="media">
+          <picture>
+            <source type="image/webp" srcset="assets/shots/04-settings-router.webp" />
+            <img src="assets/shots/04-settings-router.png" width="1600" height="1000" loading="lazy" decoding="async" alt="Omni's Settings: device selection, the F9 push-to-talk hotkey, and the AI router matrix mapping each task to a route and budget, with a live cost-and-latency ledger below." />
+          </picture>
+          <figcaption>Settings · router matrix + cost ledger</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ ACTIONS + KEYS ============ -->
+    <section class="feature">
+      <div class="wrap">
+        <div class="feature-copy" data-reveal="copy">
+          <span class="label">Actions</span>
+          <h2>Nothing runs without your say-so.</h2>
+          <p>Omni proposes calendar events, contact saves and email drafts — and waits. Each action arrives as a card you approve, edit or dismiss, and email is draft-only: it never sends. Every approved action lands in an append-only audit log.</p>
+          <ul class="notes">
+            <li>Bring your own keys — sealed with Windows DPAPI, never written in plaintext, never logged.</li>
+            <li>A kill switch halts every external call while capture and notes keep working offline.</li>
+          </ul>
+        </div>
+        <figure class="figure feature-media" data-reveal="media">
+          <picture>
+            <source type="image/webp" srcset="assets/shots/05-settings-ledger-keys.webp" />
+            <img src="assets/shots/05-settings-ledger-keys.png" width="1600" height="1000" loading="lazy" decoding="async" alt="Omni's privacy and execution settings: keep-audio off, a disclosure reminder, a kill switch, per-action instant-execute toggles that each default to needing an approval card, and API-key fields noting keys are encrypted with Windows DPAPI and never leave the device." />
+          </picture>
+          <figcaption>Approvals · keys sealed on-device</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ DICTATION ============ -->
+    <section class="feature" style="text-align:center">
+      <div class="wrap" style="grid-template-columns:1fr">
+        <div class="feature-copy" data-reveal="copy" style="max-width:44rem;margin-inline:auto">
+          <span class="label" style="display:block">Dictation</span>
+          <h2 style="max-width:16ch;margin-inline:auto">Push to talk, into any app.</h2>
+          <p style="margin-inline:auto">Hold a global hotkey and speak; Omni cleans the transcript and injects it wherever your cursor is. It keeps the raw text too, so a bad cleanup can never quietly rewrite what you actually said.</p>
+        </div>
+        <div class="pill-demo" data-reveal="media">
+          <div class="dictation-pill" role="img" aria-label="Omni's dictation pill, listening.">
+            <span class="dot" aria-hidden="true"></span>
+            <span class="bars" aria-hidden="true">
+              <span style="animation-delay:0ms"></span><span style="animation-delay:90ms"></span><span style="animation-delay:180ms"></span><span style="animation-delay:120ms"></span><span style="animation-delay:60ms"></span><span style="animation-delay:200ms"></span><span style="animation-delay:150ms"></span>
+            </span>
+            <span class="txt">listening · F9</span>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ NAOMI ============ -->
+    <section class="feature reverse">
+      <div class="wrap">
+        <div class="feature-copy" data-reveal="copy">
+          <span class="label">Naomi</span>
+          <h2>A voice you can talk to, hands-free.</h2>
+          <p>Naomi is a voice mode with a reactive black-water visual that answers from your vault and dispatches the same approval-carded actions — spoken, not typed. Ask a question mid-task and keep your hands on the work.</p>
+          <ul class="notes">
+            <li>Same retrieval, same citations, same approvals — just by voice.</li>
+            <li>Renders at 60fps on-device; her latency is measured, not guessed.</li>
+          </ul>
+        </div>
+        <figure class="figure feature-media" data-reveal="media">
+          <picture>
+            <source type="image/webp" srcset="assets/shots/06-naomi-pool.webp" />
+            <img src="assets/shots/06-naomi-pool.png" width="1600" height="1000" loading="lazy" decoding="async" alt="The Naomi screen: a large reactive black sphere on white, with hold-to-talk controls, emotion tuning, valence and arousal sliders, and a live latency readout." />
+          </picture>
+          <figcaption>Naomi · your vault, by voice</figcaption>
+        </figure>
+      </div>
+    </section>
+
+    <!-- ============ PRIVACY BAND ============ -->
+    <section class="band-dark" id="privacy">
+      <div class="wrap">
+        <span class="label">Privacy by default</span>
+        <h2>Private by construction, not by policy.</h2>
+        <p class="lead">Local-first isn't a setting you switch on — it's how Omni is built. The defaults protect you; there's nothing to opt out of.</p>
+        <div class="privacy-grid">
+          <div class="privacy-item">
+            <h3>On-device transcription</h3>
+            <p>Silero VAD gates a streaming Parakeet-TDT model on your GPU. Speech never leaves the machine to be turned into text.</p>
+          </div>
+          <div class="privacy-item">
+            <h3>Audio discarded</h3>
+            <p>Recordings are deleted the moment transcription completes. Keeping them is an explicit opt-in, off by default.</p>
+          </div>
+          <div class="privacy-item">
+            <h3>Keys sealed with DPAPI</h3>
+            <p>Your API keys are encrypted per-user with Windows DPAPI, never stored in plaintext, and never written to a log.</p>
+          </div>
+          <div class="privacy-item">
+            <h3>Email is draft-only</h3>
+            <p>Omni drafts follow-ups for you to review. It never sends on your behalf — and every executed action is logged.</p>
+          </div>
+          <div class="privacy-item">
+            <h3>Zero telemetry</h3>
+            <p>No analytics, no phone-home, no usage pings. There is no server to talk to.</p>
+          </div>
+          <div class="privacy-item">
+            <h3>Kill switch</h3>
+            <p>One flag halts every external model call. Capture, transcription and your notes keep working, fully offline.</p>
+          </div>
+        </div>
+        <div class="band-cta">
+          <a class="btn btn-primary btn-lg" href="https://github.com/AlexKapadia/omni/releases/latest">Download for Windows</a>
+          <a class="btn btn-ghost btn-lg" href="https://github.com/AlexKapadia/omni#privacy--security">How it works</a>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ ONBOARDING STRIP ============ -->
+    <section class="strip">
+      <div class="wrap">
+        <div class="strip-head">
+          <span class="label">Setup</span>
+          <h2>Ready in about two minutes.</h2>
+          <p class="lead">Point Omni at your vault, paste your keys, pick your models. Everything from there runs on your machine.</p>
+        </div>
+        <div class="strip-grid">
+          <figure class="step" data-reveal="media">
+            <div class="figure"><picture><source type="image/webp" srcset="assets/shots/07-onboarding-welcome.webp" /><img src="assets/shots/07-onboarding-welcome.png" width="1600" height="1000" loading="lazy" decoding="async" alt="Onboarding welcome step introducing Omni as local-first meeting intelligence." /></picture></div>
+            <div class="step-label"><span class="step-num">01</span><span class="step-name">Welcome</span></div>
+            <p class="step-desc">No bot, on-device, drafts only with your approval.</p>
+          </figure>
+          <figure class="step" data-reveal="media">
+            <div class="figure"><picture><source type="image/webp" srcset="assets/shots/08-onboarding-vault.webp" /><img src="assets/shots/08-onboarding-vault.png" width="1600" height="1000" loading="lazy" decoding="async" alt="Onboarding step to choose your Obsidian vault folder." /></picture></div>
+            <div class="step-label"><span class="step-num">02</span><span class="step-name">Vault</span></div>
+            <p class="step-desc">Choose the Obsidian vault Omni reads and writes.</p>
+          </figure>
+          <figure class="step" data-reveal="media">
+            <div class="figure"><picture><source type="image/webp" srcset="assets/shots/09-onboarding-keys.webp" /><img src="assets/shots/09-onboarding-keys.png" width="1600" height="1000" loading="lazy" decoding="async" alt="Onboarding step to paste your provider API keys, sealed with DPAPI." /></picture></div>
+            <div class="step-label"><span class="step-num">03</span><span class="step-name">Keys</span></div>
+            <p class="step-desc">Paste your keys — sealed on-device with DPAPI.</p>
+          </figure>
+          <figure class="step" data-reveal="media">
+            <div class="figure"><picture><source type="image/webp" srcset="assets/shots/10-onboarding-models.webp" /><img src="assets/shots/10-onboarding-models.png" width="1600" height="1000" loading="lazy" decoding="async" alt="Onboarding step to confirm the on-device models." /></picture></div>
+            <div class="step-label"><span class="step-num">04</span><span class="step-name">Models</span></div>
+            <p class="step-desc">Confirm the on-device transcription and index models.</p>
+          </figure>
+        </div>
+      </div>
+    </section>
+
+    <!-- ============ CLOSING CTA ============ -->
+    <section class="closing">
+      <div class="wrap">
+        <span class="mark" aria-hidden="true"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" stroke-width="11" stroke-dasharray="29.8 9.99" transform="rotate(-8 50 50)"/></svg></span>
+        <h2>Your meetings, understood — and kept to yourself.</h2>
+        <p class="lead">Free and open source. Runs on your Windows machine, answers from your own notes, and sends nothing you didn't approve.</p>
+        <div class="closing-cta">
+          <a class="btn btn-primary btn-lg" href="https://github.com/AlexKapadia/omni/releases/latest">Download for Windows</a>
+          <a class="btn btn-ghost btn-lg" href="https://github.com/AlexKapadia/omni">View on GitHub</a>
+        </div>
+        <p class="req">Windows 10 / 11 · MIT licensed</p>
+      </div>
+    </section>
+  </main>
+
+  <!-- ============ FOOTER ============ -->
+  <footer class="site-footer">
+    <div class="wrap">
+      <div class="footer-grid">
+        <a class="footer-brand" href="#top" aria-label="Omni — home">
+          <span class="mark" aria-hidden="true"><svg viewBox="0 0 100 100"><circle cx="50" cy="50" r="38" stroke-width="11" stroke-dasharray="29.8 9.99" transform="rotate(-8 50 50)"/></svg></span>
+          <span class="brand-name">Omni</span>
+        </a>
+        <nav class="footer-links" aria-label="Footer">
+          <a href="https://github.com/AlexKapadia/omni">GitHub</a>
+          <a href="https://github.com/AlexKapadia/omni/releases/latest">Download</a>
+          <a href="https://github.com/AlexKapadia/omni#privacy--security">Privacy &amp; security</a>
+          <a href="https://github.com/AlexKapadia/omni/blob/main/LICENSE">MIT License</a>
+        </nav>
+      </div>
+      <p class="footer-note">
+        Screenshots and the demo video are the real app running end-to-end against the real engine — real retrieval, real synthesis, real ledger — captured from the production build, not mock-ups. Omni is open source under the MIT License and was built with Claude.
+      </p>
+    </div>
+  </footer>
+
+  <script src="assets/scroll.js" defer></script>
+</body>
+</html>

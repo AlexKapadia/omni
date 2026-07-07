@@ -1,0 +1,77 @@
+/*
+ * Omni landing-site design tokens.
+ * Values copied VERBATIM from apps/ui/src/styles/tokens.css (the app's single
+ * source of truth) so the marketing page speaks the exact same design language:
+ * strictly monochrome — state is weight, scale, motion and depth, never hue.
+ * The one landing-only extension is the fluid, scaled-up display type below
+ * (a marketing hero runs larger than the in-app 56px), reinterpreted in the
+ * same Space Grotesk 600 / tight-tracking character.
+ */
+
+:root {
+  /* Palette — "total chromatic silence" (exact) */
+  --canvas: #ffffff;
+  --ink: #0a0a0a;
+  --grey-50: #f7f7f7;
+  --grey-200: #ededed;
+  --grey-300: #d4d4d4;
+  --grey-400: #a3a3a3;      /* decoration only — dividers, dots, glyphs */
+  --grey-600: #525252;
+  --ink-secondary: #6e6e6e; /* AA-compliant secondary/meta TEXT (>=4.5:1 on white) */
+
+  /* Washes & shadows (the only ones permitted) */
+  --wash-surface: linear-gradient(#ffffff, #f7f7f7);
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.08);   /* "the only shadow" */
+  --shadow-lift: 0 24px 64px rgba(0, 0, 0, 0.10);   /* marketing figure lift — same family, larger blur */
+
+  /* Typography */
+  --font-display: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif; /* weight 600 only */
+  --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;            /* 400 / 500 / 600 */
+  --font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace; /* 400 / 500 */
+
+  /* Fluid marketing type scale — Space Grotesk 600 character preserved */
+  --type-hero: clamp(2.75rem, 1.6rem + 5.6vw, 5.5rem);   /* 44 -> 88px */
+  --type-display: clamp(2rem, 1.3rem + 3.2vw, 3.25rem);  /* 32 -> 52px */
+  --type-section: clamp(1.5rem, 1.15rem + 1.6vw, 2.25rem);/* 24 -> 36px */
+  --type-lead: clamp(1.0625rem, 1rem + 0.5vw, 1.375rem); /* 17 -> 22px */
+  --type-body: 1rem;      /* 16px Inter */
+  --type-meta: 0.75rem;   /* 12px mono meta */
+  --label-ls: 0.08em;     /* mono uppercase section labels */
+
+  /* Spacing — --space-N = N x 4px (doc scale) */
+  --space-1: 4px;  --space-2: 8px;  --space-3: 12px; --space-4: 16px;
+  --space-6: 24px; --space-8: 32px; --space-12: 48px; --space-16: 64px;
+  --space-24: 96px; --space-32: 128px; /* section rhythm on large canvases */
+
+  /* Radii — "4 chips · 8 controls · 12 cards · 999 pills" */
+  --radius-control: 8px;
+  --radius-card: 12px;
+  --radius-figure: 16px; /* marketing screenshot frame */
+  --radius-pill: 999px;
+
+  /* Borders */
+  --hairline: 1px solid var(--grey-200);
+  --control-border: 1px solid var(--grey-300);
+  --ink-border: 1px solid var(--ink);
+
+  /* Motion (exact) */
+  --dur-micro: 180ms;   /* hover, press */
+  --dur-page: 300ms;    /* view transition */
+  --dur-reveal: 640ms;  /* marketing scroll reveal — view-transition family, longer travel */
+  --dur-breathe: 2400ms;/* the only permanent animation, only where capture is implied live */
+  --dur-aperture: 900ms;/* logo aperture — launch only */
+  --ease-out: cubic-bezier(0, 0, 0.2, 1);
+  --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1);
+
+  /* Layout */
+  --max-page: 1200px;
+  --max-prose: 34rem;
+}
+
+/* Keyframes (exact, from the reference) */
+@keyframes omniBreathe { 0%, 100% { opacity: 1; } 50% { opacity: 0.55; } }
+@keyframes omniAperture {
+  0%, 74%, 100% { transform: rotate(-8deg) scale(1); }
+  82% { transform: rotate(22deg) scale(0.55); }
+  90% { transform: rotate(-8deg) scale(1); }
+}

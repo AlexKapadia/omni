@@ -27,13 +27,16 @@ from engine.security.secret_redaction import SecretApiKey
 # Canonical provider names, shared with engine.router's Provider enum values.
 # WHY strings here: security must not import router (dependency direction —
 # router depends on security, never the reverse).
-KNOWN_PROVIDERS = ("groq", "gemini", "anthropic")
+# "cartesia" (M7): the optional voice-provider key rides the same DPAPI
+# custody; the router never builds a client for it (voice resolves it).
+KNOWN_PROVIDERS = ("groq", "gemini", "anthropic", "cartesia")
 
 # Dev-mode fallback env vars, per provider (populated by the dev runner).
 _ENV_VAR_BY_PROVIDER = {
     "groq": "GROQ_API_KEY",
     "gemini": "GEMINI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
+    "cartesia": "CARTESIA_API_KEY",
 }
 
 

@@ -1,10 +1,10 @@
-"""Cartesia credential resolution: env vars → SecretApiKey + voice id.
+"""Cartesia credential resolution: DPAPI key store → env → SecretApiKey.
 
-Purpose: the ONLY place Cartesia credentials are read. CARTESIA_API_KEY and
-CARTESIA_VOICE_ID come from the process environment (populated by the DEV
-RUNNER from .env, or by the packaged app's DPAPI store once Cartesia joins
-the onboarding key flow — engine code NEVER reads .env directly, matching
-``engine.security.provider_key_store``).
+Purpose: the ONLY place Cartesia credentials are read. The API key resolves
+through ``engine.security.provider_key_store`` (M7: onboarding-entered keys
+are DPAPI-encrypted; the well-known env vars remain the dev fallback —
+engine code NEVER reads .env directly). CARTESIA_VOICE_ID stays env-only
+(an identifier, not a secret).
 Pipeline position: consumed by ``tts_playback_streamer`` when it builds the
 default Cartesia client.
 
@@ -18,6 +18,7 @@ import os
 from dataclasses import dataclass
 
 from engine.security import SecretApiKey
+from engine.security.provider_key_store import ProviderKeyStore
 from engine.voice.voice_errors import VoiceNotConfiguredError
 
 CARTESIA_API_KEY_ENV_VAR = "CARTESIA_API_KEY"
@@ -34,13 +35,15 @@ class CartesiaCredentials:
 
 
 def load_cartesia_credentials() -> CartesiaCredentials:
-    """Resolve credentials from the process environment, fail closed.
+    """Resolve credentials (DPAPI store first, env fallback), fail closed.
 
     Raises :class:`VoiceNotConfiguredError` naming the missing variable —
     never a default, never a guess, never an echo of any present value.
     """
-    raw_key = os.environ.get(CARTESIA_API_KEY_ENV_VAR, "").strip()
-    if not raw_key:
+    # DPAPI-store-first, env fallback — the exact precedence every other
+    # provider key follows (a key the user saved in-app beats a stale env).
+    stored_key = ProviderKeyStore().get_key("cartesia")
+    if stored_key is None:
         raise VoiceNotConfiguredError(
             f"{CARTESIA_API_KEY_ENV_VAR} is not set; Naomi's voice needs a Cartesia key."
         )
@@ -49,4 +52,4 @@ def load_cartesia_credentials() -> CartesiaCredentials:
         raise VoiceNotConfiguredError(
             f"{CARTESIA_VOICE_ID_ENV_VAR} is not set; Naomi's voice needs a Cartesia voice."
         )
-    return CartesiaCredentials(api_key=SecretApiKey(raw_key), voice_id=voice_id)
+    return CartesiaCredentials(api_key=stored_key, voice_id=voice_id)

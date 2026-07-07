@@ -1,0 +1,295 @@
+"""Settings gateway: ``settings.get`` / ``settings.update`` / ``setup.status``.
+
+Purpose: the server-layer object behind the M7 settings surface — reads and
+writes the ``app_settings`` table (validated, all-or-nothing), applies the
+runtime side effects (vault env mirror, kill-switch runtime override), and
+reports the honest first-run setup state the onboarding wizard gates on.
+Pipeline position: constructed by ``engine.server``'s app factory (inert —
+no I/O until a command arrives); driven by
+``engine.wiring.app_settings_command_dispatcher``.
+
+Security invariants:
+- Every value passes ``validate_settings_values`` BEFORE any write (deny by
+  default; all-or-nothing so a half-applied batch cannot exist).
+- ``setup.status`` reports key PRESENCE only (booleans) — key material
+  never rides the wire in any direction on this surface.
+- The kill-switch runtime override engages immediately on update (fail
+  closed on egress without a restart).
+"""
+
+import os
+from pathlib import Path
+
+from engine.enhance.note_templates import AUTO_TEMPLATE_ID, BUILTIN_TEMPLATES
+from engine.google.dpapi_google_token_store import GoogleTokenStore
+from engine.router.completion_contract import TaskType
+from engine.router.router_errors import MisconfiguredRouteError
+from engine.router.routing_table import resolve_route
+from engine.security.kill_switch import kill_switch_engaged, set_kill_switch_runtime_override
+from engine.security.provider_key_store import ProviderKeyStore
+from engine.storage.app_settings_repository import (
+    SETTING_ACTIVE_TEMPLATE,
+    SETTING_CUSTOM_TEMPLATES,
+    SETTING_DISCLOSURE_REMINDER,
+    SETTING_INSTANT_EXECUTE_WHITELIST,
+    SETTING_KEEP_AUDIO,
+    SETTING_KILL_SWITCH,
+    SETTING_ONBOARDING_COMPLETE,
+    SETTING_PUSH_TO_TALK_HOTKEY,
+    SETTING_VAULT_DIR,
+    read_all_settings,
+    write_setting,
+)
+from engine.storage.sqlite_connection import open_sqlite_connection
+from engine.storage.sqlite_migrations_runner import apply_migrations
+from engine.stt.model_weights_downloader import MODEL_SPECS, models_directory
+from engine.vault.vault_paths import VAULT_DIR_ENV_VAR
+from engine.wiring.settings_value_validation import (
+    SettingsValueError,
+    validate_settings_values,
+)
+
+# Defaults reported by settings.get for keys never written. keep_audio is
+# FALSE by security default (audio discarded after transcription);
+# the hotkey default mirrors the Rust shell's DICTATION_HOLD_KEY ("F9").
+SETTINGS_DEFAULTS: dict[str, object] = {
+    SETTING_VAULT_DIR: None,
+    SETTING_PUSH_TO_TALK_HOTKEY: "F9",
+    SETTING_KEEP_AUDIO: False,
+    SETTING_DISCLOSURE_REMINDER: True,
+    SETTING_KILL_SWITCH: False,
+    SETTING_INSTANT_EXECUTE_WHITELIST: [],
+    SETTING_ACTIVE_TEMPLATE: AUTO_TEMPLATE_ID,
+    SETTING_CUSTOM_TEMPLATES: [],
+    SETTING_ONBOARDING_COMPLETE: False,
+}
+
+# On-device rows shown alongside the routed tasks: transcription and
+# embeddings NEVER leave the machine (local-only invariant) — the matrix
+# states it as data, not decoration.
+_ON_DEVICE_ROWS: tuple[dict[str, object], ...] = (
+    {
+        "task": "transcription",
+        "on_device": True,
+        "attempts": [{"provider": "local", "model": "parakeet-tdt-0.6b-v2"}],
+        "budget_ms": None,
+    },
+    {
+        "task": "embeddings",
+        "on_device": True,
+        "attempts": [{"provider": "local", "model": "bge-small-en-v1.5"}],
+        "budget_ms": None,
+    },
+)
+
+
+class SettingsCommandRefused(Exception):
+    """Honest refusal (unknown key / malformed value) — the dispatcher
+    turns it into a typed ``settings_error`` reply."""
+
+
+class AppSettingsCommandGateway:
+    """One per engine process; construction is inert (no keys, no I/O).
+
+    Every command opens its own connection (schema ensured first), works,
+    and closes — the same per-request lifecycle as the other gateways.
+    """
+
+    def __init__(
+        self,
+        db_path: Path,
+        migrations_dir: Path,
+        key_store: ProviderKeyStore | None = None,
+        models_dir: Path | None = None,
+        google_token_store: GoogleTokenStore | None = None,
+    ) -> None:
+        self._db_path = db_path
+        self._migrations_dir = migrations_dir
+        self._key_store = key_store if key_store is not None else ProviderKeyStore()
+        self._models_dir = models_dir
+        self._google_token_store = (
+            google_token_store if google_token_store is not None else GoogleTokenStore()
+        )
+
+    # ------------------------------------------------------------- plumbing
+    async def _read_effective_settings(self) -> dict[str, object]:
+        """Stored values over defaults; vault_dir falls back to the env
+        (the honest current truth in dev, where .env supplies it)."""
+        await apply_migrations(self._db_path, self._migrations_dir)
+        connection = await open_sqlite_connection(self._db_path)
+        try:
+            stored = await read_all_settings(connection)
+        finally:
+            await connection.close()
+        effective = dict(SETTINGS_DEFAULTS)
+        effective.update(stored)
+        if effective[SETTING_VAULT_DIR] is None:
+            env_vault = os.environ.get(VAULT_DIR_ENV_VAR, "").strip()
+            if env_vault:
+                effective[SETTING_VAULT_DIR] = env_vault
+        return effective
+
+    def _routing_rows(self) -> list[dict[str, object]]:
+        """The REAL resolved routing policy for the current keyed world."""
+        keyed = self._key_store.keyed_providers()
+        rows: list[dict[str, object]] = list(_ON_DEVICE_ROWS)
+        for task in TaskType:
+            try:
+                route = resolve_route(task.value, keyed)
+                attempts: list[dict[str, object]] = [
+                    {"provider": slot.provider.value, "model": slot.model}
+                    for slot in route.attempts
+                ]
+                budget: int | None = route.latency_budget_p95_ms
+            except MisconfiguredRouteError:
+                attempts = []  # honest: no keyed provider can serve this task
+                budget = None
+            rows.append(
+                {
+                    "task": task.value,
+                    "on_device": False,
+                    "attempts": attempts,
+                    "budget_ms": budget,
+                }
+            )
+        return rows
+
+    def _template_options(self, custom_templates: object) -> list[dict[str, object]]:
+        options: list[dict[str, object]] = [
+            {"template_id": AUTO_TEMPLATE_ID, "display_name": "Auto", "builtin": True}
+        ]
+        options.extend(
+            {"template_id": t.template_id, "display_name": t.display_name, "builtin": True}
+            for t in BUILTIN_TEMPLATES.values()
+        )
+        if isinstance(custom_templates, list):
+            options.extend(
+                {
+                    "template_id": str(entry.get("template_id", "")),
+                    "display_name": str(entry.get("display_name", "")),
+                    "builtin": False,
+                }
+                for entry in custom_templates
+                if isinstance(entry, dict)
+            )
+        return options
+
+    # ------------------------------------------------------------- commands
+    async def get_settings_payload(self) -> dict[str, object]:
+        """settings.get -> {settings, kill_switch_engaged, routing,
+        template_options} — everything real, nothing invented."""
+        effective = await self._read_effective_settings()
+        return {
+            "settings": effective,
+            # The LIVE truth (env + runtime override), not just the stored
+            # preference — the status display must never contradict reality.
+            "kill_switch_engaged": kill_switch_engaged(),
+            "routing": self._routing_rows(),
+            "template_options": self._template_options(
+                effective[SETTING_CUSTOM_TEMPLATES]
+            ),
+        }
+
+    async def update_settings(self, values: dict[str, object]) -> dict[str, object]:
+        """Validate the whole batch, persist it, apply side effects.
+
+        Returns the normalised applied map. Raises
+        :class:`SettingsCommandRefused` with the plain reason on any
+        invalid key/value (nothing persisted in that case).
+        """
+        try:
+            normalized = validate_settings_values(values)
+        except SettingsValueError as exc:
+            raise SettingsCommandRefused(str(exc)) from exc
+        await apply_migrations(self._db_path, self._migrations_dir)
+        connection = await open_sqlite_connection(self._db_path)
+        try:
+            # One transaction: the batch lands whole or not at all.
+            await connection.execute("BEGIN IMMEDIATE")
+            try:
+                for key, value in normalized.items():
+                    await write_setting(connection, key, value)
+                await connection.execute("COMMIT")
+            except Exception:
+                await connection.execute("ROLLBACK")
+                raise
+        finally:
+            await connection.close()
+        self._apply_side_effects(normalized)
+        return normalized
+
+    def _apply_side_effects(self, applied: dict[str, object]) -> None:
+        """Runtime effects after a successful persist (order-independent)."""
+        vault_dir = applied.get(SETTING_VAULT_DIR)
+        if isinstance(vault_dir, str):
+            # Vault resolution reads this env var everywhere; the explicit
+            # user choice takes effect immediately, no restart.
+            os.environ[VAULT_DIR_ENV_VAR] = vault_dir
+        kill = applied.get(SETTING_KILL_SWITCH)
+        if isinstance(kill, bool):
+            # Fail closed on egress instantly — the router consults this
+            # before every external call.
+            set_kill_switch_runtime_override(kill)
+
+    async def apply_persisted_settings_at_boot(self) -> None:
+        """Boot hook (production only): make persisted settings effective.
+
+        - vault_dir: mirrored into OMNI_VAULT_DIR only when the env does not
+          already carry one (an explicit env/dev value wins at boot).
+        - kill_switch: a stored True engages the runtime override (a stored
+          False leaves the env flag in charge — never weakens the control).
+        """
+        effective = await self._read_effective_settings()
+        stored_vault = effective.get(SETTING_VAULT_DIR)
+        if isinstance(stored_vault, str) and not os.environ.get(VAULT_DIR_ENV_VAR, "").strip():
+            os.environ[VAULT_DIR_ENV_VAR] = stored_vault
+        if effective.get(SETTING_KILL_SWITCH) is True:
+            # Fail closed: a user-engaged switch survives restarts.
+            set_kill_switch_runtime_override(True)
+
+    async def setup_status_payload(self) -> dict[str, object]:
+        """setup.status -> the honest first-run state of THIS machine."""
+        effective = await self._read_effective_settings()
+        keys = {
+            provider: self._key_store.get_key(provider) is not None
+            for provider in ("groq", "gemini", "anthropic", "cartesia")
+        }
+        vault_dir = effective.get(SETTING_VAULT_DIR)
+        vault_configured = isinstance(vault_dir, str) and Path(vault_dir).is_dir()
+        models_dir = self._models_dir if self._models_dir is not None else models_directory()
+        models = [
+            {
+                "file": spec.filename,
+                "present": (models_dir / spec.filename).is_file(),
+                "bytes": (
+                    (models_dir / spec.filename).stat().st_size
+                    if (models_dir / spec.filename).is_file()
+                    else 0
+                ),
+            }
+            for spec in MODEL_SPECS
+        ]
+        try:
+            google_connected = self._google_token_store.load_tokens() is not None
+        except Exception:
+            google_connected = False  # a corrupt blob reads as not connected
+        onboarding_complete = effective.get(SETTING_ONBOARDING_COMPLETE) is True
+        # The product's required pair is Groq + Gemini; Anthropic/Cartesia
+        # are optional slots (session decision — never required to ship).
+        setup_complete = (
+            keys["groq"]
+            and keys["gemini"]
+            and vault_configured
+            and all(bool(m["present"]) for m in models)
+        )
+        return {
+            "keys": keys,
+            "vault": {
+                "configured": vault_configured,
+                "path": vault_dir if vault_configured else None,
+            },
+            "models": models,
+            "google_connected": google_connected,
+            "onboarding_complete": onboarding_complete,
+            "setup_complete": setup_complete,
+        }

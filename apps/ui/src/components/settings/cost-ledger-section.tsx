@@ -31,7 +31,7 @@ function LedgerTable({ ledger }: { readonly ledger: LedgerSummary }) {
   const { byTask, totals, recent } = ledger;
   if (byTask.length === 0 && recent.length === 0) {
     return (
-      <p className="m-0 text-[var(--grey-400)]" style={{ fontSize: "var(--text-meta-size)" }}>
+      <p className="m-0 text-[var(--ink-secondary)]" style={{ fontSize: "var(--text-meta-size)" }}>
         No model calls yet. The ledger fills as Omni runs.
       </p>
     );
@@ -39,7 +39,7 @@ function LedgerTable({ ledger }: { readonly ledger: LedgerSummary }) {
   return (
     <>
       <div
-        className="grid border-b border-[var(--ink)] pb-[var(--space-2)] uppercase text-[var(--grey-400)]"
+        className="grid border-b border-[var(--ink)] pb-[var(--space-2)] uppercase text-[var(--ink-secondary)]"
         style={{ ...GRID, fontSize: 11, letterSpacing: "var(--label-ls)" }}
       >
         <span>task</span>

@@ -48,7 +48,7 @@ const labelStyle: React.CSSProperties = {
   fontSize: 11,
   letterSpacing: "var(--label-ls)",
   textTransform: "uppercase",
-  color: "var(--grey-400)",
+  color: "var(--ink-secondary)",
 };
 
 const monoValueStyle: React.CSSProperties = {

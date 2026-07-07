@@ -168,7 +168,7 @@ export function TemplatesSection({
         </select>
       </SettingsRow>
       <div style={{ padding: "14px 0" }} className="flex flex-col">
-        <span className="text-[var(--grey-400)]" style={{ fontSize: "var(--text-meta-size)" }}>
+        <span className="text-[var(--ink-secondary)]" style={{ fontSize: "var(--text-meta-size)" }}>
           {custom.length === 0 ? "no custom templates yet" : "custom templates"}
         </span>
         {custom.map((name) => (

@@ -91,7 +91,7 @@ export function LibraryMeetingDetailPane({
           </h2>
           {detail !== null && (
             <span
-              className="font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+              className="font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
               style={{ fontSize: "var(--text-meta-size)" }}
             >
               {formatDayLabel(detail.startIso)} · {formatClockShort(detail.startIso)}
@@ -205,7 +205,7 @@ export function LibraryMeetingDetailPane({
                 <ul className="m-0 mt-[var(--space-2)] flex list-none flex-col gap-[var(--space-1)] p-0">
                   {detail.transcript.map((line, index) => (
                     <li key={index} style={{ fontSize: 13, lineHeight: "1.5" }}>
-                      <span className="font-[family-name:var(--font-mono)] text-[var(--grey-400)]">
+                      <span className="font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]">
                         {line.stream === "me" ? "Me" : "Them"}:
                       </span>{" "}
                       <span className="text-[var(--ink)]">{line.text}</span>

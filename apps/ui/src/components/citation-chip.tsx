@@ -34,7 +34,7 @@ export function CitationChip({
       </button>
       {open && (
         <div
-          className="border-l-2 border-[var(--grey-200)] font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+          className="border-l-2 border-[var(--grey-200)] font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
           style={{ fontSize: 11, lineHeight: 1.6, paddingLeft: 20 }} // woven-context indent
         >
           <div>{citation.headingPath}</div>

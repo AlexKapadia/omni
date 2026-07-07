@@ -78,7 +78,7 @@ function PreCaptureState({
           {starting ? "Starting capture" : "Start capture"}
         </OmniButton>
         {engineDown && (
-          <p className="m-0 text-[var(--grey-400)]" style={{ fontSize: 13 }}>
+          <p className="m-0 text-[var(--ink-secondary)]" style={{ fontSize: 13 }}>
             The engine is offline — capture needs the engine running on this device.
           </p>
         )}

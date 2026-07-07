@@ -15,7 +15,7 @@ import { requestCaptureStop } from "../../lib/capture-commands";
 function MonoMeta({ children, dim = false }: { readonly children: string; readonly dim?: boolean }) {
   return (
     <span
-      className={`font-[family-name:var(--font-mono)] ${dim ? "text-[var(--grey-400)]" : "text-[var(--grey-600)]"}`}
+      className={`font-[family-name:var(--font-mono)] ${dim ? "text-[var(--ink-secondary)]" : "text-[var(--grey-600)]"}`}
       style={{ fontSize: 11 }} // doc: capture-bar meta is mono 11px
     >
       {children}

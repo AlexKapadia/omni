@@ -74,14 +74,14 @@ export function AnswersPanel() {
           <button
             type="button"
             onClick={() => setCollapsed(true)}
-            className="cursor-pointer border-none bg-transparent text-[var(--grey-400)] hover:text-[var(--ink)]"
+            className="cursor-pointer border-none bg-transparent text-[var(--ink-secondary)] hover:text-[var(--ink)]"
             style={{ fontSize: "var(--text-meta-size)" }}
           >
             Collapse
           </button>
         </div>
         <p
-          className="m-0 italic text-[var(--grey-400)]"
+          className="m-0 italic text-[var(--ink-secondary)]"
           style={{ fontSize: 13, lineHeight: "var(--text-transcript-lh)" }}
         >
           “{hit.question}”
@@ -93,7 +93,7 @@ export function AnswersPanel() {
           {topSource.snippet}
         </p>
         <div
-          className="border-t border-[var(--grey-200)] pt-[var(--space-2)] font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+          className="border-t border-[var(--grey-200)] pt-[var(--space-2)] font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
           style={{ fontSize: 11 }}
         >
           {/* Exact citation target + the measured spotted->hit span (speed showcase). */}

@@ -44,7 +44,7 @@ body,
 }
 
 .pill-timer--idle {
-  color: var(--grey-400); /* idle: 00:00 in #A3A3A3 */
+  color: var(--ink-secondary); /* idle: 00:00 — AA-compliant secondary text */
 }
 
 /* Mode chip: mono 11 caps. Idle NOTE is ghost #D4D4D4; listening is ink. */
@@ -94,7 +94,7 @@ button.pill-mode-chip--insert:hover {
   gap: 8px;
   font-family: var(--font-mono);
   font-size: 12px;
-  color: var(--grey-400);
+  color: var(--ink-secondary);
   white-space: nowrap;
 }
 
@@ -153,13 +153,13 @@ button.pill-mode-chip--insert:hover {
   font-weight: 500;
   letter-spacing: var(--label-ls);
   text-transform: uppercase;
-  color: var(--grey-400);
+  color: var(--ink-secondary);
 }
 
 .pill-popover-quote {
   font-size: 13px;
   font-style: italic;
-  color: var(--grey-400);
+  color: var(--ink-secondary);
 }
 
 .pill-popover-title {
@@ -180,7 +180,7 @@ button.pill-mode-chip--insert:hover {
   font-family: var(--font-mono);
   font-size: 11px;
   letter-spacing: var(--label-ls);
-  color: var(--grey-400);
+  color: var(--ink-secondary);
 }
 
 .pill-popover-buttons {
@@ -209,7 +209,7 @@ button.pill-mode-chip--insert:hover {
 
 .pill-button-ghost {
   font-size: 13px;
-  color: var(--grey-400);
+  color: var(--ink-secondary);
   background: transparent;
   border: none;
   border-radius: var(--radius-control);

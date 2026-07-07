@@ -17,7 +17,7 @@ const MONO = "font-[family-name:var(--font-mono)]";
 
 function AttemptChain({ row }: { readonly row: RoutingRow }) {
   if (row.attempts.length === 0) {
-    return <span className="text-[var(--grey-400)]">—</span>;
+    return <span className="text-[var(--ink-secondary)]">—</span>;
   }
   return (
     <span className="text-[var(--grey-600)]">
@@ -26,7 +26,7 @@ function AttemptChain({ row }: { readonly row: RoutingRow }) {
           {index > 0 && <span className="text-[var(--grey-300)]"> → </span>}
           {attempt.provider}
           {attempt.model.length > 0 && (
-            <span className="text-[var(--grey-400)]"> · {attempt.model}</span>
+            <span className="text-[var(--ink-secondary)]"> · {attempt.model}</span>
           )}
         </span>
       ))}
@@ -63,7 +63,7 @@ export function RouterMatrixSection({ store }: { readonly store: SettingsStore }
         >
           <div
             role="row"
-            className="grid items-center border-b border-[var(--ink)] pb-[var(--space-2)] uppercase text-[var(--grey-400)]"
+            className="grid items-center border-b border-[var(--ink)] pb-[var(--space-2)] uppercase text-[var(--ink-secondary)]"
             style={{ gridTemplateColumns: "1fr 1.6fr 0.6fr", fontSize: 11, letterSpacing: "var(--label-ls)" }}
           >
             <span role="columnheader">task</span>
@@ -85,7 +85,7 @@ export function RouterMatrixSection({ store }: { readonly store: SettingsStore }
               <span className="min-w-0">
                 {row.onDevice ? <span className="text-[var(--ink)]">on-device</span> : <AttemptChain row={row} />}
               </span>
-              <span className="text-right text-[var(--grey-400)]">
+              <span className="text-right text-[var(--ink-secondary)]">
                 {row.budgetMs === null ? "—" : `${row.budgetMs} ms`}
               </span>
             </div>

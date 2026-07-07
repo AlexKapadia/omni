@@ -3,7 +3,8 @@
  * labelled streams as they finalise, plus in-flight partials.
  *
  * Design (components doc §04): mono 12.5px lh 1.6; "Them" = left-aligned
- * grey-400 bubbles (1px grey-400 border, 10px radius); "Me" = right-aligned
+ * ink-secondary text in a bubble (1px grey-400 decorative border, 10px
+ * radius); "Me" = right-aligned
  * ink, no bubble; speaker line "Them · 14:07:12" in 10px. Auto-scroll pins to
  * the newest line; scrolling up unpins; the header toggle re-pins.
  */
@@ -22,7 +23,7 @@ const PIN_THRESHOLD_PX = 40;
 function SpeakerLine({ stream, tStart }: { readonly stream: "me" | "them"; readonly tStart: number }) {
   return (
     <span
-      className="block font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+      className="block font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
       style={{ fontSize: 10 }} // doc: in-bubble timestamps are 10px
     >
       {stream === "me" ? "Me" : "Them"} · {formatMeetingClock(tStart)}
@@ -55,7 +56,7 @@ function TranscriptLine({
           "m-0 mt-[var(--space-1)] font-[family-name:var(--font-mono)] " +
           (isMe
             ? "text-[var(--ink)]"
-            : "rounded-[var(--radius-bubble)] border border-[var(--grey-400)] text-[var(--grey-400)]")
+            : "rounded-[var(--radius-bubble)] border border-[var(--grey-400)] text-[var(--ink-secondary)]")
         }
         style={{
           fontSize: 12.5, // doc-pinned live-transcript size
@@ -117,7 +118,7 @@ export function TranscriptStream() {
             const node = scrollRef.current;
             if (next && node !== null) node.scrollTop = node.scrollHeight;
           }}
-          className="cursor-pointer border-none bg-transparent font-[family-name:var(--font-mono)] text-[var(--grey-400)] hover:text-[var(--ink)]"
+          className="cursor-pointer border-none bg-transparent font-[family-name:var(--font-mono)] text-[var(--ink-secondary)] hover:text-[var(--ink)]"
           style={{ fontSize: 11, letterSpacing: "var(--label-ls)" }}
         >
           {autoScroll ? "auto-scroll on" : "auto-scroll off"}
@@ -131,7 +132,7 @@ export function TranscriptStream() {
       >
         {segments.length === 0 && openPartials.length === 0 && (
           <p
-            className="m-auto max-w-[24ch] text-center font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+            className="m-auto max-w-[24ch] text-center font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
             style={{ fontSize: "var(--text-meta-size)", lineHeight: "var(--text-meta-lh)" }}
           >
             Listening. Words appear here as they are spoken.

@@ -41,7 +41,7 @@ export function OnboardingModelProgressRow({ file }: { readonly file: ModelFileP
           {file.file}
         </span>
         <span
-          className={`shrink-0 font-[family-name:var(--font-mono)] ${failed ? "text-[var(--grey-600)]" : "text-[var(--grey-400)]"}`}
+          className={`shrink-0 font-[family-name:var(--font-mono)] ${failed ? "text-[var(--grey-600)]" : "text-[var(--ink-secondary)]"}`}
           style={{ fontSize: "var(--text-meta-size)" }}
           role={failed ? "alert" : undefined}
         >

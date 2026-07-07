@@ -1,7 +1,7 @@
 /**
  * The canonical button set from the design system (components doc):
  * primary (ink fill), secondary (canvas + grey-300 border, hover ink border),
- * ghost (transparent, grey-600; dismiss variant grey-400). Small = 13px.
+ * ghost (transparent, grey-600; dismiss variant ink-secondary). Small = 13px.
  *
  * Copy contract: button labels say what they do, sentence case, no
  * exclamation marks — enforced by usage, carried by every call site.
@@ -23,7 +23,7 @@ const VARIANT_CLASSES: Readonly<Record<ButtonVariant, string>> = {
     "bg-[var(--canvas)] text-[var(--ink)] border border-[var(--grey-300)] " +
     "hover:border-[var(--ink)] disabled:text-[var(--grey-300)] disabled:hover:border-[var(--grey-300)]",
   ghost: "bg-transparent text-[var(--grey-600)] border-none",
-  "ghost-dismiss": "bg-transparent text-[var(--grey-400)] border-none",
+  "ghost-dismiss": "bg-transparent text-[var(--ink-secondary)] border-none",
 };
 
 export function OmniButton({ variant, small = false, className, style, ...rest }: OmniButtonProps) {

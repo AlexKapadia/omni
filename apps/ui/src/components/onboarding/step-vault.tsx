@@ -78,7 +78,7 @@ export function StepVault({
           <span className="text-[var(--ink)]" style={{ fontSize: "var(--text-body-size)" }}>
             Create a new vault here
           </span>
-          <span className="text-[var(--grey-400)]" style={{ fontSize: "var(--text-meta-size)" }}>
+          <span className="text-[var(--ink-secondary)]" style={{ fontSize: "var(--text-meta-size)" }}>
             makes the folder if it does not exist yet
           </span>
         </div>

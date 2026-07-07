@@ -27,7 +27,7 @@ function ValidationNote({ store, provider }: { readonly store: ApiKeysStore; rea
   if (state.status === "idle") return null;
   if (state.status === "validating") {
     return (
-      <span className="text-[var(--grey-400)]" style={{ fontSize: "var(--text-meta-size)" }}>
+      <span className="text-[var(--ink-secondary)]" style={{ fontSize: "var(--text-meta-size)" }}>
         Validating…
       </span>
     );
@@ -165,7 +165,7 @@ export function ApiKeysSection({
           {errorMessage}
         </p>
       )}
-      <p className="m-0 pb-[var(--space-3)] text-[var(--grey-400)]" style={{ fontSize: 11 }}>
+      <p className="m-0 pb-[var(--space-3)] text-[var(--ink-secondary)]" style={{ fontSize: 11 }}>
         Keys are encrypted with Windows DPAPI and never leave this device.
       </p>
     </SettingsGroupCard>

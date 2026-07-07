@@ -19,7 +19,7 @@ const SELECT_CLASS =
 function DeviceStateNote({ children }: { readonly children: string }) {
   return (
     <span
-      className="font-[family-name:var(--font-mono)] text-[var(--grey-400)]"
+      className="font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
       style={{ fontSize: "var(--text-meta-size)" }}
     >
       {children}

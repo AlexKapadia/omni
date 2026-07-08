@@ -22,6 +22,7 @@ export function DetectionAutomationSection({
 }) {
   const autoStartSources = useStore(store, (s) => s.settings?.detectionAutoStartSources ?? []);
   const autostopSilenceS = useStore(store, (s) => s.settings?.autostopSilenceS ?? 60);
+  const liveCaptionsOverlay = useStore(store, (s) => s.settings?.liveCaptionsOverlay ?? true);
   const [error, setError] = useState<string | null>(null);
   const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
   const [googleBusy, setGoogleBusy] = useState(false);
@@ -101,6 +102,16 @@ export function DetectionAutomationSection({
             </option>
           ))}
         </select>
+      </SettingsRow>
+      <SettingsRow
+        title="Live captions overlay"
+        subCaption="Always-on-top captions bar while capture is running."
+      >
+        <ToggleSwitch
+          checked={liveCaptionsOverlay}
+          onChange={(next) => void apply({ liveCaptionsOverlay: next })}
+          label="Show live captions overlay"
+        />
       </SettingsRow>
       <SettingsRow
         title="Google Calendar"

@@ -35,6 +35,7 @@ SETTING_CUSTOM_TEMPLATES = "custom_templates"
 SETTING_ONBOARDING_COMPLETE = "onboarding_complete"
 SETTING_DETECTION_AUTO_START_SOURCES = "detection_auto_start_sources"
 SETTING_AUTOSTOP_SILENCE_S = "autostop_silence_s"
+SETTING_LIVE_CAPTIONS_OVERLAY = "live_captions_overlay"
 
 KNOWN_SETTINGS_KEYS: frozenset[str] = frozenset(
     {
@@ -49,6 +50,7 @@ KNOWN_SETTINGS_KEYS: frozenset[str] = frozenset(
         SETTING_ONBOARDING_COMPLETE,
         SETTING_DETECTION_AUTO_START_SOURCES,
         SETTING_AUTOSTOP_SILENCE_S,
+        SETTING_LIVE_CAPTIONS_OVERLAY,
     }
 )
 

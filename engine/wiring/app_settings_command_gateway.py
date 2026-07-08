@@ -40,6 +40,7 @@ from engine.storage.app_settings_repository import (
     SETTING_VAULT_DIR,
     SETTING_DETECTION_AUTO_START_SOURCES,
     SETTING_AUTOSTOP_SILENCE_S,
+    SETTING_LIVE_CAPTIONS_OVERLAY,
     read_all_settings,
     write_setting,
 )
@@ -68,6 +69,7 @@ SETTINGS_DEFAULTS: dict[str, object] = {
     SETTING_ONBOARDING_COMPLETE: False,
     SETTING_DETECTION_AUTO_START_SOURCES: [],
     SETTING_AUTOSTOP_SILENCE_S: 60,
+    SETTING_LIVE_CAPTIONS_OVERLAY: True,
 }
 
 # On-device rows shown alongside the routed tasks: transcription and

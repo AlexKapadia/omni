@@ -38,6 +38,7 @@ const READY: SettingsGetResult = {
     onboardingComplete: true,
     detectionAutoStartSources: [],
     autostopSilenceS: 60,
+    liveCaptionsOverlay: true,
   },
   killSwitchEngaged: false,
   routing: [

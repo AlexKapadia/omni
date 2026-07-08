@@ -23,6 +23,7 @@ const GOOD_SETTINGS = {
   onboarding_complete: true,
   detection_auto_start_sources: ["zoom", "teams"],
   autostop_silence_s: 60,
+  live_captions_overlay: true,
 };
 
 const GOOD_GET = {
@@ -44,6 +45,7 @@ describe("parseSettingsGet", () => {
     expect(result!.settings.instantExecuteWhitelist).toEqual(["create_event", "draft_email"]);
     expect(result!.settings.detectionAutoStartSources).toEqual(["zoom", "teams"]);
     expect(result!.settings.autostopSilenceS).toBe(60);
+    expect(result!.settings.liveCaptionsOverlay).toBe(true);
     expect(result!.routing[0]!.attempts[0]).toEqual({ provider: "groq", model: "x" });
   });
 

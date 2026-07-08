@@ -22,6 +22,7 @@ const BASE: SettingsGetResult = {
     onboardingComplete: true,
     detectionAutoStartSources: [],
     autostopSilenceS: 60,
+    liveCaptionsOverlay: true,
   },
   killSwitchEngaged: false,
   routing: [],
@@ -41,6 +42,7 @@ const WIRE_GET = {
     onboarding_complete: true,
     detection_auto_start_sources: [],
     autostop_silence_s: 60,
+    live_captions_overlay: true,
   },
   kill_switch_engaged: true, // the engine reports it engaged now
   routing: [],

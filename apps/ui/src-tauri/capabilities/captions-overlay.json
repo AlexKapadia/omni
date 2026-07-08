@@ -1,0 +1,7 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "captions-overlay",
+  "description": "Least-privilege capability for the live captions overlay window. Core defaults only — visibility is driven from the main window via a shell command.",
+  "windows": ["captions"],
+  "permissions": ["core:default"]
+}

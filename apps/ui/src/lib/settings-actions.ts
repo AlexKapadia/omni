@@ -78,6 +78,9 @@ function toWireValues(partial: Partial<EngineSettings>): Record<string, unknown>
   if (partial.autostopSilenceS !== undefined) {
     values["autostop_silence_s"] = partial.autostopSilenceS;
   }
+  if (partial.liveCaptionsOverlay !== undefined) {
+    values["live_captions_overlay"] = partial.liveCaptionsOverlay;
+  }
   return values;
 }
 

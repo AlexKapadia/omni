@@ -34,3 +34,10 @@ def test_autostop_silence_s_rejects_arbitrary() -> None:
     with pytest.raises(SettingsValueError) as exc:
         validate_settings_values({SETTING_AUTOSTOP_SILENCE_S: 45})
     assert exc.value.key == SETTING_AUTOSTOP_SILENCE_S
+
+
+def test_live_captions_overlay_accepts_bool() -> None:
+    from engine.storage.app_settings_repository import SETTING_LIVE_CAPTIONS_OVERLAY
+
+    applied = validate_settings_values({SETTING_LIVE_CAPTIONS_OVERLAY: False})
+    assert applied[SETTING_LIVE_CAPTIONS_OVERLAY] is False

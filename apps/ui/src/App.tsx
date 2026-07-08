@@ -14,6 +14,9 @@ import { StatusFooter } from "./components/status-footer";
 import { tokenDurationSeconds } from "./lib/design-token-motion";
 import { startLiveEngineConnection } from "./lib/live-engine-socket";
 import { wireTrayStartCapture } from "./lib/wire-tray-capture";
+import { wireCaptionsOverlay } from "./lib/wire-captions-overlay";
+import { loadSettings } from "./lib/settings-actions";
+import { appSettingsStore } from "./screens/settings-screen";
 import { getSetupStatus } from "./lib/setup-settings-repository";
 import { syncConfiguredDictationHotkey } from "./lib/sync-dictation-hotkey";
 import type { SetupStatus } from "./lib/setup-settings-payloads";
@@ -111,6 +114,17 @@ export default function App({
 function MainShell() {
   const [activeSection, setActiveSection] = useState<SectionId>("library");
   const reducedMotion = useReducedMotion();
+
+  useEffect(() => {
+    void loadSettings(appSettingsStore);
+    let unwireCaptions: (() => void) | undefined;
+    try {
+      unwireCaptions = wireCaptionsOverlay(appSettingsStore);
+    } catch {
+      // Web build / tests: no Tauri shell.
+    }
+    return () => unwireCaptions?.();
+  }, []);
 
   return (
     <div className="flex h-full flex-col bg-[var(--canvas)] text-[var(--ink)]">

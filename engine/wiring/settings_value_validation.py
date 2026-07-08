@@ -34,6 +34,7 @@ from engine.storage.app_settings_repository import (
     SETTING_VAULT_DIR,
     SETTING_DETECTION_AUTO_START_SOURCES,
     SETTING_AUTOSTOP_SILENCE_S,
+    SETTING_LIVE_CAPTIONS_OVERLAY,
 )
 from engine.detect.detection_settings_from_app import AUTOSTOP_SILENCE_CHOICES
 from engine.detect.detection_signal_types import KNOWN_DETECTION_SOURCES
@@ -229,6 +230,7 @@ def validate_settings_values(values: dict[str, object]) -> dict[str, object]:
             SETTING_DISCLOSURE_REMINDER,
             SETTING_KILL_SWITCH,
             SETTING_ONBOARDING_COMPLETE,
+            SETTING_LIVE_CAPTIONS_OVERLAY,
         ):
             normalized[key] = _validate_bool(key, value)
         elif key == SETTING_INSTANT_EXECUTE_WHITELIST:

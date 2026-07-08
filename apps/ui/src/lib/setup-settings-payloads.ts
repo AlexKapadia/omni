@@ -37,6 +37,8 @@ export interface EngineSettings {
   readonly detectionAutoStartSources: readonly string[];
   /** Sustained silence before auto-stop (0 disables). */
   readonly autostopSilenceS: number;
+  /** Show the always-on-top live captions overlay during capture. */
+  readonly liveCaptionsOverlay: boolean;
 }
 
 export interface RoutingAttempt {
@@ -117,10 +119,11 @@ function parseEngineSettings(value: unknown): EngineSettings | null {
   const detectionAutoStartSources =
     parseStringArray(value["detection_auto_start_sources"]) ?? [];
   const autostopSilenceS = asFiniteNumber(value["autostop_silence_s"]);
+  const liveCaptionsOverlay = asBoolean(value["live_captions_overlay"]);
   if (hotkey === null || keepAudio === null || disclosureReminder === null) return null;
   if (killSwitch === null || whitelist === null || activeTemplate === null) return null;
   if (customTemplates === null || onboardingComplete === null) return null;
-  if (autostopSilenceS === null) return null;
+  if (autostopSilenceS === null || liveCaptionsOverlay === null) return null;
   return {
     vaultDir,
     pushToTalkHotkey: hotkey,
@@ -133,6 +136,7 @@ function parseEngineSettings(value: unknown): EngineSettings | null {
     onboardingComplete,
     detectionAutoStartSources,
     autostopSilenceS,
+    liveCaptionsOverlay,
   };
 }
 

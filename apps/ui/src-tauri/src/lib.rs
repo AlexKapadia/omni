@@ -24,6 +24,7 @@
 pub mod dictation_clipboard_win32;
 pub mod dictation_hotkey_accelerator;
 pub mod dictation_injection_win32;
+mod captions_overlay_window;
 mod dictation_pill_window;
 pub mod dictation_text_injection;
 mod engine_sidecar;
@@ -69,6 +70,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             dictation_text_injection::inject_dictation_text,
             dictation_pill_window::set_dictation_hotkey,
+            captions_overlay_window::set_captions_overlay_visible,
             updater_launch_check::updater_download_and_install,
             updater_launch_check::updater_restart_app
         ])
@@ -100,6 +102,9 @@ pub fn run() {
             // launching — log and continue on any failure.
             if let Err(e) = dictation_pill_window::setup_dictation_pill(app.handle()) {
                 log::warn!("dictation pill setup skipped: {e}");
+            }
+            if let Err(e) = captions_overlay_window::setup_captions_overlay(app.handle()) {
+                log::warn!("captions overlay setup skipped: {e}");
             }
             // Start supervising the engine sidecar immediately; the supervisor
             // tolerates the engine being absent (retry loop, never a crash)

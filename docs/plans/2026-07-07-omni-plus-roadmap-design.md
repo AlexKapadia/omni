@@ -42,40 +42,40 @@ Skip `tokio::sync::broadcast` in Rust. Python already has `engine/protocol/event
 | Item | Status | Actual location |
 |------|--------|-----------------|
 | Live captions | **Exists** | `transcript.partial/final` → `transcript-stream.tsx` |
-| Live captions overlay (always-on-top) | **Missing** | New Tauri window |
-| Live translation | **Missing** | New engine module |
-| Rolling summaries | **Missing** | New engine module + UI panel |
-| Proactive vault suggestions | **Partial** | `live_answers_spotter.py` — extend to 30s RAG poll |
+| Live captions overlay (always-on-top) | **Done** | `captions_overlay_window.rs`, `captions.html` |
+| Live translation | **Partial** | `live_translation_service.py` (module ready; wire + UI setting optional) |
+| Rolling summaries | **Done** | `live_summary_service.py` + `live-summary-panel.tsx` |
+| Proactive vault suggestions | **Done** | `proactive_vault_poller.py` + `vault-suggestions-panel.tsx` |
 
 ### Phase 3 — Cross-Platform
 
 | Item | Status | Notes |
 |------|--------|-------|
-| macOS CoreAudio loopback | **Missing** | Abstract `engine/audio/` behind `sys_platform` |
-| Linux PipeWire/Pulse | **Missing** | Same abstraction |
+| macOS CoreAudio loopback | **Deferred** | Blocker without macOS CI/hardware |
+| Linux PipeWire/Pulse | **Deferred** | Blocker without Linux CI/hardware |
 | CI multi-target builds | **Partial** | Extend `.github/workflows/` |
 
 ### Phase 4 — Advanced Outputs
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Structured meeting board | **Partial** | `engine/enhance/meeting_extraction_pipeline.py` |
-| PDF/DOCX export | **Missing** | Python-side export preferred |
-| File import (MP3/MP4) | **Missing** | ffmpeg + existing STT pipeline |
-| SRT/VTT export | **Missing** | From transcript store |
+| Structured meeting board | **Done** | `meeting-board-panel.tsx` + extraction in `meeting.get` |
+| PDF/DOCX export | **Deferred** | SRT/VTT/TXT done; PDF/DOCX need extra deps |
+| File import (MP3/MP4) | **Partial** | `import.media` command + CLI; needs ffmpeg + full STT pipeline |
+| SRT/VTT export | **Done** | `meeting.export` + library download buttons |
 
 ### Phase 5 — UI/UX
 
 | Item | Status | Notes |
 |------|--------|-------|
-| In-app rough notes | **Partial** | `notepad-store.ts` exists |
-| Edit transcript segments | **Missing** | UI + engine command |
+| In-app rough notes | **Exists** | `notepad-store.ts` |
+| Edit transcript segments | **Done** | `transcript.segment.update` + library detail edit |
 
 ### Phase 6 — Advanced AI
 
 | Item | Status | Notes |
 |------|--------|-------|
-| Echo cancellation | **Missing** | `engine/audio/` processor |
+| Echo cancellation | **Partial** | `echo_cancellation_processor.py` (simple AEC; wire into capture optional) |
 | Multi-language summaries | **Partial** | Router prompt extension |
 | Custom summary templates | **Exists** | `engine/enhance/note_templates.py` |
 | Background retranscription | **Partial** | `keep_audio` + re-run STT |
@@ -84,7 +84,7 @@ Skip `tokio::sync::broadcast` in Rust. Python already has `engine/protocol/event
 
 | Item | Status | Notes |
 |------|--------|-------|
-| CLI headless mode | **Missing** | `python -m engine.server` exists; add `omni-cli` |
+| CLI headless mode | **Done** | `uv run omni-cli list|get|export|import` |
 | BYO-LLM providers | **Partial** | Groq/Gemini/Anthropic in `engine/router/` |
 
 ---

@@ -99,8 +99,17 @@ function mapSummaryRow(value: unknown): MeetingSummaryRow | null {
 }
 
 export interface MeetingTranscriptLine {
+  readonly segmentId: string;
   readonly stream: "me" | "them";
   readonly text: string;
+  readonly tStart: number;
+  readonly tEnd: number;
+}
+
+export interface MeetingExtractionData {
+  readonly actions: readonly { readonly title: string; readonly owner?: string }[];
+  readonly commitments: readonly { readonly who: string; readonly what: string }[];
+  readonly openQuestions: readonly string[];
 }
 
 export interface MeetingDetail {
@@ -111,20 +120,60 @@ export interface MeetingDetail {
   readonly durationMin: number;
   readonly finalized: boolean;
   readonly notePath: string | null;
-  /** The user's rough notes, verbatim (fidelity mandate). */
   readonly notesText: string;
-  /** Sanitised enhancement markdown; empty until enhanced. */
   readonly enhancedNotesMd: string;
+  readonly extraction: MeetingExtractionData | null;
   readonly transcript: readonly MeetingTranscriptLine[];
 }
 
 function mapTranscriptLine(value: unknown): MeetingTranscriptLine | null {
   if (typeof value !== "object" || value === null) return null;
   const line = value as Record<string, unknown>;
+  const segmentId = asString(line["segment_id"]);
   const stream = line["stream"];
   const text = asString(line["text"]);
+  const tStart = line["t_start"];
+  const tEnd = line["t_end"];
+  if (segmentId === null || segmentId.length === 0) return null;
   if ((stream !== "me" && stream !== "them") || text === null) return null;
-  return { stream, text };
+  if (typeof tStart !== "number" || typeof tEnd !== "number") return null;
+  if (!Number.isFinite(tStart) || !Number.isFinite(tEnd)) return null;
+  return { segmentId, stream, text, tStart, tEnd };
+}
+
+function mapExtraction(value: unknown): MeetingExtractionData | null {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "object") return null;
+  const record = value as Record<string, unknown>;
+  const actionsRaw = record["actions"];
+  const commitmentsRaw = record["commitments"];
+  const questionsRaw = record["open_questions"];
+  if (!Array.isArray(actionsRaw) || !Array.isArray(commitmentsRaw)) return null;
+  if (!Array.isArray(questionsRaw)) return null;
+  const actions: MeetingExtractionData["actions"] = [];
+  for (const item of actionsRaw) {
+    if (typeof item !== "object" || item === null) return null;
+    const row = item as Record<string, unknown>;
+    const title = asString(row["title"]);
+    if (title === null) return null;
+    const owner = asString(row["owner"]);
+    actions.push(owner !== null ? { title, owner } : { title });
+  }
+  const commitments: MeetingExtractionData["commitments"] = [];
+  for (const item of commitmentsRaw) {
+    if (typeof item !== "object" || item === null) return null;
+    const row = item as Record<string, unknown>;
+    const who = asString(row["who"]);
+    const what = asString(row["what"]);
+    if (who === null || what === null) return null;
+    commitments.push({ who, what });
+  }
+  const openQuestions: string[] = [];
+  for (const q of questionsRaw) {
+    if (typeof q !== "string") return null;
+    openQuestions.push(q);
+  }
+  return { actions, commitments, openQuestions };
 }
 
 function mapDetail(payload: Record<string, unknown>): MeetingDetail | null {
@@ -137,6 +186,7 @@ function mapDetail(payload: Record<string, unknown>): MeetingDetail | null {
   const notePath = payload["note_path"] === null ? null : asString(payload["note_path"]);
   const notesText = asString(payload["notes_text"]);
   const enhancedNotesMd = asString(payload["enhanced_notes_md"]);
+  const extraction = mapExtraction(payload["extraction"]);
   const transcriptRaw = payload["transcript"];
   if (id === null || title === null || startIso === null || notesText === null) return null;
   if (typeof durationMin !== "number" || !Number.isFinite(durationMin)) return null;
@@ -158,8 +208,23 @@ function mapDetail(payload: Record<string, unknown>): MeetingDetail | null {
     notePath,
     notesText,
     enhancedNotesMd,
+    extraction,
     transcript,
   };
+}
+
+export async function updateTranscriptSegment(
+  meetingId: string,
+  segmentId: string,
+  text: string,
+  transport: EngineRequestTransport = liveTransport,
+): Promise<void> {
+  await requestEngineReply(
+    "transcript.segment.update",
+    { meeting_id: meetingId, segment_id: segmentId, text },
+    READ_TIMEOUT_MS,
+    transport,
+  );
 }
 
 // ------------------------------------------------------------- public API

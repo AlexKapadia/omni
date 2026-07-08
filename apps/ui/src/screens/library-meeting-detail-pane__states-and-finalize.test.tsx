@@ -35,9 +35,10 @@ const DETAIL: MeetingDetail = {
   notePath: "Meetings/2026-07-06 Vendor sync.md",
   notesText: "my raw notes\n  with exact   spacing",
   enhancedNotesMd: "## Summary\nRenewal agreed.",
+  extraction: null,
   transcript: [
-    { stream: "them", text: "hello there" },
-    { stream: "me", text: "hi" },
+    { segmentId: "s1", stream: "them", text: "hello there", tStart: 0, tEnd: 1 },
+    { segmentId: "s2", stream: "me", text: "hi", tStart: 1, tEnd: 2 },
   ],
 };
 

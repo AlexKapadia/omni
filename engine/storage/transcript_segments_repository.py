@@ -22,6 +22,7 @@ import aiosqlite
 class TranscriptSegmentRow:
     """One finalised segment as read back for finalization / the detail view."""
 
+    segment_id: str
     stream: str  # 'me' | 'them' (DB CHECK constraint)
     text: str  # verbatim model text (fidelity mandate)
     t_start: float
@@ -37,7 +38,7 @@ async def list_transcript_segment_rows(
     ``meeting.get`` command build the transcript view from these rows.
     """
     cursor = await connection.execute(
-        "SELECT stream, text, t_start, t_end FROM transcript_segments"
+        "SELECT id, stream, text, t_start, t_end FROM transcript_segments"
         " WHERE meeting_id = ? ORDER BY t_start, id",
         (meeting_id,),
     )
@@ -45,7 +46,11 @@ async def list_transcript_segment_rows(
     await cursor.close()
     return [
         TranscriptSegmentRow(
-            stream=str(row[0]), text=str(row[1]), t_start=float(row[2]), t_end=float(row[3])
+            segment_id=str(row[0]),
+            stream=str(row[1]),
+            text=str(row[2]),
+            t_start=float(row[3]),
+            t_end=float(row[4]),
         )
         for row in rows
     ]
@@ -70,3 +75,19 @@ async def insert_transcript_segment(
         " VALUES (?, ?, ?, ?, ?, ?, ?)",
         (segment_id, meeting_id, stream, text, t_start, t_end, created_at_iso),
     )
+
+
+async def update_transcript_segment_text(
+    connection: aiosqlite.Connection,
+    meeting_id: str,
+    segment_id: str,
+    text: str,
+) -> bool:
+    """Update one segment's text; returns False when no row matched."""
+    cursor = await connection.execute(
+        "UPDATE transcript_segments SET text = ? WHERE meeting_id = ? AND id = ?",
+        (text, meeting_id, segment_id),
+    )
+    changed = cursor.rowcount > 0
+    await cursor.close()
+    return changed

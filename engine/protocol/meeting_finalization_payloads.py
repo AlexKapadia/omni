@@ -26,6 +26,9 @@ from pydantic import BaseModel, ConfigDict, Field
 COMMAND_MEETING_FINALIZE = "meeting.finalize"
 COMMAND_MEETINGS_LIST = "meetings.list"
 COMMAND_MEETING_GET = "meeting.get"
+COMMAND_MEETING_EXPORT = "meeting.export"
+COMMAND_TRANSCRIPT_SEGMENT_UPDATE = "transcript.segment.update"
+COMMAND_IMPORT_MEDIA = "import.media"
 EVENT_ENHANCE_STARTED = "enhance.started"
 EVENT_ENHANCE_READY = "enhance.ready"
 EVENT_ENHANCE_FAILED = "enhance.failed"
@@ -64,6 +67,28 @@ class MeetingGetCommandPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     meeting_id: str = Field(min_length=1, max_length=128)
+
+
+class MeetingExportCommandPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    meeting_id: str = Field(min_length=1, max_length=128)
+    format: str = Field(pattern=r"^(srt|vtt|txt)$")
+
+
+class TranscriptSegmentUpdatePayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    meeting_id: str = Field(min_length=1, max_length=128)
+    segment_id: str = Field(min_length=1, max_length=128)
+    text: str = Field(min_length=1, max_length=20_000)
+
+
+class ImportMediaCommandPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    path: str = Field(min_length=1, max_length=1024)
+    title: str | None = Field(default=None, max_length=200)
 
 
 def build_enhance_started_payload(meeting_id: str) -> dict[str, Any]:

@@ -63,9 +63,10 @@ const VALID_DETAIL = {
   note_path: "Meetings/2026-07-06 Vendor sync.md",
   notes_text: "raw notes\nwith a second line",
   enhanced_notes_md: "## Summary\nDone.",
+  extraction: null,
   transcript: [
-    { stream: "them", text: "hello" },
-    { stream: "me", text: "hi" },
+    { segment_id: "s1", stream: "them", text: "hello", t_start: 0, t_end: 1 },
+    { segment_id: "s2", stream: "me", text: "hi", t_start: 1, t_end: 2 },
   ],
 };
 
@@ -176,13 +177,13 @@ describe("meeting.get mapping (fail closed)", () => {
     expect(detail.notesText).toBe("raw notes\nwith a second line"); // verbatim
     expect(detail.finalized).toBe(true);
     expect(detail.transcript).toEqual([
-      { stream: "them", text: "hello" },
-      { stream: "me", text: "hi" },
+      { segmentId: "s1", stream: "them", text: "hello", tStart: 0, tEnd: 1 },
+      { segmentId: "s2", stream: "me", text: "hi", tStart: 1, tEnd: 2 },
     ]);
   });
 
   it.each([
-    [{ ...VALID_DETAIL, transcript: [{ stream: "attacker", text: "x" }] }],
+    [{ ...VALID_DETAIL, transcript: [{ segment_id: "x", stream: "attacker", text: "x", t_start: 0, t_end: 1 }] }],
     [{ ...VALID_DETAIL, transcript: "not-a-list" }],
     [{ ...VALID_DETAIL, finalized: "yes" }],
     [{ ...VALID_DETAIL, notes_text: null }],

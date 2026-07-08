@@ -27,22 +27,35 @@ from engine.enhance.meeting_summary_presenter import (
     meeting_summary_payload,
 )
 from engine.protocol import (
+    COMMAND_IMPORT_MEDIA,
+    COMMAND_MEETING_EXPORT,
     COMMAND_MEETING_FINALIZE,
     COMMAND_MEETING_GET,
     COMMAND_MEETINGS_LIST,
+    COMMAND_TRANSCRIPT_SEGMENT_UPDATE,
     PROTOCOL_VERSION,
     Envelope,
     EnvelopeKind,
+    ImportMediaCommandPayload,
+    MeetingExportCommandPayload,
     MeetingFinalizeCommandPayload,
     MeetingGetCommandPayload,
     MeetingsListCommandPayload,
     ProtocolErrorCode,
+    TranscriptSegmentUpdatePayload,
     error_reply,
 )
 
 # The commands this dispatcher owns; the handler routes ONLY these here.
 MEETING_COMMAND_NAMES = frozenset(
-    {COMMAND_MEETING_FINALIZE, COMMAND_MEETINGS_LIST, COMMAND_MEETING_GET}
+    {
+        COMMAND_MEETING_FINALIZE,
+        COMMAND_MEETINGS_LIST,
+        COMMAND_MEETING_GET,
+        COMMAND_MEETING_EXPORT,
+        COMMAND_TRANSCRIPT_SEGMENT_UPDATE,
+        COMMAND_IMPORT_MEDIA,
+    }
 )
 
 # Additive error codes (string literals, not enum extensions — the pinned
@@ -97,6 +110,15 @@ async def dispatch_meeting_command(
         return
     if command.name == COMMAND_MEETING_GET:
         await _handle_get(command, service, send)
+        return
+    if command.name == COMMAND_MEETING_EXPORT:
+        await _handle_export(command, service, send)
+        return
+    if command.name == COMMAND_TRANSCRIPT_SEGMENT_UPDATE:
+        await _handle_segment_update(command, service, send)
+        return
+    if command.name == COMMAND_IMPORT_MEDIA:
+        await _handle_import_media(command, service, send)
         return
     # Unreachable while the handler routes by MEETING_COMMAND_NAMES; keep
     # the deny-by-default reply so a routing bug cannot go silent.
@@ -182,5 +204,83 @@ async def _handle_get(
             )
         )
         return
-    row, segments = found
-    await send(_ok_reply(command.id, meeting_detail_payload(row, segments)))
+    row, segments, extraction = found
+    await send(_ok_reply(command.id, meeting_detail_payload(row, segments, extraction)))
+
+
+async def _handle_export(
+    command: Envelope, service: MeetingFinalizationService, send: SendFn
+) -> None:
+    try:
+        payload = MeetingExportCommandPayload.model_validate(command.payload)
+    except ValidationError:
+        await send(
+            error_reply(
+                command.id,
+                ProtocolErrorCode.INVALID_PAYLOAD,
+                "meeting.export payload failed validation",
+            )
+        )
+        return
+    content = await service.export_transcript(payload.meeting_id, payload.format)
+    if content is None:
+        await send(
+            _typed_error_reply(
+                command.id, NOT_FOUND_ERROR_CODE, f"meeting {payload.meeting_id!r} does not exist"
+            )
+        )
+        return
+    await send(_ok_reply(command.id, {"content": content, "format": payload.format}))
+
+
+async def _handle_segment_update(
+    command: Envelope, service: MeetingFinalizationService, send: SendFn
+) -> None:
+    try:
+        payload = TranscriptSegmentUpdatePayload.model_validate(command.payload)
+    except ValidationError:
+        await send(
+            error_reply(
+                command.id,
+                ProtocolErrorCode.INVALID_PAYLOAD,
+                "transcript.segment.update payload failed validation",
+            )
+        )
+        return
+    changed = await service.update_transcript_segment(
+        payload.meeting_id, payload.segment_id, payload.text
+    )
+    if not changed:
+        await send(
+            _typed_error_reply(
+                command.id, NOT_FOUND_ERROR_CODE, "segment not found or meeting still live"
+            )
+        )
+        return
+    await send(_ok_reply(command.id, {"segment_id": payload.segment_id}))
+
+
+async def _handle_import_media(
+    command: Envelope, service: MeetingFinalizationService, send: SendFn
+) -> None:
+    try:
+        payload = ImportMediaCommandPayload.model_validate(command.payload)
+    except ValidationError:
+        await send(
+            error_reply(
+                command.id,
+                ProtocolErrorCode.INVALID_PAYLOAD,
+                "import.media payload failed validation",
+            )
+        )
+        return
+    from engine.import_.media_import_service import import_media_file
+
+    try:
+        meeting_id = await import_media_file(
+            service.db_path, service.migrations_dir, payload.path, payload.title
+        )
+    except Exception as exc:
+        await send(_typed_error_reply(command.id, FINALIZE_ERROR_CODE, str(exc)))
+        return
+    await send(_ok_reply(command.id, {"meeting_id": meeting_id}))

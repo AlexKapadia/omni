@@ -9,13 +9,16 @@
  * sends meeting.finalize with the notepad buffer (when it belongs to this
  * meeting). States: loading shimmer, error + retry, ready — none faked.
  */
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { ApprovalRack } from "../components/approval/approval-rack";
+import { MeetingBoardPanel } from "../components/live/meeting-board-panel";
 import { OmniButton } from "../components/button";
 import { SectionLabel } from "../components/section-label";
 import { SkeletonShimmer } from "../components/skeleton-shimmer";
 import { formatClockShort, formatDayLabel, formatDurationMin } from "../lib/format-quantities";
+import { downloadMeetingExport, triggerBrowserDownload } from "../lib/meeting-export";
 import type { FinalizeOutcome, MeetingDetail } from "../lib/meetings-live-repository";
+import { updateTranscriptSegment } from "../lib/meetings-live-repository";
 import { SafeMarkdown } from "../lib/meetings-safe-markdown";
 import {
   closeMeetingDetail,
@@ -62,6 +65,8 @@ export function LibraryMeetingDetailPane({
   const finalizeMessage = useMeetingsDetail((s) => s.finalizeMessage);
   const notepadMeetingId = useNotepad((s) => s.meetingId);
   const notepadText = useNotepad((s) => s.text);
+  const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null);
+  const [editText, setEditText] = useState("");
 
   const load = useCallback(
     () => void loadMeetingDetail(meetingsDetailStore, loadDetail, meetingId),
@@ -176,6 +181,43 @@ export function LibraryMeetingDetailPane({
             <ApprovalRack meetingId={meetingId} />
           </PaneSection>
 
+          {detail.extraction !== null && (
+            <MeetingBoardPanel
+              extraction={{
+                actions: detail.extraction.actions.map((a) => ({
+                  title: a.title,
+                  owner: a.owner,
+                })),
+                commitments: detail.extraction.commitments,
+                openQuestions: detail.extraction.openQuestions,
+                contacts: [],
+              }}
+            />
+          )}
+
+          <PaneSection label="Export">
+            <div className="flex flex-wrap gap-2">
+              {(["srt", "vtt", "txt"] as const).map((format) => (
+                <OmniButton
+                  key={format}
+                  variant="secondary"
+                  small
+                  onClick={() =>
+                    void downloadMeetingExport(meetingId, format).then((content) =>
+                      triggerBrowserDownload(
+                        `${detail.title}.${format}`,
+                        content,
+                        format === "txt" ? "text/plain" : "text/plain",
+                      ),
+                    )
+                  }
+                >
+                  Download {format.toUpperCase()}
+                </OmniButton>
+              ))}
+            </div>
+          </PaneSection>
+
           <PaneSection label="My Notes">
             {detail.notesText.length > 0 || notepadForThisMeeting.length > 0 ? (
               // Verbatim, plain text (fidelity mandate): pre-wrap preserves
@@ -203,12 +245,51 @@ export function LibraryMeetingDetailPane({
                   {detail.transcript.length} segments — click to expand
                 </summary>
                 <ul className="m-0 mt-[var(--space-2)] flex list-none flex-col gap-[var(--space-1)] p-0">
-                  {detail.transcript.map((line, index) => (
-                    <li key={index} style={{ fontSize: 13, lineHeight: "1.5" }}>
+                  {detail.transcript.map((line) => (
+                    <li key={line.segmentId} style={{ fontSize: 13, lineHeight: "1.5" }}>
                       <span className="font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]">
                         {line.stream === "me" ? "Me" : "Them"}:
                       </span>{" "}
-                      <span className="text-[var(--ink)]">{line.text}</span>
+                      {editingSegmentId === line.segmentId ? (
+                        <form
+                          className="inline"
+                          onSubmit={(e) => {
+                            e.preventDefault();
+                            void updateTranscriptSegment(meetingId, line.segmentId, editText).then(
+                              () => {
+                                setEditingSegmentId(null);
+                                load();
+                              },
+                            );
+                          }}
+                        >
+                          <input
+                            aria-label="Edit transcript segment"
+                            value={editText}
+                            onChange={(e) => setEditText(e.target.value)}
+                            className="w-full border border-[var(--grey-200)] px-2 py-1"
+                            style={{ fontSize: 13 }}
+                          />
+                          <OmniButton variant="secondary" small type="submit">
+                            Save
+                          </OmniButton>
+                        </form>
+                      ) : (
+                        <>
+                          <span className="text-[var(--ink)]">{line.text}</span>
+                          <button
+                            type="button"
+                            className="ml-2 cursor-pointer border-none bg-transparent text-[var(--grey-600)]"
+                            style={{ fontSize: 11 }}
+                            onClick={() => {
+                              setEditingSegmentId(line.segmentId);
+                              setEditText(line.text);
+                            }}
+                          >
+                            Edit
+                          </button>
+                        </>
+                      )}
                     </li>
                   ))}
                 </ul>

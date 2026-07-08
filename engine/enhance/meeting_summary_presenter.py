@@ -19,6 +19,8 @@ Correctness invariants:
 import re
 from datetime import datetime
 
+import json
+
 from engine.storage.meetings_repository import MeetingRow
 from engine.storage.transcript_segments_repository import TranscriptSegmentRow
 
@@ -85,13 +87,21 @@ def meeting_summary_payload(row: MeetingRow) -> dict[str, object]:
 
 
 def meeting_detail_payload(
-    row: MeetingRow, segments: list[TranscriptSegmentRow]
+    row: MeetingRow,
+    segments: list[TranscriptSegmentRow],
+    extraction_json: str | None = None,
 ) -> dict[str, object]:
     """The ``meeting.get`` payload — field names pinned by the TS mirror.
 
     ``notes_text`` is the user's verbatim notes (fidelity mandate);
     ``transcript`` is the persisted verbatim segments in spoken order.
     """
+    extraction: object | None = None
+    if extraction_json:
+        try:
+            extraction = json.loads(extraction_json)
+        except json.JSONDecodeError:
+            extraction = None
     return {
         "id": row.id,
         "title": row.title,
@@ -102,5 +112,15 @@ def meeting_detail_payload(
         "note_path": row.note_path,
         "notes_text": row.notes_text or "",
         "enhanced_notes_md": row.enhanced_notes_md or "",
-        "transcript": [{"stream": s.stream, "text": s.text} for s in segments],
+        "extraction": extraction,
+        "transcript": [
+            {
+                "segment_id": s.segment_id,
+                "stream": s.stream,
+                "text": s.text,
+                "t_start": s.t_start,
+                "t_end": s.t_end,
+            }
+            for s in segments
+        ],
     }

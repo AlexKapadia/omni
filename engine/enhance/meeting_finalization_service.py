@@ -56,7 +56,10 @@ from engine.protocol import (
     build_enhance_ready_payload,
     build_enhance_started_payload,
 )
-from engine.storage.extraction_results_repository import insert_extraction_result
+from engine.storage.extraction_results_repository import (
+    insert_extraction_result,
+    latest_extraction_payload_json,
+)
 from engine.storage.meetings_repository import (
     MeetingRow,
     fetch_meeting_row,
@@ -69,6 +72,12 @@ from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.storage.transcript_segments_repository import (
     TranscriptSegmentRow,
     list_transcript_segment_rows,
+    update_transcript_segment_text,
+)
+from engine.export.transcript_export import (
+    export_transcript_srt,
+    export_transcript_txt,
+    export_transcript_vtt,
 )
 from engine.vault import VaultWriteError, create_meeting_note, resolve_vault_root
 
@@ -111,8 +120,8 @@ class MeetingFinalizationService:
 
     async def get_meeting(
         self, meeting_id: str
-    ) -> tuple[MeetingRow, list[TranscriptSegmentRow]] | None:
-        """One meeting + its segments for ``meeting.get``; None when unknown."""
+    ) -> tuple[MeetingRow, list[TranscriptSegmentRow], str | None] | None:
+        """One meeting + segments + latest extraction JSON for ``meeting.get``."""
         await apply_migrations(self.db_path, self.migrations_dir)
         connection = await open_sqlite_connection(self.db_path)
         try:
@@ -120,9 +129,48 @@ class MeetingFinalizationService:
             if row is None:
                 return None
             segments = await list_transcript_segment_rows(connection, meeting_id)
-            return row, segments
+            extraction = await latest_extraction_payload_json(connection, meeting_id)
+            return row, segments, extraction
         finally:
             await connection.close()
+
+    async def update_transcript_segment(
+        self, meeting_id: str, segment_id: str, text: str
+    ) -> bool:
+        """Edit one segment's text; refuses when meeting is still capturing."""
+        await apply_migrations(self.db_path, self.migrations_dir)
+        connection = await open_sqlite_connection(self.db_path)
+        try:
+            row = await fetch_meeting_row(connection, meeting_id)
+            if row is None or row.ended_at is None:
+                return False
+            changed = await update_transcript_segment_text(
+                connection, meeting_id, segment_id, text
+            )
+            if changed:
+                await connection.commit()
+            return changed
+        finally:
+            await connection.close()
+
+    async def export_transcript(self, meeting_id: str, fmt: str) -> str | None:
+        """Export transcript as srt, vtt, or txt; None when meeting unknown."""
+        await apply_migrations(self.db_path, self.migrations_dir)
+        connection = await open_sqlite_connection(self.db_path)
+        try:
+            row = await fetch_meeting_row(connection, meeting_id)
+            if row is None:
+                return None
+            segments = await list_transcript_segment_rows(connection, meeting_id)
+        finally:
+            await connection.close()
+        if fmt == "srt":
+            return export_transcript_srt(segments)
+        if fmt == "vtt":
+            return export_transcript_vtt(segments)
+        if fmt == "txt":
+            return export_transcript_txt(segments)
+        return None
 
     # --------------------------------------------------------------- finalize
     async def finalize(

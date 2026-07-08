@@ -148,6 +148,14 @@ def default_spotter_wiring_factory(hub: EventBroadcastHub) -> LiveAnswersSpotter
     return LiveAnswersSpotterWiring(hub, db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
 
 
+def default_enrichment_wiring_factory(hub: EventBroadcastHub) -> LiveMeetingEnrichmentWiring:
+    """Live summary + proactive vault poll; production only."""
+    from engine.wiring.live_meeting_enrichment_wiring import LiveMeetingEnrichmentWiring
+
+    settings = load_engine_settings()
+    return LiveMeetingEnrichmentWiring(hub, db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
+
+
 def default_calendar_poll_factory(hub: EventBroadcastHub):
     """Google Calendar poll for upcoming meetings; no-op when not connected."""
     from engine.google.calendar_poll_service import CalendarPollService

@@ -12,6 +12,8 @@
 import { useEffect, useState, type ReactNode } from "react";
 import { OmniButton } from "../components/button";
 import { AnswersPanel } from "../components/live/answers-panel";
+import { LiveSummaryPanel } from "../components/live/live-summary-panel";
+import { VaultSuggestionsPanel } from "../components/live/vault-suggestions-panel";
 import { CaptureBar } from "../components/live/capture-bar";
 import { FinalizeMeetingPanel } from "../components/live/finalize-meeting-panel";
 import { MeetingDetectedToast } from "../components/live/meeting-detected-toast";
@@ -142,11 +144,17 @@ export function LiveMeetingScreen() {
   return (
     <div className="relative flex h-full min-h-0 flex-col">
       <MeetingDetectedToast />
-      <div className="flex min-h-0 flex-1">
-        <NotepadPane meetingTitle="Live meeting" elapsedSeconds={elapsedSeconds} />
-        <TranscriptStream />
+      <div className="flex min-h-0 flex-1 flex-col">
+        <div className="flex min-h-0 flex-1">
+          <div className="flex min-w-0 flex-col" style={{ flex: 2 }}>
+            <LiveSummaryPanel />
+            <NotepadPane meetingTitle="Live meeting" elapsedSeconds={elapsedSeconds} />
+          </div>
+          <TranscriptStream />
+        </div>
       </div>
       <CaptureBar elapsedSeconds={elapsedSeconds} />
+      <VaultSuggestionsPanel />
       <AnswersPanel />
     </div>
   );

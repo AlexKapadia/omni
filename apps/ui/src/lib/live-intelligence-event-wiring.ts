@@ -27,6 +27,20 @@ import {
   liveAnswersStore,
   type LiveAnswersStore,
 } from "./live-answers-store";
+import {
+  SUMMARY_UPDATED_EVENT_NAME,
+  applySummaryUpdated,
+  clearLiveSummary,
+  liveSummaryStore,
+  type LiveSummaryStore,
+} from "./live-summary-store";
+import {
+  VAULT_SUGGESTION_EVENT_NAME,
+  applyVaultSuggestion,
+  clearVaultSuggestions,
+  vaultSuggestionsStore,
+  type VaultSuggestionsStore,
+} from "./vault-suggestions-store";
 import { CAPTURE_STARTED_EVENT_NAME } from "./capture-protocol";
 import { maybeAutoStartCaptureOnDetection } from "./auto-start-reaction";
 import {
@@ -52,6 +66,8 @@ import { parseInboundMessage } from "./protocol";
 
 export interface IntelligenceStores {
   readonly liveAnswers: LiveAnswersStore;
+  readonly liveSummary: LiveSummaryStore;
+  readonly vaultSuggestions: VaultSuggestionsStore;
   readonly detection: MeetingDetectionStore;
   readonly finalize: MeetingFinalizeStore;
   readonly approvalCards: ApprovalCardsStore;
@@ -85,10 +101,16 @@ export function createIntelligenceFrameListener(
       applyCardUpdated(stores.approvalCards, payload);
     } else if (name === ANSWERS_HIT_EVENT_NAME) {
       applyAnswersHit(stores.liveAnswers, payload);
+    } else if (name === SUMMARY_UPDATED_EVENT_NAME) {
+      applySummaryUpdated(stores.liveSummary, payload);
+    } else if (name === VAULT_SUGGESTION_EVENT_NAME) {
+      applyVaultSuggestion(stores.vaultSuggestions, payload);
     } else if (name === CAPTURE_STARTED_EVENT_NAME) {
       // A fresh meeting: hits belong to one meeting, the suggestion card is
       // consumed, and any previous finalize flow is over.
       clearLiveAnswers(stores.liveAnswers);
+      clearLiveSummary(stores.liveSummary);
+      clearVaultSuggestions(stores.vaultSuggestions);
       clearMeetingDetection(stores.detection);
       resetMeetingFinalize(stores.finalize);
     } else if (name === MEETING_DETECTED_EVENT_NAME) {
@@ -123,6 +145,8 @@ export function wireLiveIntelligence(
   subscribeFrames(
     createIntelligenceFrameListener({
       liveAnswers: liveAnswersStore,
+      liveSummary: liveSummaryStore,
+      vaultSuggestions: vaultSuggestionsStore,
       detection: meetingDetectionStore,
       finalize: meetingFinalizeStore,
       approvalCards: approvalCardsStore,

@@ -42,6 +42,7 @@ from engine.wiring.approval_card_build_server_wiring import ApprovalCardBuildWir
 from engine.wiring.approval_cards_gateway import ApprovalCardsGateway
 from engine.wiring.detection_server_wiring import DetectionServerWiring
 from engine.wiring.dictation_command_dispatcher import DictationCommandGateway
+from engine.wiring.live_meeting_enrichment_wiring import LiveMeetingEnrichmentWiring
 from engine.wiring.live_answers_spotter_wiring import LiveAnswersSpotterWiring
 
 # The M7 onboarding/settings command surface (5 gateways) is built and owned
@@ -64,6 +65,7 @@ from engine.wiring.server_default_service_factories import (
     default_finalization_service_factory,
     default_naomi_loop_factory,
     default_spotter_wiring_factory,
+    default_enrichment_wiring_factory,
     default_vault_watchdog_factory,
 )
 from engine.google.calendar_poll_service import CalendarPollService
@@ -82,6 +84,7 @@ DictationGatewayFactory = Callable[[EventBroadcastHub], DictationCommandGateway]
 ApprovalGatewayFactory = Callable[[EventBroadcastHub], ApprovalCardsGateway]
 DetectionWiringFactory = Callable[[EventBroadcastHub, LiveCaptureService], DetectionServerWiring]
 SpotterWiringFactory = Callable[[EventBroadcastHub], LiveAnswersSpotterWiring]
+EnrichmentWiringFactory = Callable[[EventBroadcastHub], LiveMeetingEnrichmentWiring]
 CardBuildWiringFactory = Callable[[EventBroadcastHub], ApprovalCardBuildWiring]
 VaultWatchdogFactory = Callable[[], VaultWatchdogServerWiring]
 CalendarPollFactory = Callable[[EventBroadcastHub], CalendarPollService]
@@ -100,6 +103,7 @@ def create_app(
     device_lister: DeviceLister | None = None,
     detection_wiring_factory: DetectionWiringFactory | None = None,
     spotter_wiring_factory: SpotterWiringFactory | None = None,
+    enrichment_wiring_factory: EnrichmentWiringFactory | None = None,
     card_build_wiring_factory: CardBuildWiringFactory | None = None,
     vault_watchdog_factory: VaultWatchdogFactory | None = None,
     calendar_poll_factory: CalendarPollFactory | None = None,
@@ -144,6 +148,9 @@ def create_app(
             detection_wiring.apply_detection_settings
         )
     spotter_wiring = spotter_wiring_factory(event_hub) if spotter_wiring_factory else None
+    enrichment_wiring = (
+        enrichment_wiring_factory(event_hub) if enrichment_wiring_factory else None
+    )
     # M4 card-building seams (event/hook-driven — same wired-only-when-passed
     # rule): finalization events + the dictation gateway's post-final hook.
     card_build_wiring = card_build_wiring_factory(event_hub) if card_build_wiring_factory else None
@@ -203,6 +210,9 @@ def create_app(
         if spotter_wiring is not None:
             with contextlib.suppress(Exception):
                 await spotter_wiring.shutdown()
+        if enrichment_wiring is not None:
+            with contextlib.suppress(Exception):
+                await enrichment_wiring.shutdown()
         if card_build_wiring is not None:
             with contextlib.suppress(Exception):
                 await card_build_wiring.shutdown()
@@ -248,6 +258,7 @@ def create_app(
     app.state.device_lister = device_lister if device_lister is not None else list_audio_devices
     app.state.detection_wiring = detection_wiring
     app.state.spotter_wiring = spotter_wiring
+    app.state.enrichment_wiring = enrichment_wiring
     app.state.card_build_wiring = card_build_wiring
     app.state.vault_watchdog = vault_watchdog
     app.state.m7_surface = m7
@@ -299,6 +310,7 @@ def build_uvicorn_config(settings: EngineSettings) -> uvicorn.Config:
             preload_stt=True,
             detection_wiring_factory=default_detection_wiring_factory,
             spotter_wiring_factory=default_spotter_wiring_factory,
+            enrichment_wiring_factory=default_enrichment_wiring_factory,
             card_build_wiring_factory=default_card_build_wiring_factory,
             vault_watchdog_factory=default_vault_watchdog_factory,
             calendar_poll_factory=default_calendar_poll_factory,

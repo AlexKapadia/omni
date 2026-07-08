@@ -9,21 +9,27 @@ import { describe, expect, it } from "vitest";
 import { createApprovalCardsStore } from "./approval-cards-store";
 import { createIntelligenceFrameListener } from "./live-intelligence-event-wiring";
 import { createLiveAnswersStore } from "./live-answers-store";
+import { createLiveSummaryStore } from "./live-summary-store";
+import { createVaultSuggestionsStore } from "./vault-suggestions-store";
 import { createMeetingDetectionStore } from "./meeting-detection-store";
 import { createMeetingFinalizeStore } from "./meeting-finalize-store";
 
 function makeAll() {
   const liveAnswers = createLiveAnswersStore();
+  const liveSummary = createLiveSummaryStore();
+  const vaultSuggestions = createVaultSuggestionsStore();
   const detection = createMeetingDetectionStore();
   const finalize = createMeetingFinalizeStore();
   const approvalCards = createApprovalCardsStore();
   const listener = createIntelligenceFrameListener({
     liveAnswers,
+    liveSummary,
+    vaultSuggestions,
     detection,
     finalize,
     approvalCards,
   });
-  return { liveAnswers, detection, finalize, approvalCards, listener };
+  return { liveAnswers, liveSummary, vaultSuggestions, detection, finalize, approvalCards, listener };
 }
 
 function frame(name: string, payload: Record<string, unknown>, kind = "event"): string {

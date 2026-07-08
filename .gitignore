@@ -43,6 +43,12 @@ Thumbs.db
 .vscode/
 .claude/
 
+# Agent tooling / temp artifacts
+/tmp/
+/.agentic-cursorrules/
+/agent_*.md
+*.log
+
 # packaging: track only the bundle-resource placeholder, not the built engine
 !packaging/dist/
 !packaging/dist/omni-engine/

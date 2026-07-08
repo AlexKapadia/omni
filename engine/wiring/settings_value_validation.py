@@ -35,6 +35,8 @@ from engine.storage.app_settings_repository import (
     SETTING_DETECTION_AUTO_START_SOURCES,
     SETTING_AUTOSTOP_SILENCE_S,
     SETTING_LIVE_CAPTIONS_OVERLAY,
+    SETTING_AEC_ENABLED,
+    SETTING_LIVE_TRANSLATION_LANG,
 )
 from engine.detect.detection_settings_from_app import AUTOSTOP_SILENCE_CHOICES
 from engine.detect.detection_signal_types import KNOWN_DETECTION_SOURCES
@@ -52,6 +54,7 @@ INSTANT_EXECUTABLE_INTENT_TYPES: frozenset[str] = frozenset(
 _MAX_HOTKEY_CHARS = 64
 _MAX_CUSTOM_TEMPLATES = 20
 _MAX_PATH_CHARS = 500
+_MAX_TRANSLATION_LANG_CHARS = 32
 
 
 class SettingsValueError(ValueError):
@@ -196,6 +199,16 @@ def _validate_detection_auto_start_sources(value: object) -> list[str]:
     return sorted(normalized)
 
 
+def _validate_live_translation_lang(value: object) -> str:
+    key = SETTING_LIVE_TRANSLATION_LANG
+    if not isinstance(value, str):
+        raise SettingsValueError(key, "value must be a language name or empty string")
+    trimmed = value.strip()
+    if len(trimmed) > _MAX_TRANSLATION_LANG_CHARS:
+        raise SettingsValueError(key, "language name is too long")
+    return trimmed
+
+
 def _validate_autostop_silence_s(value: object) -> int:
     key = SETTING_AUTOSTOP_SILENCE_S
     if not isinstance(value, int) or isinstance(value, bool):
@@ -231,6 +244,7 @@ def validate_settings_values(values: dict[str, object]) -> dict[str, object]:
             SETTING_KILL_SWITCH,
             SETTING_ONBOARDING_COMPLETE,
             SETTING_LIVE_CAPTIONS_OVERLAY,
+            SETTING_AEC_ENABLED,
         ):
             normalized[key] = _validate_bool(key, value)
         elif key == SETTING_INSTANT_EXECUTE_WHITELIST:
@@ -243,6 +257,8 @@ def validate_settings_values(values: dict[str, object]) -> dict[str, object]:
             normalized[key] = _validate_detection_auto_start_sources(value)
         elif key == SETTING_AUTOSTOP_SILENCE_S:
             normalized[key] = _validate_autostop_silence_s(value)
+        elif key == SETTING_LIVE_TRANSLATION_LANG:
+            normalized[key] = _validate_live_translation_lang(value)
     if not normalized:
         raise SettingsValueError("values", "no persistable settings in the update")
     return normalized

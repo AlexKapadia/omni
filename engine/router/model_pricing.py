@@ -19,6 +19,8 @@ from engine.router.routing_table import (
     GEMINI_FLASH_MODEL,
     GEMINI_PRO_MODEL,
     GROQ_FAST_MODEL,
+    OPENAI_MINI_MODEL,
+    OLLAMA_DEFAULT_MODEL,
 )
 
 _TOKENS_PER_PRICE_UNIT = Decimal(1_000_000)
@@ -38,6 +40,8 @@ MODEL_PRICES_USD_PER_MILLION: dict[str, tuple[Decimal, Decimal]] = {
     GEMINI_FLASH_MODEL: (Decimal("0.30"), Decimal("2.50")),
     GEMINI_PRO_MODEL: (Decimal("1.25"), Decimal("10.00")),
     ANTHROPIC_MODEL: (Decimal("3.00"), Decimal("15.00")),
+    OPENAI_MINI_MODEL: (Decimal("0.15"), Decimal("0.60")),
+    OLLAMA_DEFAULT_MODEL: (Decimal("0.00"), Decimal("0.00")),
 }
 
 

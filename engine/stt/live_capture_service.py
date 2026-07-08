@@ -35,6 +35,7 @@ from engine.audio.dual_stream_capture_controller import (
     CaptureBackend,
     DualStreamCaptureController,
 )
+from engine.audio.stream_echo_canceller import StreamEchoCanceller
 from engine.audio.timestamped_audio_ring_buffer import TimestampedAudioRingBuffer
 from engine.protocol.capture_event_payloads import (
     EVENT_CAPTURE_DEVICE_CHANGED,
@@ -45,6 +46,7 @@ from engine.protocol.capture_event_payloads import (
     build_capture_stopped_payload,
 )
 from engine.protocol.event_broadcast_hub import EventBroadcastHub
+from engine.storage.app_settings_repository import SETTING_AEC_ENABLED, read_setting_bool
 from engine.storage.meetings_repository import insert_meeting, mark_meeting_ended, utc_now_iso
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
@@ -74,9 +76,9 @@ TranscribeAsyncFn = Callable[[npt.NDArray[np.float32]], Awaitable[list[WordToken
 
 
 def _default_backend_factory() -> CaptureBackend:
-    from engine.audio.pyaudiowpatch_capture_backend import PyAudioWpatchCaptureBackend
+    from engine.audio.capture_backend_factory import create_capture_backend
 
-    return PyAudioWpatchCaptureBackend()
+    return create_capture_backend()
 
 
 def _log_task_crash(task: asyncio.Task[None]) -> None:
@@ -157,10 +159,13 @@ class LiveCaptureService:
             await insert_meeting(connection, meeting_id, title or "Untitled meeting", utc_now_iso())
             self._anchor_monotonic = time.monotonic()
             ring_buffer = TimestampedAudioRingBuffer()
+            aec_enabled = await read_setting_bool(connection, SETTING_AEC_ENABLED, default=False)
+            echo_canceller = StreamEchoCanceller() if aec_enabled else None
             controller = DualStreamCaptureController(
                 backend=self._backend_factory(),
                 ring_buffer=ring_buffer,
                 on_device_changed=self._on_device_changed,
+                echo_canceller=echo_canceller,
             )
             await controller.start()  # Fail closed: both streams or nothing.
         except Exception as exc:

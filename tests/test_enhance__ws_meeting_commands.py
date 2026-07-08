@@ -42,7 +42,7 @@ ROW = MeetingRow(
     enhanced_notes_md="First line of the summary.",
     finalized_at="2026-07-06T10:31:00+00:00",
 )
-SEGMENTS = [TranscriptSegmentRow(stream="them", text="hello", t_start=0.0, t_end=1.0)]
+SEGMENTS = [TranscriptSegmentRow(segment_id="s1", stream="them", text="hello", t_start=0.0, t_end=1.0)]
 
 
 class FakeFinalizationService(MeetingFinalizationService):
@@ -57,8 +57,8 @@ class FakeFinalizationService(MeetingFinalizationService):
 
     async def get_meeting(
         self, meeting_id: str
-    ) -> tuple[MeetingRow, list[TranscriptSegmentRow]] | None:
-        return (ROW, SEGMENTS) if meeting_id == ROW.id else None
+    ) -> tuple[MeetingRow, list[TranscriptSegmentRow], str | None] | None:
+        return (ROW, SEGMENTS, None) if meeting_id == ROW.id else None
 
     async def finalize(
         self, meeting_id: str, notepad_text: str, template_id: str | None
@@ -165,7 +165,15 @@ def test_meeting_get_returns_detail_or_a_correlatable_not_found() -> None:
         missing = collect_until_reply(ws)[-1]
     assert detail["name"] == "ok" and detail["id"] == "get-1"
     assert detail["payload"]["notes_text"] == "raw"
-    assert detail["payload"]["transcript"] == [{"stream": "them", "text": "hello"}]
+    assert detail["payload"]["transcript"] == [
+        {
+            "segment_id": "s1",
+            "stream": "them",
+            "text": "hello",
+            "t_start": 0.0,
+            "t_end": 1.0,
+        }
+    ]
     assert missing["name"] == "error" and missing["id"] == "get-2"
     assert missing["payload"]["code"] == "not_found"
 

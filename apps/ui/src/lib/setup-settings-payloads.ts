@@ -39,6 +39,10 @@ export interface EngineSettings {
   readonly autostopSilenceS: number;
   /** Show the always-on-top live captions overlay during capture. */
   readonly liveCaptionsOverlay: boolean;
+  /** Simple echo cancellation on the mic stream using loopback reference. */
+  readonly aecEnabled: boolean;
+  /** Target language for live translation (empty disables). */
+  readonly liveTranslationLang: string;
 }
 
 export interface RoutingAttempt {
@@ -120,10 +124,13 @@ function parseEngineSettings(value: unknown): EngineSettings | null {
     parseStringArray(value["detection_auto_start_sources"]) ?? [];
   const autostopSilenceS = asFiniteNumber(value["autostop_silence_s"]);
   const liveCaptionsOverlay = asBoolean(value["live_captions_overlay"]);
+  const aecEnabled = asBoolean(value["aec_enabled"]);
+  const liveTranslationLang = asString(value["live_translation_lang"]);
   if (hotkey === null || keepAudio === null || disclosureReminder === null) return null;
   if (killSwitch === null || whitelist === null || activeTemplate === null) return null;
   if (customTemplates === null || onboardingComplete === null) return null;
   if (autostopSilenceS === null || liveCaptionsOverlay === null) return null;
+  if (aecEnabled === null || liveTranslationLang === null) return null;
   return {
     vaultDir,
     pushToTalkHotkey: hotkey,
@@ -137,6 +144,8 @@ function parseEngineSettings(value: unknown): EngineSettings | null {
     detectionAutoStartSources,
     autostopSilenceS,
     liveCaptionsOverlay,
+    aecEnabled,
+    liveTranslationLang,
   };
 }
 

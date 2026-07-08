@@ -28,7 +28,12 @@ from engine.router.completion_contract import (
     TaskType,
 )
 from engine.router.provider_client_registry import build_provider_clients
-from engine.router.routing_table import ANTHROPIC_MODEL, GEMINI_FLASH_MODEL, GROQ_FAST_MODEL
+from engine.router.routing_table import (
+    ANTHROPIC_MODEL,
+    GEMINI_FLASH_MODEL,
+    GROQ_FAST_MODEL,
+    OPENAI_MINI_MODEL,
+)
 from engine.security.kill_switch import kill_switch_engaged
 from engine.security.provider_key_store import ProviderKeyStore
 from engine.voice.cartesia_message_framing import CARTESIA_API_VERSION
@@ -38,6 +43,7 @@ _VALIDATION_MODEL_BY_PROVIDER = {
     Provider.GROQ: GROQ_FAST_MODEL,
     Provider.GEMINI: GEMINI_FLASH_MODEL,
     Provider.ANTHROPIC: ANTHROPIC_MODEL,
+    Provider.OPENAI: OPENAI_MINI_MODEL,
 }
 
 _VALIDATION_TIMEOUT_SECONDS = 15.0

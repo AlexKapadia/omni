@@ -227,6 +227,36 @@ export async function updateTranscriptSegment(
   );
 }
 
+export async function importMediaFile(
+  path: string,
+  title?: string,
+  transport: EngineRequestTransport = liveTransport,
+): Promise<string> {
+  const payload = await requestEngineReply(
+    "import.media",
+    { path, title: title ?? null },
+    120_000,
+    transport,
+  );
+  const meetingId = payload["meeting_id"];
+  if (typeof meetingId !== "string" || meetingId.length === 0) {
+    throw new Error("engine sent a malformed import reply");
+  }
+  return meetingId;
+}
+
+export async function retranscribeMeeting(
+  meetingId: string,
+  transport: EngineRequestTransport = liveTransport,
+): Promise<void> {
+  await requestEngineReply(
+    "meeting.retranscribe",
+    { meeting_id: meetingId },
+    300_000,
+    transport,
+  );
+}
+
 // ------------------------------------------------------------- public API
 export function createLiveMeetingsRepository(
   transport: EngineRequestTransport = liveTransport,

@@ -28,9 +28,15 @@ export const GOOGLE_CONNECT_COMPLETED_EVENT = "google.connect.completed";
  * API-key providers. Groq + Gemini are required for a working install; Claude
  * (anthropic) and Cartesia are optional per-task providers.
  */
-export type KeyProvider = "groq" | "gemini" | "anthropic" | "cartesia";
+export type KeyProvider = "groq" | "gemini" | "anthropic" | "openai" | "cartesia";
 
-export const KEY_PROVIDERS: readonly KeyProvider[] = ["groq", "gemini", "anthropic", "cartesia"];
+export const KEY_PROVIDERS: readonly KeyProvider[] = [
+  "groq",
+  "gemini",
+  "anthropic",
+  "openai",
+  "cartesia",
+];
 
 /** Providers a working install cannot skip (deny finish until both validate). */
 export const REQUIRED_KEY_PROVIDERS: readonly KeyProvider[] = ["groq", "gemini"];
@@ -40,6 +46,7 @@ export const KEY_PROVIDER_LABELS: Readonly<Record<KeyProvider, string>> = {
   groq: "Groq",
   gemini: "Gemini",
   anthropic: "Claude",
+  openai: "OpenAI",
   cartesia: "Cartesia",
 };
 

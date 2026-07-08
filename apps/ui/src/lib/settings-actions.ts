@@ -81,6 +81,12 @@ function toWireValues(partial: Partial<EngineSettings>): Record<string, unknown>
   if (partial.liveCaptionsOverlay !== undefined) {
     values["live_captions_overlay"] = partial.liveCaptionsOverlay;
   }
+  if (partial.aecEnabled !== undefined) {
+    values["aec_enabled"] = partial.aecEnabled;
+  }
+  if (partial.liveTranslationLang !== undefined) {
+    values["live_translation_lang"] = partial.liveTranslationLang;
+  }
   return values;
 }
 

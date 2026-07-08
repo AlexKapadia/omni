@@ -64,6 +64,7 @@ describe("LibraryScreen states", () => {
   });
 
   it("POPULATED: renders every row, day groups, and the computed meta line", () => {
+    vi.setSystemTime(new Date("2026-07-07T15:00:00"));
     meetingsStore.setState({ status: "ready", meetings: rows() });
     render(<LibraryScreen onStartCapture={onStartCapture} />);
     expect(screen.getByText("Vendor call — Northwind")).toBeTruthy();
@@ -73,6 +74,7 @@ describe("LibraryScreen states", () => {
     expect(screen.getByText("Yesterday")).toBeTruthy();
     // 47 + 32 + 26 = 105 min = 1 h 45 min — computed, exact.
     expect(screen.getByText(/3 meetings · 1 h 45 min captured/)).toBeTruthy();
+    vi.useRealTimers();
   });
 });
 

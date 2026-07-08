@@ -8,7 +8,7 @@
  * inject fakes. States: loading (shimmer, never a spinner), error (+ retry),
  * empty, and populated with a separate no-matches state for a live query.
  */
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { OmniButton } from "../components/button";
 import { SectionLabel } from "../components/section-label";
 import { SkeletonShimmer } from "../components/skeleton-shimmer";
@@ -27,8 +27,10 @@ import {
 import {
   createLiveMeetingsRepository,
   getMeetingDetail,
+  importMediaFile,
   requestMeetingFinalize,
 } from "../lib/meetings-live-repository";
+import { pickMediaFile } from "../lib/pick-media-file";
 import {
   filterMeetings,
   loadMeetings,
@@ -119,6 +121,8 @@ export function LibraryScreen({
   const errorMessage = useMeetings((s) => s.errorMessage);
   const selectedId = useMeetingsDetail((s) => s.selectedId);
   const engineStatus = useEngineStatus((s) => s.status);
+  const [importBusy, setImportBusy] = useState(false);
+  const [importMessage, setImportMessage] = useState<string | null>(null);
 
   useEffect(() => {
     // Load once per app session (mount-only by design); the error state's
@@ -157,6 +161,22 @@ export function LibraryScreen({
   const openDetail = (meetingId: string): void =>
     openMeetingDetail(meetingsDetailStore, meetingId);
 
+  const importMedia = async (): Promise<void> => {
+    setImportMessage(null);
+    const path = await pickMediaFile();
+    if (path === null) return;
+    setImportBusy(true);
+    try {
+      const meetingId = await importMediaFile(path);
+      await loadMeetings(meetingsStore, repository);
+      openDetail(meetingId);
+    } catch (err) {
+      setImportMessage(err instanceof Error ? err.message : "Import failed.");
+    } finally {
+      setImportBusy(false);
+    }
+  };
+
   return (
     <div className="flex h-full">
       <div className="h-full flex-1 overflow-y-auto" style={{ padding: "48px 64px" }}>
@@ -181,10 +201,20 @@ export function LibraryScreen({
             </span>
           )}
         </div>
-        <OmniButton variant="primary" onClick={onStartCapture}>
-          Start capture
-        </OmniButton>
+        <div className="flex gap-2">
+          <OmniButton variant="secondary" disabled={importBusy} onClick={() => void importMedia()}>
+            {importBusy ? "Importing…" : "Import media"}
+          </OmniButton>
+          <OmniButton variant="primary" onClick={onStartCapture}>
+            Start capture
+          </OmniButton>
+        </div>
       </header>
+      {importMessage !== null && (
+        <p className="m-0 mt-[var(--space-2)] text-[var(--grey-600)]" style={{ fontSize: 13 }}>
+          {importMessage}
+        </p>
+      )}
 
       <div className="mt-[var(--space-6)]">
         <input

@@ -41,6 +41,13 @@ import {
   vaultSuggestionsStore,
   type VaultSuggestionsStore,
 } from "./vault-suggestions-store";
+import {
+  TRANSLATION_UPDATED_EVENT_NAME,
+  applyTranslationUpdated,
+  clearLiveTranslation,
+  liveTranslationStore,
+  type LiveTranslationStore,
+} from "./live-translation-store";
 import { CAPTURE_STARTED_EVENT_NAME } from "./capture-protocol";
 import { maybeAutoStartCaptureOnDetection } from "./auto-start-reaction";
 import {
@@ -67,6 +74,7 @@ import { parseInboundMessage } from "./protocol";
 export interface IntelligenceStores {
   readonly liveAnswers: LiveAnswersStore;
   readonly liveSummary: LiveSummaryStore;
+  readonly liveTranslation: LiveTranslationStore;
   readonly vaultSuggestions: VaultSuggestionsStore;
   readonly detection: MeetingDetectionStore;
   readonly finalize: MeetingFinalizeStore;
@@ -105,11 +113,14 @@ export function createIntelligenceFrameListener(
       applySummaryUpdated(stores.liveSummary, payload);
     } else if (name === VAULT_SUGGESTION_EVENT_NAME) {
       applyVaultSuggestion(stores.vaultSuggestions, payload);
+    } else if (name === TRANSLATION_UPDATED_EVENT_NAME) {
+      applyTranslationUpdated(stores.liveTranslation, payload);
     } else if (name === CAPTURE_STARTED_EVENT_NAME) {
       // A fresh meeting: hits belong to one meeting, the suggestion card is
       // consumed, and any previous finalize flow is over.
       clearLiveAnswers(stores.liveAnswers);
       clearLiveSummary(stores.liveSummary);
+      clearLiveTranslation(stores.liveTranslation);
       clearVaultSuggestions(stores.vaultSuggestions);
       clearMeetingDetection(stores.detection);
       resetMeetingFinalize(stores.finalize);
@@ -146,6 +157,7 @@ export function wireLiveIntelligence(
     createIntelligenceFrameListener({
       liveAnswers: liveAnswersStore,
       liveSummary: liveSummaryStore,
+      liveTranslation: liveTranslationStore,
       vaultSuggestions: vaultSuggestionsStore,
       detection: meetingDetectionStore,
       finalize: meetingFinalizeStore,

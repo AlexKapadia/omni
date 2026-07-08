@@ -23,6 +23,8 @@ GROQ_FAST_MODEL = "llama-3.3-70b-versatile"
 GEMINI_FLASH_MODEL = "gemini-2.5-flash"
 GEMINI_PRO_MODEL = "gemini-2.5-pro"
 ANTHROPIC_MODEL = "claude-sonnet-4-5"
+OPENAI_MINI_MODEL = "gpt-4o-mini"
+OLLAMA_DEFAULT_MODEL = "llama3.2"
 
 
 @dataclass(frozen=True)
@@ -46,6 +48,8 @@ RouteSlot = ProviderModelSlot | AnthropicIfKeyedSlot
 _GROQ_FAST = ProviderModelSlot(Provider.GROQ, GROQ_FAST_MODEL)
 _GEMINI_FLASH = ProviderModelSlot(Provider.GEMINI, GEMINI_FLASH_MODEL)
 _GEMINI_PRO = ProviderModelSlot(Provider.GEMINI, GEMINI_PRO_MODEL)
+_OPENAI_MINI = ProviderModelSlot(Provider.OPENAI, OPENAI_MINI_MODEL)
+_OLLAMA_DEFAULT = ProviderModelSlot(Provider.OLLAMA, OLLAMA_DEFAULT_MODEL)
 
 
 @dataclass(frozen=True)
@@ -91,7 +95,7 @@ ROUTING_TABLE: dict[TaskType, RouteSpec] = {
     ),
     TaskType.ASK_SYNTHESIS: RouteSpec(
         primary=AnthropicIfKeyedSlot(otherwise=_GEMINI_FLASH),
-        fallbacks=(_GEMINI_FLASH, _GEMINI_PRO),
+        fallbacks=(_GEMINI_FLASH, _GEMINI_PRO, _OPENAI_MINI, _OLLAMA_DEFAULT),
         latency_budget_p95_ms=3_500,  # interactive Q&A
     ),
     TaskType.LONG_CONTEXT_BULK: RouteSpec(

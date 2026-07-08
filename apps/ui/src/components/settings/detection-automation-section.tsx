@@ -23,6 +23,8 @@ export function DetectionAutomationSection({
   const autoStartSources = useStore(store, (s) => s.settings?.detectionAutoStartSources ?? []);
   const autostopSilenceS = useStore(store, (s) => s.settings?.autostopSilenceS ?? 60);
   const liveCaptionsOverlay = useStore(store, (s) => s.settings?.liveCaptionsOverlay ?? true);
+  const aecEnabled = useStore(store, (s) => s.settings?.aecEnabled ?? false);
+  const liveTranslationLang = useStore(store, (s) => s.settings?.liveTranslationLang ?? "");
   const [error, setError] = useState<string | null>(null);
   const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
   const [googleBusy, setGoogleBusy] = useState(false);
@@ -111,6 +113,29 @@ export function DetectionAutomationSection({
           checked={liveCaptionsOverlay}
           onChange={(next) => void apply({ liveCaptionsOverlay: next })}
           label="Show live captions overlay"
+        />
+      </SettingsRow>
+      <SettingsRow
+        title="Echo cancellation (AEC)"
+        subCaption="Subtract loopback audio from the mic stream to reduce speaker bleed."
+      >
+        <ToggleSwitch
+          checked={aecEnabled}
+          onChange={(next) => void apply({ aecEnabled: next })}
+          label="Enable echo cancellation"
+        />
+      </SettingsRow>
+      <SettingsRow
+        title="Live translation"
+        subCaption="Translate recent transcript lines during capture (empty disables)."
+      >
+        <input
+          aria-label="Live translation target language"
+          className="border border-[var(--grey-200)] bg-[var(--paper,#fff)] text-[var(--ink)]"
+          style={{ fontSize: 13, padding: "4px 8px", borderRadius: 4, width: 160 }}
+          placeholder="e.g. Spanish"
+          value={liveTranslationLang}
+          onChange={(e) => void apply({ liveTranslationLang: e.target.value })}
         />
       </SettingsRow>
       <SettingsRow

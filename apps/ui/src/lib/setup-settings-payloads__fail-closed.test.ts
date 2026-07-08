@@ -24,6 +24,8 @@ const GOOD_SETTINGS = {
   detection_auto_start_sources: ["zoom", "teams"],
   autostop_silence_s: 60,
   live_captions_overlay: true,
+  aec_enabled: false,
+  live_translation_lang: "",
 };
 
 const GOOD_GET = {

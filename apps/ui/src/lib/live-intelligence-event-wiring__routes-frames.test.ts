@@ -10,6 +10,7 @@ import { createApprovalCardsStore } from "./approval-cards-store";
 import { createIntelligenceFrameListener } from "./live-intelligence-event-wiring";
 import { createLiveAnswersStore } from "./live-answers-store";
 import { createLiveSummaryStore } from "./live-summary-store";
+import { createLiveTranslationStore } from "./live-translation-store";
 import { createVaultSuggestionsStore } from "./vault-suggestions-store";
 import { createMeetingDetectionStore } from "./meeting-detection-store";
 import { createMeetingFinalizeStore } from "./meeting-finalize-store";
@@ -17,6 +18,7 @@ import { createMeetingFinalizeStore } from "./meeting-finalize-store";
 function makeAll() {
   const liveAnswers = createLiveAnswersStore();
   const liveSummary = createLiveSummaryStore();
+  const liveTranslation = createLiveTranslationStore();
   const vaultSuggestions = createVaultSuggestionsStore();
   const detection = createMeetingDetectionStore();
   const finalize = createMeetingFinalizeStore();
@@ -24,12 +26,13 @@ function makeAll() {
   const listener = createIntelligenceFrameListener({
     liveAnswers,
     liveSummary,
+    liveTranslation,
     vaultSuggestions,
     detection,
     finalize,
     approvalCards,
   });
-  return { liveAnswers, liveSummary, vaultSuggestions, detection, finalize, approvalCards, listener };
+  return { liveAnswers, liveSummary, liveTranslation, vaultSuggestions, detection, finalize, approvalCards, listener };
 }
 
 function frame(name: string, payload: Record<string, unknown>, kind = "event"): string {

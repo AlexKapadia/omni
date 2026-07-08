@@ -21,6 +21,7 @@ Fidelity / resilience invariants:
   unconfigured vault all refuse with a plain reason.
 """
 
+import base64
 import logging
 from pathlib import Path
 
@@ -74,6 +75,7 @@ from engine.storage.transcript_segments_repository import (
     list_transcript_segment_rows,
     update_transcript_segment_text,
 )
+from engine.export.document_export import export_transcript_docx, export_transcript_pdf
 from engine.export.transcript_export import (
     export_transcript_srt,
     export_transcript_txt,
@@ -153,8 +155,8 @@ class MeetingFinalizationService:
         finally:
             await connection.close()
 
-    async def export_transcript(self, meeting_id: str, fmt: str) -> str | None:
-        """Export transcript as srt, vtt, or txt; None when meeting unknown."""
+    async def export_transcript(self, meeting_id: str, fmt: str) -> dict[str, object] | None:
+        """Export transcript; None when meeting unknown."""
         await apply_migrations(self.db_path, self.migrations_dir)
         connection = await open_sqlite_connection(self.db_path)
         try:
@@ -165,12 +167,31 @@ class MeetingFinalizationService:
         finally:
             await connection.close()
         if fmt == "srt":
-            return export_transcript_srt(segments)
+            return {"content": export_transcript_srt(segments), "format": fmt}
         if fmt == "vtt":
-            return export_transcript_vtt(segments)
+            return {"content": export_transcript_vtt(segments), "format": fmt}
         if fmt == "txt":
-            return export_transcript_txt(segments)
+            return {"content": export_transcript_txt(segments), "format": fmt}
+        if fmt == "pdf":
+            data = export_transcript_pdf(segments)
+            return {
+                "content": base64.b64encode(data).decode("ascii"),
+                "encoding": "base64",
+                "format": fmt,
+            }
+        if fmt == "docx":
+            data = export_transcript_docx(segments)
+            return {
+                "content": base64.b64encode(data).decode("ascii"),
+                "encoding": "base64",
+                "format": fmt,
+            }
         return None
+
+    async def retranscribe(self, meeting_id: str) -> None:
+        from engine.enhance.meeting_retranscription_service import retranscribe_meeting
+
+        await retranscribe_meeting(self.db_path, self.migrations_dir, meeting_id)
 
     # --------------------------------------------------------------- finalize
     async def finalize(

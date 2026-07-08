@@ -118,8 +118,8 @@ def test_summary_payload_keys_and_values_are_pinned_for_the_ts_mirror() -> None:
 
 def test_detail_payload_keys_and_values_are_pinned_for_the_ts_mirror() -> None:
     segments = [
-        TranscriptSegmentRow(stream="them", text="hello", t_start=0.0, t_end=1.0),
-        TranscriptSegmentRow(stream="me", text="hi", t_start=1.2, t_end=1.8),
+        TranscriptSegmentRow(segment_id="s1", stream="them", text="hello", t_start=0.0, t_end=1.0),
+        TranscriptSegmentRow(segment_id="s2", stream="me", text="hi", t_start=1.2, t_end=1.8),
     ]
     payload = meeting_detail_payload(ROW, segments)
     assert payload == {
@@ -132,9 +132,22 @@ def test_detail_payload_keys_and_values_are_pinned_for_the_ts_mirror() -> None:
         "note_path": "Meetings/2026-07-06 Vendor sync.md",
         "notes_text": "raw notes",
         "enhanced_notes_md": "## Summary\nAll agreed.\n",
+        "extraction": None,
         "transcript": [
-            {"stream": "them", "text": "hello"},
-            {"stream": "me", "text": "hi"},
+            {
+                "segment_id": "s1",
+                "stream": "them",
+                "text": "hello",
+                "t_start": 0.0,
+                "t_end": 1.0,
+            },
+            {
+                "segment_id": "s2",
+                "stream": "me",
+                "text": "hi",
+                "t_start": 1.2,
+                "t_end": 1.8,
+            },
         ],
     }
 

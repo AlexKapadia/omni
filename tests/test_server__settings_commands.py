@@ -219,6 +219,7 @@ async def test_setup_status_reports_presence_only_and_completion_gate(
         "groq": True,
         "gemini": True,
         "anthropic": False,
+        "openai": False,
         "cartesia": False,
     }
     # No key MATERIAL anywhere in the reply — presence booleans only.

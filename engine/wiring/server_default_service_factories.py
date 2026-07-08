@@ -148,7 +148,7 @@ def default_spotter_wiring_factory(hub: EventBroadcastHub) -> LiveAnswersSpotter
     return LiveAnswersSpotterWiring(hub, db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
 
 
-def default_enrichment_wiring_factory(hub: EventBroadcastHub) -> LiveMeetingEnrichmentWiring:
+def default_enrichment_wiring_factory(hub: EventBroadcastHub):
     """Live summary + proactive vault poll; production only."""
     from engine.wiring.live_meeting_enrichment_wiring import LiveMeetingEnrichmentWiring
 

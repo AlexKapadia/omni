@@ -57,6 +57,7 @@ from engine.protocol.ledger_summary_payloads import (
 )
 from engine.protocol.meeting_finalization_payloads import (
     COMMAND_IMPORT_MEDIA,
+    COMMAND_MEETING_RETRANSCRIBE,
     COMMAND_MEETING_EXPORT,
     COMMAND_MEETING_FINALIZE,
     COMMAND_MEETING_GET,
@@ -66,6 +67,7 @@ from engine.protocol.meeting_finalization_payloads import (
     EVENT_ENHANCE_READY,
     EVENT_ENHANCE_STARTED,
     ImportMediaCommandPayload,
+    MeetingRetranscribeCommandPayload,
     MeetingExportCommandPayload,
     MeetingFinalizeCommandPayload,
     MeetingGetCommandPayload,
@@ -125,6 +127,7 @@ __all__ = [
     "COMMAND_MEETING_EXPORT",
     "COMMAND_TRANSCRIPT_SEGMENT_UPDATE",
     "COMMAND_IMPORT_MEDIA",
+    "COMMAND_MEETING_RETRANSCRIBE",
     "COMMAND_MODELS_DOWNLOAD",
     "COMMAND_SETTINGS_GET",
     "COMMAND_SETTINGS_UPDATE",

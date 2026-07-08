@@ -23,6 +23,8 @@ const BASE: SettingsGetResult = {
     detectionAutoStartSources: [],
     autostopSilenceS: 60,
     liveCaptionsOverlay: true,
+    aecEnabled: false,
+    liveTranslationLang: "",
   },
   killSwitchEngaged: false,
   routing: [],
@@ -43,6 +45,8 @@ const WIRE_GET = {
     detection_auto_start_sources: [],
     autostop_silence_s: 60,
     live_captions_overlay: true,
+    aec_enabled: false,
+    live_translation_lang: "",
   },
   kill_switch_engaged: true, // the engine reports it engaged now
   routing: [],

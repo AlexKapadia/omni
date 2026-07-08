@@ -36,6 +36,7 @@ from typing import Protocol
 
 from engine.audio.audio_frame_types import PIPELINE_SAMPLE_RATE, AudioFrame, StreamLabel
 from engine.audio.resample_to_16k_mono import StreamingResamplerTo16kMono
+from engine.audio.stream_echo_canceller import StreamEchoCanceller
 from engine.audio.timestamped_audio_ring_buffer import TimestampedAudioRingBuffer
 
 logger = logging.getLogger(__name__)
@@ -110,11 +111,13 @@ class DualStreamCaptureController:
         ring_buffer: TimestampedAudioRingBuffer,
         on_device_changed: Callable[[StreamLabel, str, float], None] | None = None,
         poll_interval_s: float = DEFAULT_DEVICE_POLL_INTERVAL_S,
+        echo_canceller: StreamEchoCanceller | None = None,
     ) -> None:
         self._backend = backend
         self._ring_buffer = ring_buffer
         self._on_device_changed = on_device_changed
         self._poll_interval_s = poll_interval_s
+        self._echo_canceller = echo_canceller
         self._streams: dict[StreamLabel, _StreamState] = {}
         self._monitor_task: asyncio.Task[None] | None = None
         self._running = False
@@ -171,6 +174,12 @@ class DualStreamCaptureController:
                 return
             if samples.size == 0:
                 return
+            canceller = self._echo_canceller
+            if canceller is not None:
+                if label is StreamLabel.THEM:
+                    canceller.feed_loopback(samples)
+                elif label is StreamLabel.ME:
+                    samples = canceller.process_mic(samples)
             t_start = t_end_monotonic - samples.size / PIPELINE_SAMPLE_RATE
             self._ring_buffer.append(
                 AudioFrame(stream=label, samples=samples, t_start_monotonic=t_start)

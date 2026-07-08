@@ -41,6 +41,8 @@ from engine.storage.app_settings_repository import (
     SETTING_DETECTION_AUTO_START_SOURCES,
     SETTING_AUTOSTOP_SILENCE_S,
     SETTING_LIVE_CAPTIONS_OVERLAY,
+    SETTING_AEC_ENABLED,
+    SETTING_LIVE_TRANSLATION_LANG,
     read_all_settings,
     write_setting,
 )
@@ -70,6 +72,8 @@ SETTINGS_DEFAULTS: dict[str, object] = {
     SETTING_DETECTION_AUTO_START_SOURCES: [],
     SETTING_AUTOSTOP_SILENCE_S: 60,
     SETTING_LIVE_CAPTIONS_OVERLAY: True,
+    SETTING_AEC_ENABLED: False,
+    SETTING_LIVE_TRANSLATION_LANG: "",
 }
 
 # On-device rows shown alongside the routed tasks: transcription and
@@ -282,7 +286,7 @@ class AppSettingsCommandGateway:
         effective = await self._read_effective_settings()
         keys = {
             provider: self._key_store.get_key(provider) is not None
-            for provider in ("groq", "gemini", "anthropic", "cartesia")
+            for provider in ("groq", "gemini", "anthropic", "openai", "cartesia")
         }
         vault_dir = effective.get(SETTING_VAULT_DIR)
         vault_configured = isinstance(vault_dir, str) and Path(vault_dir).is_dir()

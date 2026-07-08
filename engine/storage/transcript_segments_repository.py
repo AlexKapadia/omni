@@ -91,3 +91,13 @@ async def update_transcript_segment_text(
     changed = cursor.rowcount > 0
     await cursor.close()
     return changed
+
+
+async def delete_transcript_segments_for_meeting(
+    connection: aiosqlite.Connection, meeting_id: str
+) -> None:
+    """Remove every transcript segment for one meeting."""
+    await connection.execute(
+        "DELETE FROM transcript_segments WHERE meeting_id = ?",
+        (meeting_id,),
+    )

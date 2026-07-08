@@ -26,6 +26,8 @@ const baseSettings = {
   detectionAutoStartSources: [] as const,
   autostopSilenceS: 60,
   liveCaptionsOverlay: true,
+  aecEnabled: false,
+  liveTranslationLang: "",
 };
 
 describe("wireCaptionsOverlay", () => {

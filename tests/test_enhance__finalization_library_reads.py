@@ -37,7 +37,7 @@ async def test_list_and_get_serve_the_finalized_meeting(
     assert [row.id for row in rows] == ["m-10"]
     found = await service.get_meeting("m-10")
     assert found is not None
-    row, segments = found
+    row, segments, _extraction = found
     assert row.notes_text == NOTEPAD
     assert [s.stream for s in segments] == ["them", "me", "them", "me"]
     assert await service.get_meeting("ghost") is None

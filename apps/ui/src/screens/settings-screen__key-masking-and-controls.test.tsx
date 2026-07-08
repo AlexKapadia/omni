@@ -39,6 +39,8 @@ const READY: SettingsGetResult = {
     detectionAutoStartSources: [],
     autostopSilenceS: 60,
     liveCaptionsOverlay: true,
+    aecEnabled: false,
+    liveTranslationLang: "",
   },
   killSwitchEngaged: false,
   routing: [

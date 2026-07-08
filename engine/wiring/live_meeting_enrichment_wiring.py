@@ -16,6 +16,7 @@ import aiosqlite
 
 from engine.ask.ask_answer_contracts import LiveAnswerSource
 from engine.ask.live_summary_service import LiveSummaryService
+from engine.ask.live_translation_service import LiveTranslationService
 from engine.ask.proactive_vault_poller import ProactiveVaultPoller
 from engine.index import HybridRrfRetriever
 from engine.protocol import (
@@ -28,10 +29,13 @@ from engine.protocol import (
 )
 from engine.protocol.live_enrichment_payloads import (
     SUMMARY_UPDATED_EVENT_NAME,
+    TRANSLATION_UPDATED_EVENT_NAME,
     VAULT_SUGGESTION_EVENT_NAME,
     summary_updated_payload,
+    translation_updated_payload,
     vault_suggestion_payload,
 )
+from engine.storage.app_settings_repository import SETTING_LIVE_TRANSLATION_LANG, read_setting
 from engine.router import (
     ProviderRouter,
     RouterLedgerEntry,
@@ -54,21 +58,33 @@ class EnrichmentSessionProtocol(Protocol):
 
 
 class _CombinedEnrichment:
-    def __init__(self, summary: LiveSummaryService, vault: ProactiveVaultPoller) -> None:
+    def __init__(
+        self,
+        summary: LiveSummaryService,
+        vault: ProactiveVaultPoller,
+        translation: LiveTranslationService | None = None,
+    ) -> None:
         self._summary = summary
         self._vault = vault
+        self._translation = translation
 
     async def on_final_segment(self, stream: str, text: str) -> None:
         await self._summary.on_final_segment(stream, text)
         await self._vault.on_final_segment(stream, text)
+        if self._translation is not None:
+            await self._translation.on_final_segment(stream, text)
 
     async def tick(self) -> None:
         await self._summary.tick()
         await self._vault.tick()
+        if self._translation is not None:
+            await self._translation.tick()
 
     async def flush(self) -> None:
         await self._summary.flush()
         await self._vault.flush()
+        if self._translation is not None:
+            await self._translation.flush()
 
 
 class LiveMeetingEnrichmentWiring:
@@ -143,7 +159,19 @@ class LiveMeetingEnrichmentWiring:
 
         summary = LiveSummaryService(router, emit_summary)
         vault = ProactiveVaultPoller(connection, retriever, emit_vault)
-        session = _CombinedEnrichment(summary, vault)
+        raw_lang = await read_setting(connection, SETTING_LIVE_TRANSLATION_LANG)
+        target_lang = raw_lang.strip() if isinstance(raw_lang, str) else ""
+        translation: LiveTranslationService | None = None
+        if target_lang:
+
+            async def emit_translation(lines: list[dict[str, object]]) -> None:
+                await self._hub.broadcast_event(
+                    TRANSLATION_UPDATED_EVENT_NAME,
+                    translation_updated_payload(lines),
+                )
+
+            translation = LiveTranslationService(router, emit_translation, target_lang)
+        session = _CombinedEnrichment(summary, vault, translation)
 
         queue: asyncio.Queue[object] = asyncio.Queue()
         self._connection = connection

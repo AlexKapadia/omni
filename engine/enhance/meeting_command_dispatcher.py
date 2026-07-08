@@ -31,12 +31,14 @@ from engine.protocol import (
     COMMAND_MEETING_EXPORT,
     COMMAND_MEETING_FINALIZE,
     COMMAND_MEETING_GET,
+    COMMAND_MEETING_RETRANSCRIBE,
     COMMAND_MEETINGS_LIST,
     COMMAND_TRANSCRIPT_SEGMENT_UPDATE,
     PROTOCOL_VERSION,
     Envelope,
     EnvelopeKind,
     ImportMediaCommandPayload,
+    MeetingRetranscribeCommandPayload,
     MeetingExportCommandPayload,
     MeetingFinalizeCommandPayload,
     MeetingGetCommandPayload,
@@ -55,6 +57,7 @@ MEETING_COMMAND_NAMES = frozenset(
         COMMAND_MEETING_EXPORT,
         COMMAND_TRANSCRIPT_SEGMENT_UPDATE,
         COMMAND_IMPORT_MEDIA,
+        COMMAND_MEETING_RETRANSCRIBE,
     }
 )
 
@@ -119,6 +122,9 @@ async def dispatch_meeting_command(
         return
     if command.name == COMMAND_IMPORT_MEDIA:
         await _handle_import_media(command, service, send)
+        return
+    if command.name == COMMAND_MEETING_RETRANSCRIBE:
+        await _handle_retranscribe(command, service, send)
         return
     # Unreachable while the handler routes by MEETING_COMMAND_NAMES; keep
     # the deny-by-default reply so a routing bug cannot go silent.
@@ -230,7 +236,7 @@ async def _handle_export(
             )
         )
         return
-    await send(_ok_reply(command.id, {"content": content, "format": payload.format}))
+    await send(_ok_reply(command.id, content))
 
 
 async def _handle_segment_update(
@@ -284,3 +290,25 @@ async def _handle_import_media(
         await send(_typed_error_reply(command.id, FINALIZE_ERROR_CODE, str(exc)))
         return
     await send(_ok_reply(command.id, {"meeting_id": meeting_id}))
+
+
+async def _handle_retranscribe(
+    command: Envelope, service: MeetingFinalizationService, send: SendFn
+) -> None:
+    try:
+        payload = MeetingRetranscribeCommandPayload.model_validate(command.payload)
+    except ValidationError:
+        await send(
+            error_reply(
+                command.id,
+                ProtocolErrorCode.INVALID_PAYLOAD,
+                "meeting.retranscribe payload failed validation",
+            )
+        )
+        return
+    try:
+        await service.retranscribe(payload.meeting_id)
+    except Exception as exc:
+        await send(_typed_error_reply(command.id, FINALIZE_ERROR_CODE, str(exc)))
+        return
+    await send(_ok_reply(command.id, {"meeting_id": payload.meeting_id}))

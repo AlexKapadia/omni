@@ -17,6 +17,7 @@ import { SectionLabel } from "../components/section-label";
 import { SkeletonShimmer } from "../components/skeleton-shimmer";
 import { formatClockShort, formatDayLabel, formatDurationMin } from "../lib/format-quantities";
 import { downloadMeetingExport, triggerBrowserDownload } from "../lib/meeting-export";
+import { retranscribeMeeting } from "../lib/meetings-live-repository";
 import type { FinalizeOutcome, MeetingDetail } from "../lib/meetings-live-repository";
 import { updateTranscriptSegment } from "../lib/meetings-live-repository";
 import { SafeMarkdown } from "../lib/meetings-safe-markdown";
@@ -197,24 +198,31 @@ export function LibraryMeetingDetailPane({
 
           <PaneSection label="Export">
             <div className="flex flex-wrap gap-2">
-              {(["srt", "vtt", "txt"] as const).map((format) => (
+              {(["srt", "vtt", "txt", "pdf", "docx"] as const).map((format) => (
                 <OmniButton
                   key={format}
                   variant="secondary"
                   small
                   onClick={() =>
-                    void downloadMeetingExport(meetingId, format).then((content) =>
-                      triggerBrowserDownload(
-                        `${detail.title}.${format}`,
-                        content,
-                        format === "txt" ? "text/plain" : "text/plain",
-                      ),
+                    void downloadMeetingExport(meetingId, format, detail.title).then((result) =>
+                      triggerBrowserDownload(result),
                     )
                   }
                 >
                   Download {format.toUpperCase()}
                 </OmniButton>
               ))}
+              <OmniButton
+                variant="secondary"
+                small
+                onClick={() =>
+                  void retranscribeMeeting(meetingId)
+                    .then(() => load())
+                    .catch(() => undefined)
+                }
+              >
+                Retranscribe
+              </OmniButton>
             </div>
           </PaneSection>
 

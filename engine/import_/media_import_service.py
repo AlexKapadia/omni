@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import shutil
-import subprocess
 import uuid
 from datetime import UTC, datetime
 from pathlib import Path
@@ -12,6 +11,12 @@ from engine.storage.meetings_repository import insert_meeting, mark_meeting_ende
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.storage.transcript_segments_repository import insert_transcript_segment
+from engine.stt.offline_audio_transcriber import (
+    decode_media_to_mono_16k,
+    load_transcriber,
+    new_segment_id,
+    transcribe_samples,
+)
 
 
 def _utc_now_iso() -> str:
@@ -23,13 +28,10 @@ async def import_media_file(
     migrations_dir: Path,
     media_path: str,
     title: str | None,
+    *,
+    models_dir: Path | None = None,
 ) -> str:
-    """Create a meeting from a local audio/video file.
-
-    Requires ``ffmpeg`` on PATH. Transcription is stubbed with a placeholder
-    segment until the full STT offline pipeline is wired — the meeting row
-    and import path are real so the Library can list it.
-    """
+    """Create a meeting from a local audio/video file with full STT."""
     source = Path(media_path)
     if not source.is_file():
         raise ValueError(f"file not found: {media_path}")
@@ -40,51 +42,39 @@ async def import_media_file(
     meeting_title = title.strip() if title and title.strip() else source.stem
     started_at = _utc_now_iso()
 
+    samples = decode_media_to_mono_16k(source)
+    transcriber = load_transcriber(models_dir)
+    segments = transcribe_samples(transcriber, samples, stream="them")
+
     await apply_migrations(db_path, migrations_dir)
     connection = await open_sqlite_connection(db_path)
     try:
         await insert_meeting(connection, meeting_id, meeting_title, started_at)
         await mark_meeting_ended(connection, meeting_id, started_at)
-        # Probe duration via ffmpeg (best-effort).
-        duration_s = 60.0
-        try:
-            probe = subprocess.run(
-                [
-                    "ffmpeg",
-                    "-i",
-                    str(source),
-                    "-f",
-                    "null",
-                    "-",
-                ],
-                capture_output=True,
-                text=True,
-                check=False,
-                timeout=120,
+        created_at = _utc_now_iso()
+        if not segments:
+            await insert_transcript_segment(
+                connection,
+                segment_id=new_segment_id(),
+                meeting_id=meeting_id,
+                stream="them",
+                text="[No speech detected in imported file.]",
+                t_start=0.0,
+                t_end=max(1.0, samples.size / 16_000),
+                created_at_iso=created_at,
             )
-            for line in (probe.stderr or "").splitlines():
-                if "Duration:" in line:
-                    part = line.split("Duration:", 1)[1].split(",", 1)[0].strip()
-                    h, m, s = part.split(":")
-                    duration_s = int(h) * 3600 + int(m) * 60 + float(s)
-                    break
-        except (OSError, ValueError, subprocess.TimeoutExpired):
-            pass
-
-        placeholder = (
-            f"[Imported from {source.name}. Offline transcription runs when "
-            "STT models are available — re-open after engine preload completes.]"
-        )
-        await insert_transcript_segment(
-            connection,
-            segment_id=str(uuid.uuid4()),
-            meeting_id=meeting_id,
-            stream="them",
-            text=placeholder,
-            t_start=0.0,
-            t_end=max(1.0, duration_s),
-            created_at_iso=_utc_now_iso(),
-        )
+        else:
+            for segment in segments:
+                await insert_transcript_segment(
+                    connection,
+                    segment_id=new_segment_id(),
+                    meeting_id=meeting_id,
+                    stream=segment.stream,
+                    text=segment.text,
+                    t_start=segment.t_start,
+                    t_end=segment.t_end,
+                    created_at_iso=created_at,
+                )
         await connection.commit()
     finally:
         await connection.close()

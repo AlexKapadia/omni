@@ -29,13 +29,14 @@ from engine.security.secret_redaction import SecretApiKey
 # router depends on security, never the reverse).
 # "cartesia" (M7): the optional voice-provider key rides the same DPAPI
 # custody; the router never builds a client for it (voice resolves it).
-KNOWN_PROVIDERS = ("groq", "gemini", "anthropic", "cartesia")
+KNOWN_PROVIDERS = ("groq", "gemini", "anthropic", "openai", "ollama", "cartesia")
 
 # Dev-mode fallback env vars, per provider (populated by the dev runner).
 _ENV_VAR_BY_PROVIDER = {
     "groq": "GROQ_API_KEY",
     "gemini": "GEMINI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
+    "openai": "OPENAI_API_KEY",
     "cartesia": "CARTESIA_API_KEY",
 }
 
@@ -97,7 +98,10 @@ class ProviderKeyStore:
 
         The routing table uses this to decide the anthropic-if-keyed slots.
         """
-        return frozenset(p for p in KNOWN_PROVIDERS if self.get_key(p) is not None)
+        providers = frozenset(p for p in KNOWN_PROVIDERS if self.get_key(p) is not None)
+        if os.environ.get("OMNI_OLLAMA_BASE_URL", "").strip():
+            providers = providers | frozenset({"ollama"})
+        return providers
 
     def _read_encrypted_store(self) -> dict[str, str]:
         """Decrypt and parse keys.bin; missing file means an empty store."""

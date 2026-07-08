@@ -32,11 +32,13 @@ class TaskType(StrEnum):
 
 
 class Provider(StrEnum):
-    """The three providers. Groq + Gemini required; Anthropic optional."""
+    """Cloud LLM providers. Groq + Gemini required; others optional."""
 
     GROQ = "groq"
     GEMINI = "gemini"
     ANTHROPIC = "anthropic"
+    OPENAI = "openai"
+    OLLAMA = "ollama"
 
 
 @dataclass(frozen=True)

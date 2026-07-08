@@ -141,7 +141,7 @@ def test_multiple_keys_coexist_and_delete_is_surgical(key_store: ProviderKeyStor
 
 def test_unknown_provider_is_refused(key_store: ProviderKeyStore) -> None:
     with pytest.raises(ValueError, match="unknown provider"):
-        key_store.set_key("openai", SecretApiKey("nope"))
+        key_store.set_key("mistral", SecretApiKey("nope"))
 
 
 def test_stored_key_beats_env_fallback(

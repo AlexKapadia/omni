@@ -13,6 +13,7 @@ import { useEffect, useState, type ReactNode } from "react";
 import { OmniButton } from "../components/button";
 import { AnswersPanel } from "../components/live/answers-panel";
 import { LiveSummaryPanel } from "../components/live/live-summary-panel";
+import { LiveTranslationPanel } from "../components/live/live-translation-panel";
 import { VaultSuggestionsPanel } from "../components/live/vault-suggestions-panel";
 import { CaptureBar } from "../components/live/capture-bar";
 import { FinalizeMeetingPanel } from "../components/live/finalize-meeting-panel";
@@ -148,6 +149,7 @@ export function LiveMeetingScreen() {
         <div className="flex min-h-0 flex-1">
           <div className="flex min-w-0 flex-col" style={{ flex: 2 }}>
             <LiveSummaryPanel />
+            <LiveTranslationPanel />
             <NotepadPane meetingTitle="Live meeting" elapsedSeconds={elapsedSeconds} />
           </div>
           <TranscriptStream />

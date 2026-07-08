@@ -72,6 +72,12 @@ function toWireValues(partial: Partial<EngineSettings>): Record<string, unknown>
   if (partial.onboardingComplete !== undefined) {
     values["onboarding_complete"] = partial.onboardingComplete;
   }
+  if (partial.detectionAutoStartSources !== undefined) {
+    values["detection_auto_start_sources"] = partial.detectionAutoStartSources;
+  }
+  if (partial.autostopSilenceS !== undefined) {
+    values["autostop_silence_s"] = partial.autostopSilenceS;
+  }
   return values;
 }
 

@@ -47,6 +47,7 @@ function fakeActions(onDoneSpy: () => void): OnboardingActions {
     beginModelDownload: async (store) => markModelsCompleted(store, true),
     subscribeGoogleConnect: () => () => undefined,
     beginGoogleConnect: async (store) => setGoogleResult(store, true, "Connected."),
+    skipGoogleConnect: () => undefined,
     finishOnboarding: async (_store, onDone) => {
       onDoneSpy();
       onDone(DONE_STATUS);
@@ -108,19 +109,18 @@ describe("first-run wizard drives every control", () => {
     expect(keysStore.getState().validation.gemini.status).toBe("valid");
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" })));
 
-    // Step 4 — Finish is blocked until models present; download unblocks it.
+    // Step 4 — models download, then Continue to Google Calendar.
     expect(screen.getByText("Get the models")).toBeTruthy();
-    const finishBtn = () => screen.getByRole("button", { name: "Finish" }) as HTMLButtonElement;
-    expect(finishBtn().disabled).toBe(true);
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Download" })));
     await waitFor(() => expect(screen.getByText("✓ models ready")).toBeTruthy());
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" })));
 
-    // Optional Google connect + its Skip both work.
+    // Step 5 — Google Calendar connect (optional) then Finish.
+    expect(screen.getByText("Connect Google Calendar")).toBeTruthy();
+    const finishBtn = () => screen.getByRole("button", { name: "Finish" }) as HTMLButtonElement;
+    expect(finishBtn().disabled).toBe(false);
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Connect Google" })));
     await waitFor(() => expect(screen.getByText("✓ Google connected")).toBeTruthy());
-
-    // Finish now enabled — completes only after the engine confirms.
-    await waitFor(() => expect(finishBtn().disabled).toBe(false));
     await act(async () => fireEvent.click(finishBtn()));
     expect(onDoneSpy).toHaveBeenCalledTimes(1);
     expect(onComplete).toHaveBeenCalledTimes(1);
@@ -163,6 +163,7 @@ describe("first-run wizard drives every control", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Begin" })));
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" }))); // step 3
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" }))); // step 4
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" }))); // step 5
     expect((screen.getByRole("button", { name: "Finish" }) as HTMLButtonElement).disabled).toBe(true);
     expect(screen.getByText(/validate your Groq and Gemini keys/)).toBeTruthy();
   });

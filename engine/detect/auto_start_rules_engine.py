@@ -136,6 +136,10 @@ class AutoStartRulesEngine:
         self._last_meeting_seen_during_capture_s = 0.0
         self._stop_suggested = False
 
+    def apply_settings(self, settings: DetectionRuleSettings) -> None:
+        """Hot-reload user knobs without resetting session state."""
+        self._settings = settings
+
     def dismiss(self, dedupe_key: str, now_s: float) -> None:
         """User dismissed a suggestion card: suppress that key for the cooldown."""
         self._dismissed_until_s[dedupe_key] = now_s + self._settings.dismissed_cooldown_s

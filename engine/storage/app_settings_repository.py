@@ -33,6 +33,8 @@ SETTING_INSTANT_EXECUTE_WHITELIST = "instant_execute_whitelist"
 SETTING_ACTIVE_TEMPLATE = "active_template"
 SETTING_CUSTOM_TEMPLATES = "custom_templates"
 SETTING_ONBOARDING_COMPLETE = "onboarding_complete"
+SETTING_DETECTION_AUTO_START_SOURCES = "detection_auto_start_sources"
+SETTING_AUTOSTOP_SILENCE_S = "autostop_silence_s"
 
 KNOWN_SETTINGS_KEYS: frozenset[str] = frozenset(
     {
@@ -45,6 +47,8 @@ KNOWN_SETTINGS_KEYS: frozenset[str] = frozenset(
         SETTING_ACTIVE_TEMPLATE,
         SETTING_CUSTOM_TEMPLATES,
         SETTING_ONBOARDING_COMPLETE,
+        SETTING_DETECTION_AUTO_START_SOURCES,
+        SETTING_AUTOSTOP_SILENCE_S,
     }
 )
 

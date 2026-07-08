@@ -13,6 +13,7 @@ import { OmniMark } from "./components/omni-mark";
 import { StatusFooter } from "./components/status-footer";
 import { tokenDurationSeconds } from "./lib/design-token-motion";
 import { startLiveEngineConnection } from "./lib/live-engine-socket";
+import { wireTrayStartCapture } from "./lib/wire-tray-capture";
 import { getSetupStatus } from "./lib/setup-settings-repository";
 import { syncConfiguredDictationHotkey } from "./lib/sync-dictation-hotkey";
 import type { SetupStatus } from "./lib/setup-settings-payloads";
@@ -46,6 +47,17 @@ export default function App({
 
   useEffect(() => {
     startLiveEngineConnection(); // idempotent; safe under StrictMode double-mount
+    let unlistenTray: (() => void) | undefined;
+    void (async () => {
+      try {
+        const { listen } = await import("@tauri-apps/api/event");
+        unlistenTray = await wireTrayStartCapture((event, handler) =>
+          listen(event, handler).then((fn) => fn),
+        );
+      } catch {
+        // Web build / tests: no Tauri shell — tray capture is unavailable.
+      }
+    })();
     // Apply the user's configured push-to-talk key to the shell's global hold
     // binding (the shell boots on the default F9 until this lands). No-op
     // outside the Tauri shell; non-fatal if the engine is not up yet.
@@ -77,6 +89,7 @@ export default function App({
     attempt();
     return () => {
       cancelled = true;
+      unlistenTray?.();
     };
   }, [checkStatus, bootRetryBudgetMs]);
 

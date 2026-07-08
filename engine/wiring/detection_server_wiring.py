@@ -27,6 +27,7 @@ import asyncio
 import logging
 from collections.abc import Callable
 
+from engine.detect.detection_settings_from_app import detection_rule_settings_from_effective
 from engine.detect import (
     AutoStart,
     AutoStartRulesEngine,
@@ -119,6 +120,12 @@ class DetectionServerWiring:
     def feed_vad_sample(self, sample_ts_s: float, speech_probability: float) -> None:
         """The loopback VAD tap (event-loop thread; see capture service)."""
         self._service.feed_vad_sample(sample_ts_s, speech_probability)
+
+    def apply_detection_settings(self, effective: dict[str, object]) -> None:
+        """Hot-reload detection rules from the effective settings map."""
+        self._service.apply_detection_settings(
+            detection_rule_settings_from_effective(effective)
+        )
 
     def _on_decision(self, decision: DetectionDecision) -> None:
         """DetectionService callback (event loop): broadcast the WS event."""

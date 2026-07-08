@@ -21,6 +21,8 @@ const GOOD_SETTINGS = {
   active_template: "meeting",
   custom_templates: ["Deep dive"],
   onboarding_complete: true,
+  detection_auto_start_sources: ["zoom", "teams"],
+  autostop_silence_s: 60,
 };
 
 const GOOD_GET = {
@@ -40,6 +42,8 @@ describe("parseSettingsGet", () => {
     expect(result!.settings.vaultDir).toBe("C:/vault");
     expect(result!.settings.pushToTalkHotkey).toEqual(["Ctrl", "Shift", "Space"]);
     expect(result!.settings.instantExecuteWhitelist).toEqual(["create_event", "draft_email"]);
+    expect(result!.settings.detectionAutoStartSources).toEqual(["zoom", "teams"]);
+    expect(result!.settings.autostopSilenceS).toBe(60);
     expect(result!.routing[0]!.attempts[0]).toEqual({ provider: "groq", model: "x" });
   });
 

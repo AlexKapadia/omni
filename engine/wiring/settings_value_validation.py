@@ -32,7 +32,11 @@ from engine.storage.app_settings_repository import (
     SETTING_ONBOARDING_COMPLETE,
     SETTING_PUSH_TO_TALK_HOTKEY,
     SETTING_VAULT_DIR,
+    SETTING_DETECTION_AUTO_START_SOURCES,
+    SETTING_AUTOSTOP_SILENCE_S,
 )
+from engine.detect.detection_settings_from_app import AUTOSTOP_SILENCE_CHOICES
+from engine.detect.detection_signal_types import KNOWN_DETECTION_SOURCES
 
 # Companion flag (NOT persisted): "create the vault folder if it is missing".
 # Lives beside vault_dir in the same update payload; consumed here.
@@ -178,6 +182,28 @@ def _validate_custom_templates(value: object) -> list[dict[str, object]]:
     return normalized
 
 
+def _validate_detection_auto_start_sources(value: object) -> list[str]:
+    key = SETTING_DETECTION_AUTO_START_SOURCES
+    if not isinstance(value, list):
+        raise SettingsValueError(key, "value must be a list of detection sources")
+    normalized: list[str] = []
+    for item in value:
+        if not isinstance(item, str) or item not in KNOWN_DETECTION_SOURCES:
+            raise SettingsValueError(key, f"unknown detection source: {item!r}")
+        if item not in normalized:
+            normalized.append(item)
+    return sorted(normalized)
+
+
+def _validate_autostop_silence_s(value: object) -> int:
+    key = SETTING_AUTOSTOP_SILENCE_S
+    if not isinstance(value, int) or isinstance(value, bool):
+        raise SettingsValueError(key, "value must be an integer number of seconds")
+    if value not in AUTOSTOP_SILENCE_CHOICES:
+        raise SettingsValueError(key, f"value must be one of {sorted(AUTOSTOP_SILENCE_CHOICES)}")
+    return value
+
+
 def validate_settings_values(values: dict[str, object]) -> dict[str, object]:
     """Validate one ``settings.update`` batch; returns the normalised map.
 
@@ -211,6 +237,10 @@ def validate_settings_values(values: dict[str, object]) -> dict[str, object]:
             normalized[key] = _validate_active_template(value)
         elif key == SETTING_CUSTOM_TEMPLATES:
             normalized[key] = _validate_custom_templates(value)
+        elif key == SETTING_DETECTION_AUTO_START_SOURCES:
+            normalized[key] = _validate_detection_auto_start_sources(value)
+        elif key == SETTING_AUTOSTOP_SILENCE_S:
+            normalized[key] = _validate_autostop_silence_s(value)
     if not normalized:
         raise SettingsValueError("values", "no persistable settings in the update")
     return normalized

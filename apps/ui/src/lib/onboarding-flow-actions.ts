@@ -14,6 +14,7 @@ import {
   markModelsAlreadyPresent,
   markModelsCompleted,
   markModelsStarted,
+  markGoogleSkipped,
   setFinishError,
   setFinishing,
   setGoogleBusy,
@@ -153,14 +154,19 @@ export function subscribeGoogleConnect(
 /** Begin the Google OAuth connect; the result arrives via the event above. */
 export async function beginGoogleConnect(
   store: OnboardingFlowStore,
-  connect = connectGoogle,
+  connect: typeof connectGoogle = connectGoogle,
+  credentials?: { readonly clientId: string; readonly clientSecret: string },
 ): Promise<void> {
   setGoogleBusy(store, true);
   try {
-    await connect();
+    await connect(undefined, credentials);
   } catch (err) {
     setGoogleResult(store, false, messageOf(err, "Could not start Google connect."));
   }
+}
+
+export function skipGoogleConnect(store: OnboardingFlowStore): void {
+  markGoogleSkipped(store);
 }
 
 /**

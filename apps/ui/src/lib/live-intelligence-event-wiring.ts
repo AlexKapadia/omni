@@ -28,6 +28,7 @@ import {
   type LiveAnswersStore,
 } from "./live-answers-store";
 import { CAPTURE_STARTED_EVENT_NAME } from "./capture-protocol";
+import { maybeAutoStartCaptureOnDetection } from "./auto-start-reaction";
 import {
   applyCaptureSuggestStop,
   applyMeetingDetected,
@@ -35,6 +36,7 @@ import {
   clearMeetingDetection,
   MEETING_DETECTED_EVENT_NAME,
   meetingDetectionStore,
+  parseMeetingDetectedPayload,
   type MeetingDetectionStore,
 } from "./meeting-detection-store";
 import {
@@ -91,6 +93,10 @@ export function createIntelligenceFrameListener(
       resetMeetingFinalize(stores.finalize);
     } else if (name === MEETING_DETECTED_EVENT_NAME) {
       applyMeetingDetected(stores.detection, payload);
+      const suggestion = parseMeetingDetectedPayload(payload);
+      if (suggestion !== null) {
+        maybeAutoStartCaptureOnDetection(suggestion);
+      }
     } else if (name === CAPTURE_SUGGEST_STOP_EVENT_NAME) {
       applyCaptureSuggestStop(stores.detection, payload);
     } else if (name === ENHANCE_READY_EVENT_NAME) {

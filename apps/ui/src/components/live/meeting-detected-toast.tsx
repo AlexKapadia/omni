@@ -39,7 +39,7 @@ export function MeetingDetectedToast({
       className="pointer-events-none absolute left-0 right-0 top-0 z-20 flex justify-center"
       style={{ padding: "var(--space-4)" }}
     >
-      {suggestion !== null && canStart ? (
+      {suggestion !== null && canStart && !suggestion.autoStart ? (
         <div
           role="status"
           aria-label="Meeting detected"

@@ -56,6 +56,7 @@ from engine.wiring.onboarding_settings_command_surface import (
 from engine.wiring.server_default_service_factories import (
     default_approval_gateway_factory,
     default_ask_gateway_factory,
+    default_calendar_poll_factory,
     default_capture_service_factory,
     default_card_build_wiring_factory,
     default_detection_wiring_factory,
@@ -65,6 +66,7 @@ from engine.wiring.server_default_service_factories import (
     default_spotter_wiring_factory,
     default_vault_watchdog_factory,
 )
+from engine.google.calendar_poll_service import CalendarPollService
 from engine.wiring.vault_watchdog_server_wiring import VaultWatchdogServerWiring
 
 # Factory seams (a factory, not an instance, so services are built AFTER
@@ -82,6 +84,7 @@ DetectionWiringFactory = Callable[[EventBroadcastHub, LiveCaptureService], Detec
 SpotterWiringFactory = Callable[[EventBroadcastHub], LiveAnswersSpotterWiring]
 CardBuildWiringFactory = Callable[[EventBroadcastHub], ApprovalCardBuildWiring]
 VaultWatchdogFactory = Callable[[], VaultWatchdogServerWiring]
+CalendarPollFactory = Callable[[EventBroadcastHub], CalendarPollService]
 # Return the structural control Protocol (not the concrete gateway) so tests
 # can inject a fake; the real gateway satisfies it (return-type covariance).
 NaomiLoopFactory = Callable[[EventBroadcastHub], NaomiTurnControl]
@@ -99,6 +102,7 @@ def create_app(
     spotter_wiring_factory: SpotterWiringFactory | None = None,
     card_build_wiring_factory: CardBuildWiringFactory | None = None,
     vault_watchdog_factory: VaultWatchdogFactory | None = None,
+    calendar_poll_factory: CalendarPollFactory | None = None,
     m7_surface: OnboardingSettingsCommandSurface | None = None,
     naomi_loop_gateway_factory: NaomiLoopFactory | None = None,
 ) -> FastAPI:
@@ -136,6 +140,9 @@ def create_app(
     )
     if detection_wiring is not None:
         capture_service.on_loopback_vad_probability = detection_wiring.feed_vad_sample
+        m7.settings_gateway.set_detection_settings_listener(
+            detection_wiring.apply_detection_settings
+        )
     spotter_wiring = spotter_wiring_factory(event_hub) if spotter_wiring_factory else None
     # M4 card-building seams (event/hook-driven — same wired-only-when-passed
     # rule): finalization events + the dictation gateway's post-final hook.
@@ -151,6 +158,7 @@ def create_app(
         )
     # M3 live vault watching (OS-event-driven — same rule).
     vault_watchdog = vault_watchdog_factory() if vault_watchdog_factory else None
+    calendar_poll = calendar_poll_factory(event_hub) if calendar_poll_factory else None
     # Naomi conversation loop: command-driven but heavy (loads STT models,
     # opens the mic + persistent Cartesia socket on first listen), so wired
     # ONLY when a factory is passed — hermetic tests get an honest refusal.
@@ -168,12 +176,19 @@ def create_app(
             # first command — a user-chosen vault and an engaged kill switch
             # survive restarts (fail closed on egress across reboots).
             await m7.apply_persisted_settings_at_boot()
+            if detection_wiring is not None:
+                payload = await m7.settings_gateway.get_settings_payload()
+                settings = payload.get("settings")
+                if isinstance(settings, dict):
+                    detection_wiring.apply_detection_settings(settings)
             # Background: heartbeats flow (stt_ready=false) while models load.
             preload_task = asyncio.create_task(capture_service.preload_models())
         if detection_wiring is not None:
             detection_wiring.start()  # bot-free detection poll loop
         if vault_watchdog is not None:
             vault_watchdog.start()  # live vault reindex (or one honest OFF line)
+        if calendar_poll is not None:
+            calendar_poll.start()
         yield
         if detection_wiring is not None:
             # Stop the poll loop first: no suggestions during teardown.
@@ -182,6 +197,9 @@ def create_app(
         if vault_watchdog is not None:
             with contextlib.suppress(Exception):
                 await vault_watchdog.shutdown()
+        if calendar_poll is not None:
+            with contextlib.suppress(Exception):
+                await calendar_poll.stop()
         if spotter_wiring is not None:
             with contextlib.suppress(Exception):
                 await spotter_wiring.shutdown()
@@ -283,6 +301,7 @@ def build_uvicorn_config(settings: EngineSettings) -> uvicorn.Config:
             spotter_wiring_factory=default_spotter_wiring_factory,
             card_build_wiring_factory=default_card_build_wiring_factory,
             vault_watchdog_factory=default_vault_watchdog_factory,
+            calendar_poll_factory=default_calendar_poll_factory,
             naomi_loop_gateway_factory=default_naomi_loop_factory,
         ),
         # Local-only invariant: loopback constant, never a setting.

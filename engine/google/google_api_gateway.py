@@ -46,6 +46,15 @@ class CreatedCalendarEvent:
 
 
 @dataclass(frozen=True)
+class UpcomingCalendarEvent:
+    event_id: str
+    title: str
+    start_iso: str
+    end_iso: str
+    attendee_emails: tuple[str, ...]
+
+
+@dataclass(frozen=True)
 class BusyInterval:
     start_iso: str
     end_iso: str
@@ -93,6 +102,66 @@ async def create_calendar_event(
     return CreatedCalendarEvent(
         event_id=event_id, html_link=html_link if isinstance(html_link, str) else ""
     )
+
+
+async def list_upcoming_calendar_events(
+    session: GoogleSession,
+    *,
+    time_min_iso: str,
+    time_max_iso: str,
+    calendar_id: str = "primary",
+    max_results: int = 10,
+) -> tuple[UpcomingCalendarEvent, ...]:
+    """List events starting inside a window (read-only, calendar.events scope)."""
+    _refuse_egress_when_kill_switch_engaged()
+    response = await session.request_json(
+        "GET",
+        CALENDAR_EVENTS_URL.format(calendar_id=calendar_id),
+        params={
+            "timeMin": time_min_iso,
+            "timeMax": time_max_iso,
+            "singleEvents": "true",
+            "orderBy": "startTime",
+            "maxResults": str(max_results),
+        },
+    )
+    items = response.get("items")
+    if not isinstance(items, list):
+        return ()
+    events: list[UpcomingCalendarEvent] = []
+    for item in items:
+        if not isinstance(item, dict):
+            continue
+        event_id = item.get("id")
+        summary = item.get("summary")
+        start = item.get("start")
+        end = item.get("end")
+        if not isinstance(event_id, str) or not event_id:
+            continue
+        if not isinstance(summary, str) or not summary.strip():
+            continue
+        if not isinstance(start, dict) or not isinstance(end, dict):
+            continue
+        start_iso = start.get("dateTime") or start.get("date")
+        end_iso = end.get("dateTime") or end.get("date")
+        if not isinstance(start_iso, str) or not isinstance(end_iso, str):
+            continue
+        attendees_raw = item.get("attendees", [])
+        emails: list[str] = []
+        if isinstance(attendees_raw, list):
+            for attendee in attendees_raw:
+                if isinstance(attendee, dict) and isinstance(attendee.get("email"), str):
+                    emails.append(attendee["email"])
+        events.append(
+            UpcomingCalendarEvent(
+                event_id=event_id,
+                title=summary.strip(),
+                start_iso=start_iso,
+                end_iso=end_iso,
+                attendee_emails=tuple(emails),
+            )
+        )
+    return tuple(events)
 
 
 async def query_free_busy(

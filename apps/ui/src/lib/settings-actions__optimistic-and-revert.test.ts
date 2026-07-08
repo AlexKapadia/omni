@@ -20,6 +20,8 @@ const BASE: SettingsGetResult = {
     activeTemplate: "meeting",
     customTemplates: [],
     onboardingComplete: true,
+    detectionAutoStartSources: [],
+    autostopSilenceS: 60,
   },
   killSwitchEngaged: false,
   routing: [],
@@ -37,6 +39,8 @@ const WIRE_GET = {
     active_template: "meeting",
     custom_templates: [],
     onboarding_complete: true,
+    detection_auto_start_sources: [],
+    autostop_silence_s: 60,
   },
   kill_switch_engaged: true, // the engine reports it engaged now
   routing: [],

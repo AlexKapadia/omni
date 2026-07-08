@@ -14,6 +14,7 @@ import { ApiKeysSection } from "../components/settings/api-keys-section";
 import { CostLatencyLedgerSection } from "../components/settings/cost-ledger-section";
 import { DevicesSection, HotkeySection } from "../components/settings/devices-and-hotkey-sections";
 import { InstantExecuteWhitelistSection } from "../components/settings/instant-execute-whitelist-section";
+import { DetectionAutomationSection } from "../components/settings/detection-automation-section";
 import { PrivacySection } from "../components/settings/privacy-section";
 import { RouterMatrixSection } from "../components/settings/router-matrix-section";
 import { TemplatesSection } from "../components/settings/templates-and-custom-editor-section";
@@ -96,6 +97,7 @@ export function SettingsScreen({
           ) : (
             <>
               <HotkeySection store={store} update={update} />
+              <DetectionAutomationSection store={store} update={update} />
               <TemplatesSection store={store} update={update} />
               <PrivacySection store={store} update={update} />
               <InstantExecuteWhitelistSection store={store} update={update} />

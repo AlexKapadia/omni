@@ -37,7 +37,7 @@ import time
 from collections.abc import Callable
 from typing import Protocol
 
-from engine.detect.auto_start_rules_engine import AutoStartRulesEngine
+from engine.detect.auto_start_rules_engine import AutoStartRulesEngine, DetectionRuleSettings
 from engine.detect.detection_signal_types import DetectionDecision, DetectionSignal
 from engine.detect.meeting_process_watcher import MeetingProcessWatcher
 from engine.detect.microphone_in_use_detector import MicrophoneInUseDetector
@@ -111,6 +111,10 @@ class DetectionService:
     def dismiss_suggestion(self, dedupe_key: str) -> None:
         """Wiring surface for the UI's 'dismiss' action on a suggestion card."""
         self._rules_engine.dismiss(dedupe_key, self._clock.monotonic())
+
+    def apply_detection_settings(self, settings: DetectionRuleSettings) -> None:
+        """Hot-reload user knobs without restarting the poll loop."""
+        self._rules_engine.apply_settings(settings)
 
     def start(self) -> None:
         """Begin polling. Idempotent: a second start while running is a no-op."""

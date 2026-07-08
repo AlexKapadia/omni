@@ -7,7 +7,7 @@
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
     tray::TrayIconBuilder,
-    AppHandle, Manager,
+    AppHandle, Emitter, Manager,
 };
 
 const MENU_ID_SHOW: &str = "show-omni";
@@ -18,7 +18,7 @@ const MENU_ID_QUIT: &str = "quit";
 pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let show = MenuItemBuilder::with_id(MENU_ID_SHOW, "Show Omni").build(app)?;
     let start_capture = MenuItemBuilder::with_id(MENU_ID_START_CAPTURE, "Start capture")
-        .enabled(false) // placeholder until the capture pipeline exists (M1)
+        .enabled(true)
         .build(app)?;
     let quit = MenuItemBuilder::with_id(MENU_ID_QUIT, "Quit").build(app)?;
 
@@ -46,8 +46,13 @@ pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
                 let _ = window.set_focus();
             }
         }
+        MENU_ID_START_CAPTURE => {
+            if let Some(window) = app.get_webview_window("main") {
+                let _ = window.emit("tray-start-capture", ());
+            }
+        }
         MENU_ID_QUIT => app.exit(0),
-        _ => {} // disabled placeholder emits nothing today
+        _ => {}
     })
     .build(app)?;
 

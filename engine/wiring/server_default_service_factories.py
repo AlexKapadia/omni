@@ -146,3 +146,10 @@ def default_spotter_wiring_factory(hub: EventBroadcastHub) -> LiveAnswersSpotter
     """Real per-meeting spotter over the settings database; production only."""
     settings = load_engine_settings()  # Raises on bad env — fail closed.
     return LiveAnswersSpotterWiring(hub, db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
+
+
+def default_calendar_poll_factory(hub: EventBroadcastHub):
+    """Google Calendar poll for upcoming meetings; no-op when not connected."""
+    from engine.google.calendar_poll_service import CalendarPollService
+
+    return CalendarPollService(hub)

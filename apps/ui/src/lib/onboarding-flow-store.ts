@@ -10,7 +10,7 @@
  */
 import { createStore, type StoreApi } from "zustand";
 
-export type OnboardingStep = 1 | 2 | 3 | 4;
+export type OnboardingStep = 1 | 2 | 3 | 4 | 5;
 
 export interface ModelFileProgress {
   readonly file: string;
@@ -35,6 +35,7 @@ export interface OnboardingFlowState {
   readonly googleBusy: boolean;
   readonly googleConnected: boolean;
   readonly googleMessage: string | null;
+  readonly googleSkipped: boolean;
   // finishing
   readonly finishing: boolean;
   readonly finishError: string | null;
@@ -55,6 +56,7 @@ export function createOnboardingFlowState(): OnboardingFlowState {
     googleBusy: false,
     googleConnected: false,
     googleMessage: null,
+    googleSkipped: false,
     finishing: false,
     finishError: null,
   };
@@ -149,6 +151,10 @@ export function setGoogleBusy(store: OnboardingFlowStore, busy: boolean): void {
 
 export function setGoogleResult(store: OnboardingFlowStore, connected: boolean, message: string): void {
   store.setState({ googleBusy: false, googleConnected: connected, googleMessage: message });
+}
+
+export function markGoogleSkipped(store: OnboardingFlowStore): void {
+  store.setState({ googleSkipped: true, googleBusy: false });
 }
 
 // ------------------------------------------------------------------ finish

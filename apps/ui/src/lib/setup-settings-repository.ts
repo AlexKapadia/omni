@@ -125,6 +125,11 @@ export async function startModelsDownload(
 /** Begin the Google OAuth connect; completion arrives as an event. */
 export async function connectGoogle(
   request: SetupRequestFn = requestSetupCommand,
+  credentials?: { readonly clientId: string; readonly clientSecret: string },
 ): Promise<void> {
-  await request(GOOGLE_CONNECT_COMMAND, {}, READ_TIMEOUT_MS);
+  const payload =
+    credentials !== undefined
+      ? { client_id: credentials.clientId.trim(), client_secret: credentials.clientSecret.trim() }
+      : {};
+  await request(GOOGLE_CONNECT_COMMAND, payload, READ_TIMEOUT_MS);
 }

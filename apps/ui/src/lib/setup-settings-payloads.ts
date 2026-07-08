@@ -33,6 +33,10 @@ export interface EngineSettings {
   readonly activeTemplate: string;
   readonly customTemplates: readonly string[];
   readonly onboardingComplete: boolean;
+  /** Per-source opt-in for auto-start (deny by default — empty until user enables). */
+  readonly detectionAutoStartSources: readonly string[];
+  /** Sustained silence before auto-stop (0 disables). */
+  readonly autostopSilenceS: number;
 }
 
 export interface RoutingAttempt {
@@ -110,9 +114,13 @@ function parseEngineSettings(value: unknown): EngineSettings | null {
   const activeTemplate = asString(value["active_template"]);
   const customTemplates = parseStringArray(value["custom_templates"]);
   const onboardingComplete = asBoolean(value["onboarding_complete"]);
+  const detectionAutoStartSources =
+    parseStringArray(value["detection_auto_start_sources"]) ?? [];
+  const autostopSilenceS = asFiniteNumber(value["autostop_silence_s"]);
   if (hotkey === null || keepAudio === null || disclosureReminder === null) return null;
   if (killSwitch === null || whitelist === null || activeTemplate === null) return null;
   if (customTemplates === null || onboardingComplete === null) return null;
+  if (autostopSilenceS === null) return null;
   return {
     vaultDir,
     pushToTalkHotkey: hotkey,
@@ -123,6 +131,8 @@ function parseEngineSettings(value: unknown): EngineSettings | null {
     activeTemplate,
     customTemplates,
     onboardingComplete,
+    detectionAutoStartSources,
+    autostopSilenceS,
   };
 }
 

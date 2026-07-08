@@ -36,6 +36,8 @@ const READY: SettingsGetResult = {
     activeTemplate: "meeting",
     customTemplates: [],
     onboardingComplete: true,
+    detectionAutoStartSources: [],
+    autostopSilenceS: 60,
   },
   killSwitchEngaged: false,
   routing: [

@@ -18,6 +18,7 @@ Security invariants:
 """
 
 import os
+from collections.abc import Callable
 from pathlib import Path
 
 from engine.enhance.note_templates import AUTO_TEMPLATE_ID, BUILTIN_TEMPLATES
@@ -37,9 +38,12 @@ from engine.storage.app_settings_repository import (
     SETTING_ONBOARDING_COMPLETE,
     SETTING_PUSH_TO_TALK_HOTKEY,
     SETTING_VAULT_DIR,
+    SETTING_DETECTION_AUTO_START_SOURCES,
+    SETTING_AUTOSTOP_SILENCE_S,
     read_all_settings,
     write_setting,
 )
+from engine.stt.silence_auto_stop_monitor import AUTOSTOP_SILENCE_ENV_VAR
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.stt.model_weights_downloader import MODEL_SPECS, models_directory
@@ -62,6 +66,8 @@ SETTINGS_DEFAULTS: dict[str, object] = {
     SETTING_ACTIVE_TEMPLATE: AUTO_TEMPLATE_ID,
     SETTING_CUSTOM_TEMPLATES: [],
     SETTING_ONBOARDING_COMPLETE: False,
+    SETTING_DETECTION_AUTO_START_SOURCES: [],
+    SETTING_AUTOSTOP_SILENCE_S: 60,
 }
 
 # On-device rows shown alongside the routed tasks: transcription and
@@ -110,6 +116,13 @@ class AppSettingsCommandGateway:
         self._google_token_store = (
             google_token_store if google_token_store is not None else GoogleTokenStore()
         )
+        self._on_detection_settings_applied: Callable[[dict[str, object]], None] | None = None
+
+    def set_detection_settings_listener(
+        self, listener: Callable[[dict[str, object]], None] | None
+    ) -> None:
+        """Optional hook: detection rules hot-reload when settings change."""
+        self._on_detection_settings_applied = listener
 
     # ------------------------------------------------------------- plumbing
     async def _read_effective_settings(self) -> dict[str, object]:
@@ -216,7 +229,14 @@ class AppSettingsCommandGateway:
         finally:
             await connection.close()
         self._apply_side_effects(normalized)
+        await self._notify_detection_settings_listener()
         return normalized
+
+    async def _notify_detection_settings_listener(self) -> None:
+        if self._on_detection_settings_applied is None:
+            return
+        effective = await self._read_effective_settings()
+        self._on_detection_settings_applied(effective)
 
     def _apply_side_effects(self, applied: dict[str, object]) -> None:
         """Runtime effects after a successful persist (order-independent)."""
@@ -230,6 +250,9 @@ class AppSettingsCommandGateway:
             # Fail closed on egress instantly — the router consults this
             # before every external call.
             set_kill_switch_runtime_override(kill)
+        silence_s = applied.get(SETTING_AUTOSTOP_SILENCE_S)
+        if isinstance(silence_s, int):
+            os.environ[AUTOSTOP_SILENCE_ENV_VAR] = str(silence_s)
 
     async def apply_persisted_settings_at_boot(self) -> None:
         """Boot hook (production only): make persisted settings effective.
@@ -246,6 +269,11 @@ class AppSettingsCommandGateway:
         if effective.get(SETTING_KILL_SWITCH) is True:
             # Fail closed: a user-engaged switch survives restarts.
             set_kill_switch_runtime_override(True)
+        silence_s = effective.get(SETTING_AUTOSTOP_SILENCE_S)
+        if isinstance(silence_s, int):
+            os.environ[AUTOSTOP_SILENCE_ENV_VAR] = str(silence_s)
+        if self._on_detection_settings_applied is not None:
+            self._on_detection_settings_applied(effective)
 
     async def setup_status_payload(self) -> dict[str, object]:
         """setup.status -> the honest first-run state of THIS machine."""

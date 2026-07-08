@@ -41,14 +41,14 @@ const incomplete: SetupStatus = { ...complete, onboardingComplete: false, setupC
 describe("App setup gate", () => {
   it("renders the first-run wizard when setup is incomplete", async () => {
     render(<App checkStatus={() => Promise.resolve(incomplete)} />);
-    await waitFor(() => expect(screen.getByText("1 / 4")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("1 / 5")).toBeTruthy());
     expect(screen.getByRole("button", { name: "Begin" })).toBeTruthy();
   });
 
   it("renders the main shell when setup is complete", async () => {
     render(<App checkStatus={() => Promise.resolve(complete)} />);
     // The nav rail is a main-shell fixture, not present in the wizard.
-    await waitFor(() => expect(screen.queryByText("1 / 4")).toBeNull());
+    await waitFor(() => expect(screen.queryByText("1 / 5")).toBeNull());
     expect(screen.getByRole("navigation")).toBeTruthy();
   });
 
@@ -62,6 +62,6 @@ describe("App setup gate", () => {
       />,
     );
     await waitFor(() => expect(screen.getByRole("navigation")).toBeTruthy());
-    expect(screen.queryByText("1 / 4")).toBeNull();
+    expect(screen.queryByText("1 / 5")).toBeNull();
   });
 });

@@ -36,6 +36,9 @@ export interface HeartbeatPayload {
   readonly engine_version: string;
   readonly python: string;
   readonly stt_ready: boolean;
+  readonly stt_engine?: string;
+  readonly stt_model_id?: string;
+  readonly stt_device?: string;
 }
 
 export const HEARTBEAT_EVENT_NAME = "engine.heartbeat";
@@ -110,7 +113,23 @@ export function parseHeartbeatPayload(payload: Record<string, unknown>): Heartbe
   if (typeof version !== "string" || version.length === 0) return null;
   if (typeof python !== "string" || python.length === 0) return null;
   if (typeof sttReady !== "boolean") return null;
-  return { uptime_s: uptime, engine_version: version, python, stt_ready: sttReady };
+  const sttEngine = payload["stt_engine"];
+  const sttModelId = payload["stt_model_id"];
+  const sttDevice = payload["stt_device"];
+  if (sttEngine !== undefined && typeof sttEngine !== "string") return null;
+  if (sttModelId !== undefined && typeof sttModelId !== "string") return null;
+  if (sttDevice !== undefined && typeof sttDevice !== "string") return null;
+  return {
+    uptime_s: uptime,
+    engine_version: version,
+    python,
+    stt_ready: sttReady,
+    ...(typeof sttEngine === "string" && sttEngine.length > 0 ? { stt_engine: sttEngine } : {}),
+    ...(typeof sttModelId === "string" && sttModelId.length > 0
+      ? { stt_model_id: sttModelId }
+      : {}),
+    ...(typeof sttDevice === "string" && sttDevice.length > 0 ? { stt_device: sttDevice } : {}),
+  };
 }
 
 /** Build an outbound command envelope with a fresh correlation id. */

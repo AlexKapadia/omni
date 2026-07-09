@@ -19,6 +19,9 @@ export async function pickVaultDirectory(): Promise<string | null> {
   if (typeof hook === "function") {
     return hook() ?? null;
   }
+  if (typeof (window as any).__TAURI__ === "undefined") {
+    return window.prompt("Enter the path to your vault folder:", "~/Documents/Omni Steroid");
+  }
   const { open } = await import("@tauri-apps/plugin-dialog");
   const selected = await open({ directory: true, multiple: false, title: "Choose your vault folder" });
   // The plugin returns a string for a single directory, or null if cancelled.

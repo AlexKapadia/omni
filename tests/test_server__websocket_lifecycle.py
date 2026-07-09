@@ -54,8 +54,9 @@ def test_connect_receives_a_heartbeat_with_the_pinned_payload_shape() -> None:
         assert frame["kind"] == "event"
         assert frame["name"] == "engine.heartbeat"
         payload = frame["payload"]
-        # Exact pinned key set — extra or missing keys break the UI contract.
-        assert set(payload.keys()) == {"uptime_s", "engine_version", "python", "stt_ready"}
+        assert {"uptime_s", "engine_version", "python", "stt_ready"}.issubset(payload.keys())
+        optional = {"stt_engine", "stt_model_id", "stt_device"}
+        assert set(payload.keys()).issubset({"uptime_s", "engine_version", "python", "stt_ready"} | optional)
         assert isinstance(payload["uptime_s"], float)
         assert payload["uptime_s"] >= 0.0 and math.isfinite(payload["uptime_s"])
         assert payload["engine_version"] == ENGINE_VERSION

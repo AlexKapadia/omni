@@ -26,8 +26,8 @@ async function shot(page: import("@playwright/test").Page, name: string): Promis
 test("real product tour — library, meeting, ask, settings, naomi", async ({ page }) => {
   await page.goto("/");
 
-  // 1) Library home — real seeded meetings (wait for a real row, not the race).
-  await expect(page.getByRole("heading", { name: "Library", level: 1 })).toBeVisible();
+  // 1) Meetings home — real seeded meetings (wait for a real row, not the race).
+  await expect(page.getByRole("heading", { name: "Meetings", level: 1 })).toBeVisible();
   const firstMeeting = page.getByRole("button", { name: "Open Northwind Renewal" });
   await expect(firstMeeting).toBeVisible({ timeout: 20_000 });
   await page.waitForTimeout(600); // let view-transition settle for a clean frame
@@ -43,10 +43,10 @@ test("real product tour — library, meeting, ask, settings, naomi", async ({ pa
   await shot(page, "02-meeting-detail");
   await page.getByRole("button", { name: "Close meeting detail" }).click();
 
-  // 3) Ask Omni — a REAL answer with real citations (health-gated success).
-  await page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Ask Omni" }).click();
-  await expect(page.getByRole("heading", { name: "Ask across everything you know" })).toBeVisible();
-  await page.getByRole("textbox", { name: "Ask Omni" }).fill("What did we agree on the Northwind renewal?");
+  // 3) Ask — a REAL answer with real citations (health-gated success).
+  await page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Ask" }).click();
+  await expect(page.getByRole("heading", { name: "Ask about your meetings" })).toBeVisible();
+  await page.getByRole("textbox", { name: "Ask" }).fill("What did we agree on the Northwind renewal?");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("article", { name: "Answer" })).toBeVisible({ timeout: 40_000 });
   await expect(page.getByRole("button", { name: /\.md · L\d+/ }).first()).toBeVisible();
@@ -81,7 +81,7 @@ test("real onboarding walk-through — the four first-run steps", async ({ page 
   await setOnboardingComplete(false);
   try {
     await page.goto("/");
-    await expect(page.getByRole("heading", { name: "Omni", level: 1 })).toBeVisible({ timeout: 20_000 });
+    await expect(page.getByRole("heading", { name: "Omni Steroid", level: 1 })).toBeVisible({ timeout: 20_000 });
     await page.waitForTimeout(500);
     await shot(page, "07-onboarding-welcome");
 

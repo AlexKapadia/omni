@@ -1,15 +1,16 @@
 /**
- * Settings — Automation group: auto-start sources, silence auto-stop, Google Calendar.
+ * Settings — Automation group (Advanced): auto-start sources, silence
+ * auto-stop, and live translation.
+ *
+ * Calendar connect rows now live in their own CalendarConnectSection (surfaced
+ * under Essentials); this section owns only the capture-automation controls.
+ * Every control persists through the REAL settings.update command.
  */
-import { useEffect, useState } from "react";
+import { useState } from "react";
 import { useStore } from "zustand";
-import { GoogleConnectPanel } from "../google-connect-panel";
 import { ToggleSwitch } from "../toggle-switch";
 import { SettingsGroupCard, SettingsRow } from "./settings-group-card";
 import { AUTOSTOP_SILENCE_OPTIONS, DETECTION_SOURCE_OPTIONS } from "../../lib/detection-source-options";
-import { getSetupStatus } from "../../lib/setup-settings-repository";
-import { connectGoogle } from "../../lib/setup-settings-repository";
-import { subscribeToGoogleConnect } from "../../lib/setup-settings-transport";
 import type { SettingsStore } from "../../lib/settings-store";
 import type { SettingsUpdater } from "../../lib/settings-actions";
 
@@ -22,25 +23,9 @@ export function DetectionAutomationSection({
 }) {
   const autoStartSources = useStore(store, (s) => s.settings?.detectionAutoStartSources ?? []);
   const autostopSilenceS = useStore(store, (s) => s.settings?.autostopSilenceS ?? 60);
-  const liveCaptionsOverlay = useStore(store, (s) => s.settings?.liveCaptionsOverlay ?? true);
-  const aecEnabled = useStore(store, (s) => s.settings?.aecEnabled ?? false);
+
   const liveTranslationLang = useStore(store, (s) => s.settings?.liveTranslationLang ?? "");
   const [error, setError] = useState<string | null>(null);
-  const [googleConnected, setGoogleConnected] = useState<boolean | null>(null);
-  const [googleBusy, setGoogleBusy] = useState(false);
-  const [googleMessage, setGoogleMessage] = useState<string | null>(null);
-
-  useEffect(() => {
-    void getSetupStatus()
-      .then((status) => setGoogleConnected(status.googleConnected))
-      .catch(() => setGoogleConnected(false));
-    const unsub = subscribeToGoogleConnect((completed) => {
-      setGoogleBusy(false);
-      setGoogleMessage(completed.message);
-      if (completed.ok) setGoogleConnected(true);
-    });
-    return unsub;
-  }, []);
 
   const apply = async (partial: Parameters<SettingsUpdater>[0]): Promise<void> => {
     const result = await update(partial);
@@ -54,25 +39,11 @@ export function DetectionAutomationSection({
     void apply({ detectionAutoStartSources: [...current].sort() });
   };
 
-  const connectGoogleAccount = async (credentials?: {
-    readonly clientId: string;
-    readonly clientSecret: string;
-  }): Promise<void> => {
-    setGoogleBusy(true);
-    setGoogleMessage(null);
-    try {
-      await connectGoogle(undefined, credentials);
-    } catch (err) {
-      setGoogleBusy(false);
-      setGoogleMessage(err instanceof Error ? err.message : "Could not start Google connect.");
-    }
-  };
-
   return (
     <SettingsGroupCard label="Automation">
       <SettingsRow
         title="Auto-start capture"
-        subCaption="When enabled for a source, Omni starts recording without a toast click once a meeting is detected."
+        subCaption="When enabled for a source, Omni Steroid starts recording without a toast click once a meeting is detected."
       />
       {DETECTION_SOURCE_OPTIONS.map((option, index) => (
         <SettingsRow
@@ -93,8 +64,8 @@ export function DetectionAutomationSection({
       >
         <select
           aria-label="Silence auto-stop timeout"
-          className="border border-[var(--grey-200)] bg-[var(--paper,#fff)] text-[var(--ink)]"
-          style={{ fontSize: 13, padding: "4px 8px", borderRadius: 4 }}
+          className="cursor-pointer border border-[var(--grey-300)] bg-[var(--canvas)] text-[var(--ink)] focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-[var(--focus-ring)]"
+          style={{ fontSize: 13, height: "var(--control-height-sm)", borderRadius: "var(--radius-control)", padding: "0 var(--space-2)" }}
           value={autostopSilenceS}
           onChange={(e) => void apply({ autostopSilenceS: Number(e.target.value) })}
         >
@@ -106,54 +77,19 @@ export function DetectionAutomationSection({
         </select>
       </SettingsRow>
       <SettingsRow
-        title="Live captions overlay"
-        subCaption="Always-on-top captions bar while capture is running."
-      >
-        <ToggleSwitch
-          checked={liveCaptionsOverlay}
-          onChange={(next) => void apply({ liveCaptionsOverlay: next })}
-          label="Show live captions overlay"
-        />
-      </SettingsRow>
-      <SettingsRow
-        title="Echo cancellation (AEC)"
-        subCaption="Subtract loopback audio from the mic stream to reduce speaker bleed."
-      >
-        <ToggleSwitch
-          checked={aecEnabled}
-          onChange={(next) => void apply({ aecEnabled: next })}
-          label="Enable echo cancellation"
-        />
-      </SettingsRow>
-      <SettingsRow
         title="Live translation"
         subCaption="Translate recent transcript lines during capture (empty disables)."
+        last={error === null}
       >
         <input
           aria-label="Live translation target language"
-          className="border border-[var(--grey-200)] bg-[var(--paper,#fff)] text-[var(--ink)]"
-          style={{ fontSize: 13, padding: "4px 8px", borderRadius: 4, width: 160 }}
+          className="omni-input"
+          style={{ fontSize: 13, height: "var(--control-height-sm)", paddingLeft: 8, paddingRight: 8, width: 160 }}
           placeholder="e.g. Spanish"
           value={liveTranslationLang}
           onChange={(e) => void apply({ liveTranslationLang: e.target.value })}
         />
       </SettingsRow>
-      <SettingsRow
-        title="Google Calendar"
-        subCaption="Optional — pre-loads meeting context when connected."
-        last={error === null}
-      >
-        <span />
-      </SettingsRow>
-      <div style={{ padding: "0 0 12px" }}>
-        <GoogleConnectPanel
-          connected={googleConnected === true}
-          busy={googleBusy}
-          message={googleMessage}
-          onConnect={(credentials) => void connectGoogleAccount(credentials)}
-          compact
-        />
-      </div>
       {error !== null && (
         <p role="alert" className="m-0 text-[var(--grey-600)]" style={{ padding: "8px 0", fontSize: 12 }}>
           {error}

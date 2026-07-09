@@ -10,6 +10,7 @@
  */
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
+import { OmniMark } from "../components/omni-mark";
 
 import type { DictationFinalPayload } from "./dictation-events-protocol";
 import {
@@ -55,6 +56,37 @@ function flipToNote(): void {
   dispatchPillEvent(dictationPillStore, { type: "flip-to-note" });
 }
 
+/**
+ * The per-stage latency strip is a power-user diagnostic, HIDDEN by default —
+ * the everyday pill stays quiet. Opt in with localStorage
+ * `omni.pill.debugLatency = "true"` (read fail-safe: any error = hidden).
+ */
+function latencyDebugEnabled(): boolean {
+  try {
+    return window.localStorage.getItem("omni.pill.debugLatency") === "true";
+  } catch {
+    return false;
+  }
+}
+
+/** Monochrome padlock — the locked "still listening" affordance (§07). */
+function PadlockIcon() {
+  return (
+    <svg
+      data-testid="pill-lock-icon"
+      width="10"
+      height="10"
+      viewBox="0 0 24 24"
+      fill="none"
+      aria-hidden="true"
+      style={{ flexShrink: 0 }}
+    >
+      <rect x="5" y="11" width="14" height="9" rx="2" stroke="currentColor" strokeWidth="2" />
+      <path d="M8 11V8a4 4 0 0 1 8 0v3" stroke="currentColor" strokeWidth="2" />
+    </svg>
+  );
+}
+
 function HoldTimer({ startedAtMs }: { readonly startedAtMs: number }) {
   const [nowMs, setNowMs] = useState(() => Date.now());
   useEffect(() => {
@@ -73,6 +105,8 @@ function LatencyLine({
   readonly totalMs?: number | undefined;
   readonly injectionMs?: number | undefined;
 }) {
+  // Default view never shows the latency strip; only the debug opt-in does.
+  if (!latencyDebugEnabled()) return null;
   const line = buildLatencyLine(final, totalMs, injectionMs);
   if (line === "") return null;
   return <span className="pill-popover-latency">{line}</span>;
@@ -222,15 +256,18 @@ export function DictationPillView() {
 
   const listening = state.phase === "listening";
   const inSession = state.phase === "listening" || state.phase === "processing";
+  const lockedRecording =
+    (state.phase === "listening" || state.phase === "processing") &&
+    state.lockedRecording === true;
   const commandDetected = inSession && state.commandDetected;
   const injectArmed = inSession && !state.commandDetected && state.injectArmed;
 
   return (
     <div className="pill-stage">
       <div className="pill">
+        <OmniMark size={20} />
         {state.phase === "idle" && (
           <span className="pill-idle-hint">
-            <span className="pill-idle-dot" aria-hidden="true" />
             Hold F9
           </span>
         )}
@@ -240,8 +277,18 @@ export function DictationPillView() {
         ) : (
           <span className="pill-timer pill-timer--idle">00:00</span>
         )}
-        {injectArmed && listening ? (
-          // The flip affordance: INSERT is a real control while the key is
+        {lockedRecording ? (
+          // Locked hands-free: a padlock + "Still listening" — capture keeps
+          // running after the key is released until the user ends it.
+          <span
+            className="pill-mode-chip pill-mode-chip--locked"
+            aria-label="Locked — still listening"
+          >
+            <PadlockIcon />
+            Still listening
+          </span>
+        ) : injectArmed && listening ? (
+          // The flip affordance: PASTE is a real control while the key is
           // held — one click redirects this dictation into a vault note.
           <button
             type="button"
@@ -249,7 +296,7 @@ export function DictationPillView() {
             onClick={flipToNote}
             title="Save as a note instead"
           >
-            insert
+            Paste
           </button>
         ) : (
           <span
@@ -263,7 +310,7 @@ export function DictationPillView() {
                     : "pill-mode-chip"
             }
           >
-            {commandDetected ? "command" : injectArmed ? "insert" : "note"}
+            {commandDetected ? "Command" : injectArmed ? "Paste" : "Note"}
           </span>
         )}
       </div>

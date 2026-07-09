@@ -1,16 +1,16 @@
 /**
- * The universal section label: JetBrains Mono 11px, 0.08em tracking,
- * uppercase, ink-secondary (AA-compliant secondary text; was grey-400) —
- * "TRANSCRIPT", "AI ROUTER", "ANSWER" (brief §2).
+ * The universal section label. Rehaul v2 (Evidence Mono Rule): section labels
+ * are Inter 500 sentence case — NOT mono uppercase eyebrows. Mono is reserved
+ * for transcript/code/ledger evidence. Renders the label text as passed
+ * (sentence case), so callers own the casing. ink-secondary keeps it AA.
  */
 import type { ReactNode } from "react";
 
 export function SectionLabel({ children }: { readonly children: ReactNode }) {
   return (
     <span
-      className="font-[family-name:var(--font-mono)] uppercase text-[var(--ink-secondary)]"
-      // 11px is the doc-pinned label size (no scale token exists for it).
-      style={{ fontSize: 11, letterSpacing: "var(--label-ls)" }}
+      className="font-[family-name:var(--font-label)] font-medium text-[var(--ink-secondary)]"
+      style={{ fontSize: 13, lineHeight: 1.4 }}
     >
       {children}
     </span>

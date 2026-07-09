@@ -31,6 +31,16 @@ from engine.wiring.google_connect_command_dispatcher import (
     GoogleConnectCommandGateway,
     dispatch_google_command,
 )
+from engine.wiring.microsoft_connect_command_dispatcher import (
+    MICROSOFT_COMMAND_NAMES,
+    MicrosoftConnectCommandGateway,
+    dispatch_microsoft_command,
+)
+from engine.wiring.speaker_enroll_command_dispatcher import (
+    SPEAKER_COMMAND_NAMES,
+    SpeakerEnrollCommandGateway,
+    dispatch_speaker_command,
+)
 from engine.wiring.ledger_summary_command_dispatcher import (
     LEDGER_COMMAND_NAMES,
     LedgerSummaryCommandGateway,
@@ -48,6 +58,8 @@ from engine.wiring.provider_keys_command_dispatcher import (
 )
 from engine.wiring.server_default_service_factories import (
     default_google_gateway_factory,
+    default_microsoft_gateway_factory,
+    default_speaker_gateway_factory,
     default_keys_gateway_factory,
     default_ledger_gateway_factory,
     default_models_gateway_factory,
@@ -62,6 +74,8 @@ M7_COMMAND_NAMES = (
     | LEDGER_COMMAND_NAMES
     | MODELS_COMMAND_NAMES
     | GOOGLE_COMMAND_NAMES
+    | MICROSOFT_COMMAND_NAMES
+    | SPEAKER_COMMAND_NAMES
 )
 
 # Factory seams (a factory, not an instance, so gateways build AFTER settings
@@ -71,6 +85,8 @@ KeysGatewayFactory = Callable[[], ProviderKeysCommandGateway]
 LedgerGatewayFactory = Callable[[], LedgerSummaryCommandGateway]
 ModelsGatewayFactory = Callable[[EventBroadcastHub], ModelsDownloadCommandGateway]
 GoogleGatewayFactory = Callable[[EventBroadcastHub], GoogleConnectCommandGateway]
+MicrosoftGatewayFactory = Callable[[EventBroadcastHub], MicrosoftConnectCommandGateway]
+SpeakerGatewayFactory = Callable[[], SpeakerEnrollCommandGateway]
 
 
 @dataclass(frozen=True)
@@ -82,6 +98,8 @@ class OnboardingSettingsCommandSurface:
     ledger_gateway: LedgerSummaryCommandGateway
     models_gateway: ModelsDownloadCommandGateway
     google_gateway: GoogleConnectCommandGateway
+    microsoft_gateway: MicrosoftConnectCommandGateway
+    speaker_gateway: SpeakerEnrollCommandGateway
 
     async def apply_persisted_settings_at_boot(self) -> None:
         """Production boot hook: make persisted settings effective (fail-soft)."""
@@ -94,6 +112,8 @@ class OnboardingSettingsCommandSurface:
             await self.models_gateway.shutdown()
         with contextlib.suppress(Exception):
             await self.google_gateway.shutdown()
+        with contextlib.suppress(Exception):
+            await self.microsoft_gateway.shutdown()
 
 
 async def dispatch_m7_command(
@@ -120,6 +140,12 @@ async def dispatch_m7_command(
         await dispatch_models_command(command, surface.models_gateway if surface else None, send)
     elif name in GOOGLE_COMMAND_NAMES:
         await dispatch_google_command(command, surface.google_gateway if surface else None, send)
+    elif name in MICROSOFT_COMMAND_NAMES:
+        await dispatch_microsoft_command(
+            command, surface.microsoft_gateway if surface else None, send
+        )
+    elif name in SPEAKER_COMMAND_NAMES:
+        await dispatch_speaker_command(command, surface.speaker_gateway if surface else None, send)
 
 
 def build_onboarding_settings_command_surface(
@@ -130,6 +156,8 @@ def build_onboarding_settings_command_surface(
     ledger_gateway_factory: LedgerGatewayFactory | None = None,
     models_gateway_factory: ModelsGatewayFactory | None = None,
     google_gateway_factory: GoogleGatewayFactory | None = None,
+    microsoft_gateway_factory: MicrosoftGatewayFactory | None = None,
+    speaker_gateway_factory: SpeakerGatewayFactory | None = None,
 ) -> OnboardingSettingsCommandSurface:
     """Build the surface from the factory-or-default seam (all command-driven)."""
     return OnboardingSettingsCommandSurface(
@@ -138,4 +166,8 @@ def build_onboarding_settings_command_surface(
         ledger_gateway=(ledger_gateway_factory or default_ledger_gateway_factory)(),
         models_gateway=(models_gateway_factory or default_models_gateway_factory)(event_hub),
         google_gateway=(google_gateway_factory or default_google_gateway_factory)(event_hub),
+        microsoft_gateway=(microsoft_gateway_factory or default_microsoft_gateway_factory)(
+            event_hub
+        ),
+        speaker_gateway=(speaker_gateway_factory or default_speaker_gateway_factory)(),
     )

@@ -13,14 +13,14 @@ test.describe("shell + navigation", () => {
     // Past the boot gate: the primary nav rail is the main shell (not the wizard).
     const nav = page.getByRole("navigation", { name: "Primary" });
     await expect(nav).toBeVisible();
-    await expect(page.getByRole("heading", { name: "Library", level: 1 })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Meetings", level: 1 })).toBeVisible();
 
     // Every rail row fires its real state transition (aria-current tracks it).
     for (const [label, heading] of [
-      ["Live meeting", "Live meeting"],
-      ["Ask Omni", "Ask across everything you know"],
+      ["Record", "Record a meeting"],
+      ["Ask", "Ask about your meetings"],
       ["Settings", "Settings"],
-      ["Library", "Library"],
+      ["Meetings", "Meetings"],
     ] as const) {
       await nav.getByRole("button", { name: label }).click();
       await expect(page.getByRole("heading", { name: heading })).toBeVisible();

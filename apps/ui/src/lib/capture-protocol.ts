@@ -27,9 +27,11 @@ export type StreamLabel = "me" | "them";
 export interface TranscriptPartialPayload {
   readonly stream: StreamLabel;
   readonly text: string;
-  readonly t_start: number; // seconds from meeting start
+  readonly t_start: number;
   readonly t_end: number;
-  readonly seq: number; // per-stream ordering; lets the UI drop stale partials
+  readonly seq: number;
+  readonly speaker_id?: string;
+  readonly speaker_label?: string;
 }
 
 export interface TranscriptFinalPayload extends TranscriptPartialPayload {
@@ -77,7 +79,10 @@ function parseTranscriptCore(payload: Record<string, unknown>): TranscriptPartia
   if (!isNonNegativeFinite(t_start) || !isNonNegativeFinite(t_end)) return null;
   if (t_end < t_start) return null; // a segment cannot end before it starts
   if (!isNonNegativeInteger(seq)) return null;
-  return { stream, text, t_start, t_end, seq };
+  const speaker_id = typeof payload["speaker_id"] === "string" ? payload["speaker_id"] : undefined;
+  const speaker_label =
+    typeof payload["speaker_label"] === "string" ? payload["speaker_label"] : undefined;
+  return { stream, text, t_start, t_end, seq, speaker_id, speaker_label };
 }
 
 export function parseTranscriptPartialPayload(

@@ -10,7 +10,7 @@
  */
 import { createStore, type StoreApi } from "zustand";
 
-export type OnboardingStep = 1 | 2 | 3 | 4 | 5;
+export type OnboardingStep = 1 | 2 | 3 | 4 | 5 | 6;
 
 export interface ModelFileProgress {
   readonly file: string;

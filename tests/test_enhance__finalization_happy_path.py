@@ -54,7 +54,7 @@ async def test_full_finalization_writes_note_regions_db_events_and_daily_line(
     assert "- [ ] Finish the security review — Me (due: Friday)" in content
     assert "pending your approval" in content
     assert "> [!note]- Transcript" in content  # collapsed callout
-    assert "> Them: We need the security review done by Friday." in content
+    assert "> Speaker 1: We need the security review done by Friday." in content
     assert "attendees:" in content and "Dana Vendor" in content  # seeded frontmatter
 
     # --- the DB row: notes byte-identical, enhancement stored, stamped

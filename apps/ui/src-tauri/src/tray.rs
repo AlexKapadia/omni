@@ -1,8 +1,8 @@
-//! System tray: icon + menu (Show Omni / Start capture / Quit).
+//! System tray: icon + menu (Show Omni Steroid / Record a meeting / Quit).
 //!
-//! "Start capture" is a disabled placeholder until the capture pipeline lands
-//! (M1) — shipping a dead-looking control is deliberate here: the tray is the
-//! product's primary surface and the menu shape is part of the M0 contract.
+//! The tray is the product's always-available surface: "Record a meeting"
+//! emits to the main window to jump straight into capture (human copy that
+//! matches the in-app "Record" nav label).
 
 use tauri::{
     menu::{MenuBuilder, MenuItemBuilder},
@@ -16,8 +16,8 @@ const MENU_ID_QUIT: &str = "quit";
 
 /// Build the tray icon and its menu on the given app handle.
 pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
-    let show = MenuItemBuilder::with_id(MENU_ID_SHOW, "Show Omni").build(app)?;
-    let start_capture = MenuItemBuilder::with_id(MENU_ID_START_CAPTURE, "Start capture")
+    let show = MenuItemBuilder::with_id(MENU_ID_SHOW, "Show Omni Steroid").build(app)?;
+    let start_capture = MenuItemBuilder::with_id(MENU_ID_START_CAPTURE, "Record a meeting")
         .enabled(true)
         .build(app)?;
     let quit = MenuItemBuilder::with_id(MENU_ID_QUIT, "Quit").build(app)?;
@@ -32,7 +32,7 @@ pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
     let mut tray = TrayIconBuilder::with_id("omni-tray")
         .menu(&menu)
         .show_menu_on_left_click(true)
-        .tooltip("Omni");
+        .tooltip("Omni Steroid");
     // Reuse the window icon; if it is somehow absent we still build a tray —
     // a menu without an icon beats no tray at all.
     if let Some(icon) = app.default_window_icon() {

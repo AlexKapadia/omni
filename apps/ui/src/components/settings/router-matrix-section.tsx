@@ -41,7 +41,7 @@ export function RouterMatrixSection({ store }: { readonly store: SettingsStore }
   const killSwitchEngaged = useStore(store, (s) => s.killSwitchEngaged);
 
   return (
-    <SettingsGroupCard label="AI router">
+    <SettingsGroupCard label="AI providers">
       {phase === "loading" ? (
         <div style={{ padding: "14px 0" }}>
           <SkeletonShimmer lines={3} />
@@ -92,7 +92,7 @@ export function RouterMatrixSection({ store }: { readonly store: SettingsStore }
           ))}
           {killSwitchEngaged && (
             <p className="m-0 pt-[var(--space-2)] text-[var(--grey-600)]" style={{ fontSize: 11 }}>
-              Kill switch engaged — every external route above is refused until it is released.
+              Cloud AI is paused — every external route above is refused until you resume it.
             </p>
           )}
         </div>

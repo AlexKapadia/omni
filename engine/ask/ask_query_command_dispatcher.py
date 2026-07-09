@@ -91,23 +91,21 @@ class AskAnswerGateway:
         self.migrations_dir = migrations_dir
         self._router_factory = router_factory if router_factory else _default_ask_router_factory
 
-    async def answer(self, query: str) -> AskAnswer:
+    async def answer(
+        self, query: str, meeting_id: str | None = None, scope: str = "all"
+    ) -> AskAnswer:
         """Run the full ask pipeline for one question (see class docstring)."""
         await apply_migrations(self.db_path, self.migrations_dir)
         connection = await open_sqlite_connection(self.db_path)
         try:
-            # Dense side EXPLICITLY absent: BM25-only until the vec model
-            # ships (documented degradation, never a silent one — see
-            # HybridRrfRetriever's contract and the m3-index ledger row).
             retriever = HybridRrfRetriever(connection, None, None)
 
             async def record(entry: RouterLedgerEntry) -> None:
-                # Append-only ledger row per external call (audit invariant).
                 await insert_router_ledger_entry(connection, entry)
 
             router = self._router_factory(record)
             service = AskOmniAnswerService(connection, retriever, router)
-            return await service.answer(query)
+            return await service.answer(query, meeting_id, scope)
         finally:
             await connection.close()
 
@@ -130,7 +128,7 @@ async def dispatch_ask_command(
         await send(_ask_error_reply(command.id, "ask is not available"))
         return
     try:
-        answer = await gateway.answer(payload.query)
+        answer = await gateway.answer(payload.query, payload.meeting_id, payload.scope)
     except RouterError as exc:
         # Fail honest: kill switch / exhausted chain surfaces as a typed
         # refusal in the UI's error state, never as a fabricated answer.

@@ -13,6 +13,9 @@ from datetime import UTC, datetime, timedelta
 from engine.google.google_api_gateway import UpcomingCalendarEvent, list_upcoming_calendar_events
 from engine.google.google_auth_errors import GoogleNotConnectedError
 from engine.google.google_session import DpapiGoogleSession, GoogleSession
+from engine.microsoft.graph_api_gateway import list_upcoming_outlook_events
+from engine.microsoft.graph_session import DpapiMicrosoftSession, MicrosoftSession
+from engine.microsoft.microsoft_auth_errors import MicrosoftNotConnectedError
 from engine.protocol.calendar_event_payloads import (
     EVENT_CALENDAR_UPCOMING,
     build_calendar_upcoming_payload,
@@ -32,12 +35,16 @@ class CalendarPollService:
         self,
         hub: EventBroadcastHub,
         session: GoogleSession | None = None,
+        microsoft_session: MicrosoftSession | None = None,
         poll_interval_s: float = POLL_INTERVAL_S,
         lookahead_minutes: int = LOOKAHEAD_MINUTES,
         now_factory: Callable[[], datetime] | None = None,
     ) -> None:
         self._hub = hub
         self._session = session if session is not None else DpapiGoogleSession()
+        self._microsoft_session = (
+            microsoft_session if microsoft_session is not None else DpapiMicrosoftSession()
+        )
         self._poll_interval_s = poll_interval_s
         self._lookahead = timedelta(minutes=lookahead_minutes)
         self._now_factory = now_factory or (lambda: datetime.now(tz=UTC))
@@ -67,25 +74,48 @@ class CalendarPollService:
             await asyncio.sleep(self._poll_interval_s)
 
     async def _tick(self) -> None:
+        now = self._now_factory()
+        window_end = now + self._lookahead
+        time_min_iso = now.isoformat()
+        time_max_iso = window_end.isoformat()
+        await self._poll_google(time_min_iso, time_max_iso)
+        await self._poll_microsoft(time_min_iso, time_max_iso)
+
+    async def _poll_google(self, time_min_iso: str, time_max_iso: str) -> None:
         try:
-            now = self._now_factory()
-            window_end = now + self._lookahead
             events = await list_upcoming_calendar_events(
                 self._session,
-                time_min_iso=now.isoformat(),
-                time_max_iso=window_end.isoformat(),
+                time_min_iso=time_min_iso,
+                time_max_iso=time_max_iso,
             )
         except GoogleNotConnectedError:
             return
         except Exception:
-            logger.exception("calendar poll tick failed; skipping")
+            logger.exception("google calendar poll tick failed; skipping")
             return
-        await self._broadcast_new(events)
+        await self._broadcast_new(events, provider="google")
 
-    async def _broadcast_new(self, events: tuple[UpcomingCalendarEvent, ...]) -> None:
-        current_ids = frozenset(event.event_id for event in events)
+    async def _poll_microsoft(self, time_min_iso: str, time_max_iso: str) -> None:
+        try:
+            events = await list_upcoming_outlook_events(
+                self._microsoft_session,
+                time_min_iso=time_min_iso,
+                time_max_iso=time_max_iso,
+            )
+        except MicrosoftNotConnectedError:
+            return
+        except Exception:
+            logger.exception("outlook calendar poll tick failed; skipping")
+            return
+        await self._broadcast_new(events, provider="outlook")
+
+    async def _broadcast_new(
+        self, events: tuple[UpcomingCalendarEvent, ...] | tuple, provider: str
+    ) -> None:
+        current_ids = frozenset(f"{provider}:{event.event_id}" for event in events)
         for event in events:
-            if event.event_id in self._last_broadcast_ids:
+            key = f"{provider}:{event.event_id}"
+            if key in self._last_broadcast_ids:
                 continue
             payload = build_calendar_upcoming_payload(
                 event_id=event.event_id,
@@ -93,6 +123,7 @@ class CalendarPollService:
                 start_iso=event.start_iso,
                 end_iso=event.end_iso,
                 attendee_emails=event.attendee_emails,
+                provider=provider,
             )
             try:
                 await self._hub.broadcast_event(EVENT_CALENDAR_UPCOMING, payload)

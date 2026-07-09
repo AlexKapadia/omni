@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import asyncio
 import logging
 from datetime import UTC, datetime
 from pathlib import Path
@@ -17,10 +18,10 @@ from engine.storage.transcript_segments_repository import (
 from engine.stt.keep_audio_recorder import keep_audio_directory
 from engine.stt.offline_audio_transcriber import (
     decode_wav_to_mono_16k,
-    load_transcriber,
     new_segment_id,
-    transcribe_samples,
+    transcribe_samples_with_backend,
 )
+from engine.stt.stt_settings_loader import load_stt_backend_from_settings
 
 logger = logging.getLogger(__name__)
 
@@ -45,8 +46,8 @@ async def retranscribe_meeting(
             raise ValueError(f"meeting {meeting_id!r} does not exist")
         if row.ended_at is None:
             raise ValueError("cannot retranscribe a live meeting")
+        backend = await load_stt_backend_from_settings(connection, models_dir=models_dir)
         session_dir = keep_audio_directory() / meeting_id
-        transcriber = load_transcriber(models_dir or keep_audio_directory())
         all_segments = []
         for label in (StreamLabel.THEM, StreamLabel.ME):
             wav_path = session_dir / f"{label.value}.wav"
@@ -55,7 +56,12 @@ async def retranscribe_meeting(
                 continue
             samples = decode_wav_to_mono_16k(wav_path)
             all_segments.extend(
-                transcribe_samples(transcriber, samples, stream=label.value)
+                await asyncio.to_thread(
+                    transcribe_samples_with_backend,
+                    backend,
+                    samples,
+                    stream=label.value,
+                )
             )
         if not all_segments:
             raise ValueError("no kept audio found for this meeting")
@@ -67,6 +73,7 @@ async def retranscribe_meeting(
                 segment_id=new_segment_id(),
                 meeting_id=meeting_id,
                 stream=segment.stream,
+                speaker_id="1" if segment.stream == "them" else "me",
                 text=segment.text,
                 t_start=segment.t_start,
                 t_end=segment.t_end,

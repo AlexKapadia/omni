@@ -13,15 +13,62 @@ import { OmniButton } from "../button";
 import { SettingsGroupCard, SettingsRow } from "./settings-group-card";
 import type { SettingsStore, TemplateOption } from "../../lib/settings-store";
 import type { SettingsUpdater } from "../../lib/settings-actions";
+import { loadSettings } from "../../lib/settings-actions";
+import { updateSettings } from "../../lib/setup-settings-repository";
 
 const INPUT_CLASS =
-  "border border-[var(--grey-300)] bg-transparent font-[family-name:var(--font-mono)] text-[var(--ink)] outline-none placeholder:text-[var(--grey-300)] focus:border-[var(--ink)]";
+  "omni-input font-[family-name:var(--font-mono)]";
 const INPUT_STYLE = {
-  borderRadius: "var(--radius-control)",
-  padding: "6px 10px",
   fontSize: "var(--text-meta-size)",
+  height: "var(--control-height-sm)",
   width: 180,
+  paddingLeft: 10,
+  paddingRight: 10,
 } as const;
+
+function nameToTemplateId(name: string): string {
+  const slug = name
+    .trim()
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "_")
+    .replace(/^_|_$/g, "");
+  return slug.length > 0 ? slug : "custom";
+}
+
+function customNameToTemplate(name: string): Record<string, unknown> {
+  return {
+    template_id: nameToTemplateId(name),
+    display_name: name.trim(),
+    sections: [{ title: "Summary", guidance: "Capture the main points from this meeting." }],
+    tone_rules: "Clear and concise.",
+  };
+}
+
+function normalizeImportedTemplates(parsed: unknown): Record<string, unknown>[] {
+  if (!Array.isArray(parsed)) throw new Error("Expected a JSON array.");
+  return parsed.map((entry) => {
+    if (typeof entry === "string") {
+      const trimmed = entry.trim();
+      if (!trimmed) throw new Error("Template name cannot be empty.");
+      return customNameToTemplate(trimmed);
+    }
+    if (typeof entry === "object" && entry !== null) {
+      const record = entry as Record<string, unknown>;
+      const displayName =
+        typeof record.display_name === "string"
+          ? record.display_name.trim()
+          : typeof record.template_id === "string"
+            ? record.template_id.trim()
+            : "";
+      if (!displayName) throw new Error("Each template needs a display name.");
+      if (!Array.isArray(record.sections) || record.sections.length === 0) {
+        return customNameToTemplate(displayName);
+      }
+      return record;
+    }
+    throw new Error("Each template must be a string or object.");
+  });
+}
 
 function CustomTemplateRow({
   name,
@@ -199,6 +246,55 @@ export function TemplatesSection({
             Add
           </OmniButton>
         </form>
+        <div className="mt-[var(--space-2)] flex flex-wrap gap-2">
+          <OmniButton
+            variant="ghost"
+            small
+            onClick={() => {
+              const blob = new Blob(
+                [JSON.stringify(custom.map((name) => customNameToTemplate(name)), null, 2)],
+                {
+                  type: "application/json",
+                },
+              );
+              const url = URL.createObjectURL(blob);
+              const anchor = document.createElement("a");
+              anchor.href = url;
+              anchor.download = "omni-custom-templates.json";
+              anchor.click();
+              URL.revokeObjectURL(url);
+            }}
+          >
+            Export JSON
+          </OmniButton>
+          <OmniButton
+            variant="ghost"
+            small
+            onClick={() => {
+              const input = document.createElement("input");
+              input.type = "file";
+              input.accept = "application/json,.json";
+              input.onchange = () => {
+                const file = input.files?.[0];
+                if (file === undefined) return;
+                void file.text().then((text) => {
+                  try {
+                    const parsed = JSON.parse(text) as unknown;
+                    const normalized = normalizeImportedTemplates(parsed);
+                    void updateSettings({ custom_templates: normalized }, null).then(() =>
+                      void loadSettings(store),
+                    );
+                  } catch (err) {
+                    setAddError(err instanceof Error ? err.message : "Invalid JSON file.");
+                  }
+                });
+              };
+              input.click();
+            }}
+          >
+            Import JSON
+          </OmniButton>
+        </div>
         {addError !== null && (
           <span
             role="alert"

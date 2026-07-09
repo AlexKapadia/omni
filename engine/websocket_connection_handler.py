@@ -60,6 +60,7 @@ from engine.protocol import (
 )
 from engine.runtime_settings import HEARTBEAT_INTERVAL_SECONDS
 from engine.stt.live_capture_service import LiveCaptureService
+from engine.stt.stt_runtime_status import get_stt_runtime_status
 from engine.voice import NAOMI_COMMAND_NAMES, TtsPlaybackStreamer, dispatch_naomi_command
 from engine.wiring.approval_cards_gateway import ApprovalCardsGateway
 from engine.wiring.approval_command_dispatcher import (
@@ -167,6 +168,9 @@ class WebSocketConnectionHandler:
                     self._started_monotonic,
                     # Live truth per beat: flips true once models are loaded.
                     stt_ready=self._capture_service.is_stt_ready,
+                    stt_engine=get_stt_runtime_status().engine,
+                    stt_model_id=get_stt_runtime_status().model_id,
+                    stt_device=get_stt_runtime_status().device,
                 ),
             )
             await self._send(heartbeat)

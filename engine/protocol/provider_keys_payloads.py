@@ -23,7 +23,9 @@ COMMAND_KEYS_VALIDATE = "keys.validate"
 
 # The closed provider set for key custody. Groq + Gemini are required by the
 # product; Anthropic and Cartesia are optional slots (session decision).
-KeyProviderName = Literal["groq", "gemini", "anthropic", "cartesia"]
+KeyProviderName = Literal[
+    "groq", "gemini", "anthropic", "openai", "openrouter", "azure_openai", "cartesia"
+]
 
 # Sanity bounds on pasted keys: long enough to be real, short enough to not
 # be an abuse vector (a 4 KiB "key" is not a key).

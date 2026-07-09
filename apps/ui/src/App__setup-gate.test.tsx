@@ -9,7 +9,7 @@ import App from "./App";
 import type { SetupStatus } from "./lib/setup-settings-payloads";
 import { installJsdomMatchMediaShim } from "./test-support/install-jsdom-match-media-shim";
 
-/** Minimal WebSocket stub so startLiveEngineConnection never throws in jsdom. */
+/** Minimal WebSocket stub so startLiveEngine connection never throws in jsdom. */
 class StubWebSocket {
   static readonly OPEN = 1;
   onopen: (() => void) | null = null;
@@ -41,14 +41,14 @@ const incomplete: SetupStatus = { ...complete, onboardingComplete: false, setupC
 describe("App setup gate", () => {
   it("renders the first-run wizard when setup is incomplete", async () => {
     render(<App checkStatus={() => Promise.resolve(incomplete)} />);
-    await waitFor(() => expect(screen.getByText("1 / 5")).toBeTruthy());
-    expect(screen.getByRole("button", { name: "Begin" })).toBeTruthy();
+    await waitFor(() => expect(screen.getByLabelText("Onboarding step 1 of 6")).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Get started" })).toBeTruthy();
   });
 
   it("renders the main shell when setup is complete", async () => {
     render(<App checkStatus={() => Promise.resolve(complete)} />);
     // The nav rail is a main-shell fixture, not present in the wizard.
-    await waitFor(() => expect(screen.queryByText("1 / 5")).toBeNull());
+    await waitFor(() => expect(screen.queryByLabelText("Onboarding step 1 of 6")).toBeNull());
     expect(screen.getByRole("navigation")).toBeTruthy();
   });
 
@@ -62,6 +62,6 @@ describe("App setup gate", () => {
       />,
     );
     await waitFor(() => expect(screen.getByRole("navigation")).toBeTruthy());
-    expect(screen.queryByText("1 / 5")).toBeNull();
+    expect(screen.queryByLabelText("Onboarding step 1 of 6")).toBeNull();
   });
 });

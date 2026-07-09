@@ -141,11 +141,13 @@ async def seed_meeting(
         if ended_at is not None:
             await mark_meeting_ended(connection, meeting_id, ended_at)
         for index, (stream, text) in enumerate(segments):
+            speaker_id = "me" if stream == "me" else "1"
             await insert_transcript_segment(
                 connection,
                 segment_id=f"{meeting_id}-seg-{index}",
                 meeting_id=meeting_id,
                 stream=stream,
+                speaker_id=speaker_id,
                 text=text,
                 t_start=float(index),
                 t_end=float(index) + 0.9,

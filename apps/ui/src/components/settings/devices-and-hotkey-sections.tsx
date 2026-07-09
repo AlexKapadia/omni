@@ -53,8 +53,8 @@ export function DevicesSection({ store }: { readonly store: SettingsStore }) {
         ) : (
           <DeviceStateNote>
             {devicesSource === "pending"
-              ? "reading devices from the engine"
-              : "engine offline — devices unavailable"}
+              ? "reading devices from Omni Steroid"
+              : "Omni Steroid is offline — devices unavailable"}
           </DeviceStateNote>
         )}
       </SettingsRow>
@@ -72,7 +72,7 @@ export function DevicesSection({ store }: { readonly store: SettingsStore }) {
           </span>
         ) : (
           <DeviceStateNote>
-            {devicesSource === "pending" ? "reading devices from the engine" : "unavailable"}
+            {devicesSource === "pending" ? "reading devices from Omni Steroid" : "unavailable"}
           </DeviceStateNote>
         )}
       </SettingsRow>

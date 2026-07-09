@@ -12,10 +12,13 @@
 import { useCallback, useEffect, useState } from "react";
 import { ApprovalRack } from "../components/approval/approval-rack";
 import { MeetingBoardPanel } from "../components/live/meeting-board-panel";
+import { MeetingChatPanel } from "../components/library/meeting-chat-panel";
+import { MeetingSearchReplacePanel } from "../components/library/meeting-search-replace-panel";
 import { OmniButton } from "../components/button";
 import { SectionLabel } from "../components/section-label";
 import { SkeletonShimmer } from "../components/skeleton-shimmer";
 import { formatClockShort, formatDayLabel, formatDurationMin } from "../lib/format-quantities";
+import { copyTextToClipboard } from "../lib/copy-to-clipboard";
 import { downloadMeetingExport, triggerBrowserDownload } from "../lib/meeting-export";
 import { retranscribeMeeting } from "../lib/meetings-live-repository";
 import type { FinalizeOutcome, MeetingDetail } from "../lib/meetings-live-repository";
@@ -35,6 +38,43 @@ export type MeetingFinalizer = (
   meetingId: string,
   notepadText: string,
 ) => Promise<FinalizeOutcome>;
+
+type DetailTab = "summary" | "transcript" | "chat" | "tools";
+
+function DetailTabs({
+  tab,
+  onTab,
+}: {
+  readonly tab: DetailTab;
+  readonly onTab: (tab: DetailTab) => void;
+}) {
+  const tabs: Array<{ id: DetailTab; label: string }> = [
+    { id: "summary", label: "Summary" },
+    { id: "transcript", label: "Transcript" },
+    { id: "chat", label: "Chat" },
+    // Internal value stays 'tools' to avoid churn; the label is the user-facing
+    // "Export" (the tab is copy, search/replace, and file downloads).
+    { id: "tools", label: "Export" },
+  ];
+  return (
+    <div className="flex flex-wrap gap-[var(--space-2)] border-b border-[var(--grey-200)] pb-[var(--space-2)]">
+      {tabs.map((item) => (
+        <button
+          key={item.id}
+          type="button"
+          className={
+            "cursor-pointer border-none bg-transparent font-[family-name:var(--font-mono)] " +
+            (tab === item.id ? "text-[var(--ink)]" : "text-[var(--grey-600)]")
+          }
+          style={{ fontSize: 12 }}
+          onClick={() => onTab(item.id)}
+        >
+          {item.label}
+        </button>
+      ))}
+    </div>
+  );
+}
 
 function PaneSection({ label, children }: { readonly label: string; readonly children: React.ReactNode }) {
   return (
@@ -68,6 +108,8 @@ export function LibraryMeetingDetailPane({
   const notepadText = useNotepad((s) => s.text);
   const [editingSegmentId, setEditingSegmentId] = useState<string | null>(null);
   const [editText, setEditText] = useState("");
+  const [tab, setTab] = useState<DetailTab>("summary");
+  const [copyMessage, setCopyMessage] = useState<string | null>(null);
 
   const load = useCallback(
     () => void loadMeetingDetail(meetingsDetailStore, loadDetail, meetingId),
@@ -133,6 +175,15 @@ export function LibraryMeetingDetailPane({
 
       {status === "ready" && detail !== null && (
         <>
+          <DetailTabs tab={tab} onTab={setTab} />
+          {copyMessage !== null && (
+            <p role="status" className="m-0 text-[var(--grey-600)]" style={{ fontSize: 12 }}>
+              {copyMessage}
+            </p>
+          )}
+
+          {tab === "summary" && (
+            <>
           <PaneSection label="Enhanced Notes">
             {detail.enhancedNotesMd.length > 0 ? (
               <SafeMarkdown markdown={detail.enhancedNotesMd} />
@@ -196,40 +247,8 @@ export function LibraryMeetingDetailPane({
             />
           )}
 
-          <PaneSection label="Export">
-            <div className="flex flex-wrap gap-2">
-              {(["srt", "vtt", "txt", "pdf", "docx"] as const).map((format) => (
-                <OmniButton
-                  key={format}
-                  variant="secondary"
-                  small
-                  onClick={() =>
-                    void downloadMeetingExport(meetingId, format, detail.title).then((result) =>
-                      triggerBrowserDownload(result),
-                    )
-                  }
-                >
-                  Download {format.toUpperCase()}
-                </OmniButton>
-              ))}
-              <OmniButton
-                variant="secondary"
-                small
-                onClick={() =>
-                  void retranscribeMeeting(meetingId)
-                    .then(() => load())
-                    .catch(() => undefined)
-                }
-              >
-                Retranscribe
-              </OmniButton>
-            </div>
-          </PaneSection>
-
           <PaneSection label="My Notes">
             {detail.notesText.length > 0 || notepadForThisMeeting.length > 0 ? (
-              // Verbatim, plain text (fidelity mandate): pre-wrap preserves
-              // the user's own line structure exactly, no markdown parsing.
               <pre
                 className="m-0 whitespace-pre-wrap font-[family-name:var(--font-body,inherit)]"
                 style={{ fontSize: "var(--text-body-size)", lineHeight: "var(--text-body-lh)" }}
@@ -240,7 +259,10 @@ export function LibraryMeetingDetailPane({
               <p className="m-0 text-[var(--grey-600)]">No notes were typed for this meeting.</p>
             )}
           </PaneSection>
+            </>
+          )}
 
+          {tab === "transcript" && (
           <PaneSection label="Transcript">
             {detail.transcript.length === 0 ? (
               <p className="m-0 text-[var(--grey-600)]">No transcript was captured.</p>
@@ -256,7 +278,7 @@ export function LibraryMeetingDetailPane({
                   {detail.transcript.map((line) => (
                     <li key={line.segmentId} style={{ fontSize: 13, lineHeight: "1.5" }}>
                       <span className="font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]">
-                        {line.stream === "me" ? "Me" : "Them"}:
+                        {line.speakerLabel}:
                       </span>{" "}
                       {editingSegmentId === line.segmentId ? (
                         <form
@@ -304,6 +326,90 @@ export function LibraryMeetingDetailPane({
               </details>
             )}
           </PaneSection>
+          )}
+
+          {tab === "chat" && <MeetingChatPanel meetingId={meetingId} />}
+
+          {tab === "tools" && (
+            <>
+              <PaneSection label="Copy">
+                <div className="flex flex-wrap gap-2">
+                  <OmniButton
+                    variant="secondary"
+                    small
+                    onClick={() =>
+                      void copyTextToClipboard(detail.enhancedNotesMd || "").then(
+                        () => setCopyMessage("Enhanced notes copied."),
+                        () => setCopyMessage("Could not copy."),
+                      )
+                    }
+                  >
+                    Copy summary
+                  </OmniButton>
+                  <OmniButton
+                    variant="secondary"
+                    small
+                    onClick={() =>
+                      void copyTextToClipboard(
+                        detail.transcript.map((l) => `${l.speakerLabel}: ${l.text}`).join("\n"),
+                      ).then(
+                        () => setCopyMessage("Transcript copied."),
+                        () => setCopyMessage("Could not copy."),
+                      )
+                    }
+                  >
+                    Copy transcript
+                  </OmniButton>
+                  <OmniButton
+                    variant="secondary"
+                    small
+                    onClick={() =>
+                      void downloadMeetingExport(meetingId, "md", detail.title).then((result) =>
+                        void copyTextToClipboard(result.content).then(
+                          () => setCopyMessage("Full meeting markdown copied."),
+                          () => setCopyMessage("Could not copy."),
+                        ),
+                      )
+                    }
+                  >
+                    Copy markdown
+                  </OmniButton>
+                </div>
+              </PaneSection>
+              <PaneSection label="Search & replace">
+                <MeetingSearchReplacePanel meetingId={meetingId} onReplaced={load} />
+              </PaneSection>
+              <PaneSection label="Download files">
+                <div className="flex flex-wrap gap-2">
+                  {(["srt", "vtt", "txt", "md", "pdf", "docx"] as const).map((format) => (
+                    <OmniButton
+                      key={format}
+                      variant="secondary"
+                      small
+                      onClick={() =>
+                        void downloadMeetingExport(meetingId, format, detail.title).then((result) =>
+                          triggerBrowserDownload(result),
+                        )
+                      }
+                    >
+                      Download {format.toUpperCase()}
+                    </OmniButton>
+                  ))}
+                  <OmniButton
+                    variant="secondary"
+                    small
+                    onClick={() =>
+                      void retranscribeMeeting(meetingId)
+                        .then(() => load())
+                        .catch(() => undefined)
+                    }
+                  >
+                    Retranscribe
+                  </OmniButton>
+                </div>
+              </PaneSection>
+            </>
+          )}
         </>
       )}
     </aside>

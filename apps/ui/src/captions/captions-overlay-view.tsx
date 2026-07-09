@@ -11,10 +11,11 @@ const MAX_LINES = 4;
 function overlayLines(
   segments: readonly TranscriptSegment[],
   partials: Readonly<Record<"me" | "them", TranscriptPartial | null>>,
-): Array<{ key: string; stream: "me" | "them"; text: string; partial: boolean }> {
+): Array<{ key: string; stream: "me" | "them"; label: string; text: string; partial: boolean }> {
   const finals = segments.slice(-MAX_LINES).map((segment) => ({
     key: segment.segmentId,
     stream: segment.stream,
+    label: segment.speakerLabel,
     text: segment.text,
     partial: false,
   }));
@@ -25,6 +26,7 @@ function overlayLines(
     .map((partial) => ({
       key: `partial-${partial.stream}-${partial.seq}`,
       stream: partial.stream,
+      label: partial.speakerLabel,
       text: partial.text,
       partial: true,
     }));
@@ -55,8 +57,7 @@ export function CaptionsOverlayView() {
                 (line.partial ? " captions-line--partial" : "")
               }
             >
-              {line.stream === "me" ? "Me: " : "Them: "}
-              {line.text}
+              {line.label}: {line.text}
               {line.partial ? " …" : ""}
             </p>
           ))

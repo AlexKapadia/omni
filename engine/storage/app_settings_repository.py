@@ -38,6 +38,15 @@ SETTING_AUTOSTOP_SILENCE_S = "autostop_silence_s"
 SETTING_LIVE_CAPTIONS_OVERLAY = "live_captions_overlay"
 SETTING_AEC_ENABLED = "aec_enabled"
 SETTING_LIVE_TRANSLATION_LANG = "live_translation_lang"
+SETTING_SUMMARY_LANGUAGE = "summary_language"
+SETTING_SUMMARY_MODEL_ID = "summary_model_id"
+SETTING_SPEAKER_IDENTITY = "speaker_identity"
+SETTING_SPEAKER_VOICE_EMBEDDING = "speaker_voice_embedding"
+SETTING_DICTATION_CLEANUP_STYLE = "dictation_cleanup_style"
+SETTING_STT_ENGINE = "stt_engine"
+SETTING_STT_MODEL_ID = "stt_model_id"
+SETTING_STT_OPENAI_BASE_URL = "stt_openai_base_url"
+SETTING_SELECTION_TRANSLATION_LANG = "selection_translation_lang"
 
 KNOWN_SETTINGS_KEYS: frozenset[str] = frozenset(
     {
@@ -55,6 +64,15 @@ KNOWN_SETTINGS_KEYS: frozenset[str] = frozenset(
         SETTING_LIVE_CAPTIONS_OVERLAY,
         SETTING_AEC_ENABLED,
         SETTING_LIVE_TRANSLATION_LANG,
+        SETTING_SUMMARY_LANGUAGE,
+        SETTING_SUMMARY_MODEL_ID,
+        SETTING_SPEAKER_IDENTITY,
+        SETTING_SPEAKER_VOICE_EMBEDDING,
+        SETTING_DICTATION_CLEANUP_STYLE,
+        SETTING_STT_ENGINE,
+        SETTING_STT_MODEL_ID,
+        SETTING_STT_OPENAI_BASE_URL,
+        SETTING_SELECTION_TRANSLATION_LANG,
     }
 )
 

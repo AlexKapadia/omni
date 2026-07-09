@@ -1,30 +1,26 @@
-/**
- * First-run wizard (design §09): five 560×560 cards centred on the canvas.
- * Steps: welcome → vault → keys → models → Google Calendar → finish.
- */
-import { useEffect, useMemo } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useStore } from "zustand";
 import { OmniButton } from "../../components/button";
 import { OnboardingCardFrame } from "../../components/onboarding/onboarding-card-frame";
-import { StepGoogleCalendar } from "../../components/onboarding/step-google-calendar";
+import { StepWelcome } from "../../components/onboarding/step-welcome";
+import { StepFeaturesTour } from "../../components/onboarding/step-features-tour";
+import { StepSpeakerIdentity } from "../../components/onboarding/step-speaker-identity";
+import { StepVault, DEFAULT_VAULT_PATH } from "../../components/onboarding/step-vault";
 import { StepKeys } from "../../components/onboarding/step-keys";
 import { StepModels } from "../../components/onboarding/step-models";
-import { StepVault } from "../../components/onboarding/step-vault";
-import { StepWelcome } from "../../components/onboarding/step-welcome";
 import {
   apiKeysStore,
   createEngineApiKeyVault,
   engineKeyValidator,
-  KEY_PROVIDER_LABELS,
   type ApiKeyVault,
   type ApiKeysStore,
   type KeyValidator,
 } from "../../lib/api-keys-store";
-import { REQUIRED_KEY_PROVIDERS } from "../../lib/setup-settings-commands";
 import {
   createOnboardingFlowStore,
   goToStep,
   modelsPresent,
+  applyModelFailed,
   type OnboardingFlowStore,
   type OnboardingStep,
 } from "../../lib/onboarding-flow-store";
@@ -39,7 +35,8 @@ import {
   subscribeGoogleConnect,
   subscribeModelDownload,
 } from "../../lib/onboarding-flow-actions";
-import { connectGoogle } from "../../lib/setup-settings-repository";
+import { enrollSpeaker } from "../../lib/speaker-enroll-repository";
+import { updateSettings } from "../../lib/setup-settings-repository";
 import type { SetupStatus } from "../../lib/setup-settings-payloads";
 
 /** Injectable action seam — real engine actions by default, fakes in tests. */
@@ -59,6 +56,11 @@ export interface OnboardingActions {
     store: OnboardingFlowStore,
     onDone: (status: SetupStatus) => void,
   ) => Promise<void>;
+  enrollSpeaker: (name: string) => Promise<void>;
+  saveEngineSelection: (
+    engine: "parakeet" | "whisper",
+    summaryModelId: string,
+  ) => Promise<void>;
 }
 
 const LIVE_ACTIONS: OnboardingActions = {
@@ -68,9 +70,19 @@ const LIVE_ACTIONS: OnboardingActions = {
   subscribeModelDownload: (store) => subscribeModelDownload(store),
   beginModelDownload: (store) => beginModelDownload(store),
   subscribeGoogleConnect: (store) => subscribeGoogleConnect(store),
-  beginGoogleConnect: (store, credentials) => beginGoogleConnect(store, connectGoogle, credentials),
+  beginGoogleConnect: (store, credentials) => beginGoogleConnect(store, undefined, credentials),
   skipGoogleConnect: (store) => skipGoogleConnect(store),
   finishOnboarding: (store, onDone) => finishOnboarding(store, onDone),
+  enrollSpeaker: (name) => enrollSpeaker(name).then(() => undefined),
+  saveEngineSelection: (engine, summaryModelId) =>
+    updateSettings(
+      {
+        sttEngine: engine,
+        sttModelId: engine === "whisper" ? "large-v3" : "",
+        summaryModelId,
+      },
+      null,
+    ),
 };
 
 export function OnboardingWizard({
@@ -96,10 +108,35 @@ export function OnboardingWizard({
 
   const step = useStore(flowStore, (s) => s.step);
   const vaultConfigured = useStore(flowStore, (s) => s.vaultConfigured);
-  const present = useStore(flowStore, modelsPresent);
-  const requiredKeysValid = useStore(keysStore, (s) =>
-    REQUIRED_KEY_PROVIDERS.every((p) => s.validation[p].status === "valid"),
-  );
+  const vaultPath = useStore(flowStore, (s) => s.vaultPath);
+  const vaultBusy = useStore(flowStore, (s) => s.vaultBusy);
+
+  const modelsReady = useStore(flowStore, modelsPresent);
+  const modelsStarted = useStore(flowStore, (s) => s.modelsStarted);
+
+  const finishing = useStore(flowStore, (s) => s.finishing);
+  const finishError = useStore(flowStore, (s) => s.finishError);
+
+  // Speaker name state (Step 3)
+  const [speakerName, setSpeakerName] = useState("");
+  const [speakerBusy, setSpeakerBusy] = useState(false);
+  const [speakerError, setSpeakerError] = useState<string | null>(null);
+
+  // Vault configuration inputs state (Step 4)
+  const [vaultPathInput, setVaultPathInput] = useState(vaultPath ?? DEFAULT_VAULT_PATH);
+  const [createNewInput, setCreateNewInput] = useState(vaultPath === null);
+
+  // Model selection state (Step 5)
+  const [selectedEngine, setSelectedEngine] = useState<"parakeet" | "whisper">("parakeet");
+  const [selectedSummaryModel, setSelectedSummaryModel] = useState<string>("gemini-2.5-flash");
+
+  // Mirror picked vault path from store to local input state
+  useEffect(() => {
+    if (vaultPath !== null) {
+      setVaultPathInput(vaultPath);
+      setCreateNewInput(false);
+    }
+  }, [vaultPath]);
 
   useEffect(() => {
     void actions.initFromSetupStatus(flowStore);
@@ -111,70 +148,234 @@ export function OnboardingWizard({
     };
   }, [flowStore, actions]);
 
-  const canFinish = requiredKeysValid && vaultConfigured && present;
-  const finishBlockedReason = canFinish ? null : buildBlockedReason(requiredKeysValid, vaultConfigured, present);
-
   const advance = (to: OnboardingStep) => goToStep(flowStore, to);
 
-  return (
-    <div className="flex h-full flex-col items-center justify-center gap-[var(--space-4)] bg-[var(--canvas)]">
-      <OnboardingCardFrame step={step}>
-        {step === 1 && <StepWelcome onBegin={() => advance(2)} />}
-        {step === 2 && (
-          <StepVault
-            store={flowStore}
-            onBrowse={() => void actions.chooseVaultFolder(flowStore)}
-            onUseFolder={(path, createNew) => void actions.configureVault(flowStore, path, createNew)}
-          />
-        )}
-        {step === 3 && <StepKeys store={keysStore} vault={vault} validator={validator} />}
-        {step === 4 && (
-          <StepModels store={flowStore} onDownload={() => void actions.beginModelDownload(flowStore)} />
-        )}
-        {step === 5 && (
-          <StepGoogleCalendar
-            store={flowStore}
-            canFinish={canFinish}
-            finishBlockedReason={finishBlockedReason}
-            onConnectGoogle={(credentials) => void actions.beginGoogleConnect(flowStore, credentials)}
-            onSkipGoogle={() => actions.skipGoogleConnect(flowStore)}
-            onFinish={() => void actions.finishOnboarding(flowStore, onComplete)}
-          />
-        )}
-      </OnboardingCardFrame>
+  const footer = (
+    <div className="flex items-center justify-between w-full">
+      {/* Left-aligned Back button */}
+      <OmniButton
+        variant="ghost"
+        onClick={() => advance((step - 1) as OnboardingStep)}
+        disabled={speakerBusy || vaultBusy || finishing}
+      >
+        Back
+      </OmniButton>
 
-      {step > 1 && step < 5 && (
-        <div className="flex items-center gap-[var(--space-4)]" style={{ width: 560 }}>
-          <OmniButton variant="ghost" onClick={() => advance((step - 1) as OnboardingStep)}>
-            Back
-          </OmniButton>
+      {/* Right-aligned action buttons */}
+      <div className="flex items-center gap-[var(--space-3)]">
+        {step === 2 && (
           <OmniButton
-            variant="secondary"
-            className="ml-auto"
-            disabled={(step === 2 && !vaultConfigured) || (step === 4 && !present)}
-            onClick={() => advance((step + 1) as OnboardingStep)}
+            variant="primary"
+            onClick={() => advance(3)}
+          >
+            Got it, continue
+          </OmniButton>
+        )}
+
+        {step === 3 && (
+          <>
+            <OmniButton
+              variant="ghost"
+              onClick={() => advance(4)}
+              disabled={speakerBusy}
+            >
+              Skip
+            </OmniButton>
+            <OmniButton
+              variant="primary"
+              disabled={speakerBusy || speakerName.trim().length === 0}
+              loading={speakerBusy}
+              onClick={async () => {
+                setSpeakerBusy(true);
+                setSpeakerError(null);
+                try {
+                  await actions.enrollSpeaker(speakerName.trim());
+                  advance(4);
+                } catch (err) {
+                  setSpeakerError(err instanceof Error ? err.message : "Could not save your name.");
+                } finally {
+                  setSpeakerBusy(false);
+                }
+              }}
+            >
+              Continue
+            </OmniButton>
+          </>
+        )}
+
+        {step === 4 && (
+          <OmniButton
+            variant="primary"
+            disabled={vaultBusy || vaultPathInput.trim().length === 0}
+            loading={vaultBusy}
+            onClick={async () => {
+              const ok = await actions.configureVault(flowStore, vaultPathInput, createNewInput);
+              if (ok) {
+                advance(5);
+              }
+            }}
           >
             Continue
           </OmniButton>
-        </div>
-      )}
-      {step === 5 && (
-        <div className="flex items-center gap-[var(--space-4)]" style={{ width: 560 }}>
-          <OmniButton variant="ghost" onClick={() => advance(4)}>
-            Back
+        )}
+
+        {step === 5 && (
+          <>
+            {!modelsReady && !modelsStarted && (
+              <OmniButton
+                variant="primary"
+                onClick={async () => {
+                  try {
+                    await actions.saveEngineSelection(selectedEngine, selectedSummaryModel);
+                    void actions.beginModelDownload(flowStore);
+                  } catch (err) {
+                    applyModelFailed(flowStore, "download", err instanceof Error ? err.message : "Failed to select model.");
+                  }
+                }}
+              >
+                Download & continue
+              </OmniButton>
+            )}
+            {modelsStarted && (
+              <OmniButton
+                variant="primary"
+                disabled
+                loading
+              >
+                Downloading…
+              </OmniButton>
+            )}
+            {modelsReady && (
+              <OmniButton
+                variant="primary"
+                onClick={() => advance(6)}
+              >
+                Continue
+              </OmniButton>
+            )}
+          </>
+        )}
+
+        {step === 6 && (
+          <OmniButton
+            variant="primary"
+            disabled={finishing}
+            loading={finishing}
+            onClick={() => void actions.finishOnboarding(flowStore, onComplete)}
+          >
+            Finish
           </OmniButton>
-        </div>
-      )}
+        )}
+      </div>
+    </div>
+  );
+
+  return (
+    <div className="flex h-full flex-col items-center justify-center gap-[var(--space-4)] bg-[var(--canvas)] p-[var(--space-4)]">
+      <OnboardingCardFrame step={step} footer={step > 1 ? footer : undefined}>
+        {step === 1 && <StepWelcome onBegin={() => advance(2)} />}
+        
+        {step === 2 && <StepFeaturesTour onContinue={() => advance(3)} />}
+
+        {step === 3 && (
+          <div className="flex flex-col h-full justify-between">
+            <div>
+              <StepSpeakerIdentity
+                name={speakerName}
+                onChangeName={setSpeakerName}
+              />
+              {speakerError && (
+                <div 
+                  className="mt-[var(--space-4)] p-[var(--space-3)] rounded-[var(--radius-control)] bg-[var(--error-bg)] border border-[var(--error)] flex items-start gap-[var(--space-2)]"
+                  style={{ color: "var(--error-text)" }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="mt-0.5 shrink-0"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span style={{ fontSize: "var(--text-body-size)" }}>
+                    {speakerError}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+
+        {step === 4 && (
+          <StepVault
+            store={flowStore}
+            path={vaultPathInput}
+            setPath={setVaultPathInput}
+            createNew={createNewInput}
+            setCreateNew={setCreateNewInput}
+            onBrowse={() => void actions.chooseVaultFolder(flowStore)}
+          />
+        )}
+
+        {step === 5 && (
+          <StepModels
+            store={flowStore}
+            selectedEngine={selectedEngine}
+            setSelectedEngine={setSelectedEngine}
+            selectedSummaryModel={selectedSummaryModel}
+            setSelectedSummaryModel={setSelectedSummaryModel}
+          />
+        )}
+
+        {step === 6 && (
+          <div className="flex flex-col justify-between h-full">
+            <div>
+              <StepKeys
+                store={keysStore}
+                vault={vault}
+                validator={validator}
+                flowStore={flowStore}
+                onConnectGoogle={(credentials) => void actions.beginGoogleConnect(flowStore, credentials)}
+              />
+              {finishError && (
+                <div 
+                  className="mt-[var(--space-4)] p-[var(--space-3)] rounded-[var(--radius-control)] bg-[var(--error-bg)] border border-[var(--error)] flex items-start gap-[var(--space-2)]"
+                  style={{ color: "var(--error-text)" }}
+                >
+                  <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="16"
+                    height="16"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    className="mt-0.5 shrink-0"
+                  >
+                    <circle cx="12" cy="12" r="10" />
+                    <line x1="12" y1="8" x2="12" y2="12" />
+                    <line x1="12" y1="16" x2="12.01" y2="16" />
+                  </svg>
+                  <span style={{ fontSize: "var(--text-body-size)" }}>
+                    {finishError}
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
+      </OnboardingCardFrame>
     </div>
   );
 }
 
-function buildBlockedReason(keysValid: boolean, vaultSet: boolean, models: boolean): string {
-  const missing: string[] = [];
-  if (!keysValid) {
-    missing.push(`validate your ${REQUIRED_KEY_PROVIDERS.map((p) => KEY_PROVIDER_LABELS[p]).join(" and ")} keys`);
-  }
-  if (!vaultSet) missing.push("set your vault");
-  if (!models) missing.push("download the models");
-  return `To finish, ${missing.join(", ")}.`;
-}

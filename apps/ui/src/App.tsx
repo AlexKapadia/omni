@@ -9,6 +9,8 @@
 import { useEffect, useState } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import { NavRail, type SectionId } from "./components/nav-rail";
+import { useStore } from "zustand";
+import { apiKeysStore } from "./lib/api-keys-store";
 import { OmniMark } from "./components/omni-mark";
 import { StatusFooter } from "./components/status-footer";
 import { tokenDurationSeconds } from "./lib/design-token-motion";
@@ -22,9 +24,11 @@ import { syncConfiguredDictationHotkey } from "./lib/sync-dictation-hotkey";
 import type { SetupStatus } from "./lib/setup-settings-payloads";
 import { NaomiView } from "./naomi/NaomiView";
 import { OnboardingWizard } from "./screens/onboarding/onboarding-wizard";
+import { HomeScreen } from "./screens/home-screen";
 import { AskScreen } from "./screens/ask-screen";
 import { LibraryScreen } from "./screens/library-screen";
 import { LiveMeetingScreen } from "./screens/live-meeting-screen";
+import { DictationHistoryScreen } from "./screens/dictation-history-screen";
 import { SettingsScreen } from "./screens/settings-screen";
 
 /** Boot gate: first-run onboarding vs the main shell, from real setup.status. */
@@ -65,6 +69,8 @@ export default function App({
     // binding (the shell boots on the default F9 until this lands). No-op
     // outside the Tauri shell; non-fatal if the engine is not up yet.
     void syncConfiguredDictationHotkey();
+    const savedTheme = localStorage.getItem("omni-theme") || "evergreen";
+    document.documentElement.setAttribute("data-theme", savedTheme);
     let cancelled = false;
     // The engine WebSocket takes a beat to open on a cold boot, so the very
     // first setup.status can fail simply because the socket is not open yet.
@@ -78,7 +84,7 @@ export default function App({
       void checkStatus()
         .then((status) => {
           if (cancelled) return;
-          setGate(status.onboardingComplete && status.setupComplete ? "app" : "onboarding");
+          setGate(status.onboardingComplete ? "app" : "onboarding");
         })
         .catch(() => {
           if (cancelled) return;
@@ -98,7 +104,7 @@ export default function App({
 
   if (gate === "checking") {
     return (
-      <div className="flex h-full items-center justify-center bg-[var(--canvas)]" aria-label="Starting Omni">
+      <div className="flex h-full items-center justify-center bg-[var(--canvas)]" aria-label="Starting Omni Steroid">
         <span className="omni-breathe" aria-hidden>
           <OmniMark size={64} />
         </span>
@@ -112,8 +118,32 @@ export default function App({
 }
 
 function MainShell() {
-  const [activeSection, setActiveSection] = useState<SectionId>("library");
+  const [activeSection, setActiveSection] = useState<SectionId>("home");
   const reducedMotion = useReducedMotion();
+
+  // Redirect guard if Naomi is disabled or Cartesia API key is missing
+  const [naomiEnabled, setNaomiEnabled] = useState(() => localStorage.getItem("omni_naomi_enabled") === "true");
+
+  useEffect(() => {
+    const handleStorage = () => {
+      setNaomiEnabled(localStorage.getItem("omni_naomi_enabled") === "true");
+    };
+    window.addEventListener("storage", handleStorage);
+    window.addEventListener("naomi-toggle", handleStorage);
+    return () => {
+      window.removeEventListener("storage", handleStorage);
+      window.removeEventListener("naomi-toggle", handleStorage);
+    };
+  }, []);
+
+  const isCartesiaSaved = useStore(apiKeysStore, (s) => s.keys.cartesia?.saved === true);
+  const showNaomi = naomiEnabled && isCartesiaSaved;
+
+  useEffect(() => {
+    if (activeSection === "naomi" && !showNaomi) {
+      setActiveSection("home");
+    }
+  }, [activeSection, showNaomi]);
 
   useEffect(() => {
     void loadSettings(appSettingsStore);
@@ -145,11 +175,18 @@ function MainShell() {
                 duration: reducedMotion ? 0 : tokenDurationSeconds("--dur-page"),
               }}
             >
+              {activeSection === "home" && (
+                <HomeScreen
+                  onNavigate={(sec) => setActiveSection(sec)}
+                  onStartCapture={() => setActiveSection("live")}
+                />
+              )}
               {activeSection === "library" && (
                 <LibraryScreen onStartCapture={() => setActiveSection("live")} />
               )}
               {activeSection === "live" && <LiveMeetingScreen />}
               {activeSection === "ask" && <AskScreen />}
+              {activeSection === "dictation" && <DictationHistoryScreen />}
               {activeSection === "naomi" && <NaomiView />}
               {activeSection === "settings" && <SettingsScreen />}
             </motion.div>

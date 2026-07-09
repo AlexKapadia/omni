@@ -20,24 +20,32 @@ import {
 /** Pixels from the bottom still counted as "at the bottom". */
 const PIN_THRESHOLD_PX = 40;
 
-function SpeakerLine({ stream, tStart }: { readonly stream: "me" | "them"; readonly tStart: number }) {
+function SpeakerLine({
+  label,
+  tStart,
+}: {
+  readonly label: string;
+  readonly tStart: number;
+}) {
   return (
     <span
       className="block font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
-      style={{ fontSize: 10 }} // doc: in-bubble timestamps are 10px
+      style={{ fontSize: 10 }}
     >
-      {stream === "me" ? "Me" : "Them"} · {formatMeetingClock(tStart)}
+      {label} · {formatMeetingClock(tStart)}
     </span>
   );
 }
 
 function TranscriptLine({
   stream,
+  speakerLabel,
   text,
   tStart,
   inProgress,
 }: {
   readonly stream: "me" | "them";
+  readonly speakerLabel: string;
   readonly text: string;
   readonly tStart: number;
   readonly inProgress: boolean;
@@ -50,7 +58,7 @@ function TranscriptLine({
       className={isMe ? "self-end text-right" : "self-start"}
       style={{ maxWidth: "85%" }}
     >
-      <SpeakerLine stream={stream} tStart={tStart} />
+      <SpeakerLine label={speakerLabel} tStart={tStart} />
       <p
         className={
           "m-0 mt-[var(--space-1)] font-[family-name:var(--font-mono)] " +
@@ -142,6 +150,7 @@ export function TranscriptStream() {
           <TranscriptLine
             key={segment.segmentId}
             stream={segment.stream}
+            speakerLabel={segment.speakerLabel}
             text={segment.text}
             tStart={segment.tStart}
             inProgress={false}
@@ -151,6 +160,7 @@ export function TranscriptStream() {
           <TranscriptLine
             key={`partial-${partial.stream}-${partial.seq}`}
             stream={partial.stream}
+            speakerLabel={partial.speakerLabel}
             text={partial.text}
             tStart={partial.tStart}
             inProgress

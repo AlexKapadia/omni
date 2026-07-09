@@ -26,6 +26,7 @@ from engine.stt.parakeet_nemo_transcriber import (
     ParakeetNemoTranscriber,
     stt_dependencies_available,
 )
+from engine.stt.stt_runtime_status import detect_inference_device, update_stt_runtime_status
 from engine.stt.silero_onnx_voice_activity_detector import SileroOnnxVoiceActivityDetector
 
 # Test seam: production default is the real stateful Silero VAD per stream.
@@ -82,4 +83,9 @@ class CaptureModelLoader:
             if not self.transcriber.is_loaded:
                 # Heavy load off the event loop; heartbeats keep flowing.
                 await asyncio.to_thread(self.transcriber.load)
+            update_stt_runtime_status(
+                engine="parakeet",
+                model_id="parakeet-tdt-0.6b-v2",
+                device=getattr(self.transcriber, "_device", detect_inference_device()),
+            )
             self._ready = True

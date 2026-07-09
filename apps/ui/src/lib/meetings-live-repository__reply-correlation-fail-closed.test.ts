@@ -177,8 +177,8 @@ describe("meeting.get mapping (fail closed)", () => {
     expect(detail.notesText).toBe("raw notes\nwith a second line"); // verbatim
     expect(detail.finalized).toBe(true);
     expect(detail.transcript).toEqual([
-      { segmentId: "s1", stream: "them", text: "hello", tStart: 0, tEnd: 1 },
-      { segmentId: "s2", stream: "me", text: "hi", tStart: 1, tEnd: 2 },
+      { segmentId: "s1", stream: "them", speakerLabel: "Them", text: "hello", tStart: 0, tEnd: 1 },
+      { segmentId: "s2", stream: "me", speakerLabel: "Me", text: "hi", tStart: 1, tEnd: 2 },
     ]);
   });
 

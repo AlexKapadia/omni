@@ -26,6 +26,9 @@ const GOOD_SETTINGS = {
   live_captions_overlay: true,
   aec_enabled: false,
   live_translation_lang: "",
+  summary_language: "",
+  speaker_identity: "Me",
+  speaker_voice_enrolled: false,
 };
 
 const GOOD_GET = {
@@ -72,6 +75,24 @@ describe("parseSettingsGet", () => {
     expect(result!.settings.instantExecuteWhitelist).toEqual(["create_event"]);
   });
 
+  it("accepts dict-shaped custom templates from the engine", () => {
+    const result = parseSettingsGet({
+      ...GOOD_GET,
+      settings: {
+        ...GOOD_SETTINGS,
+        custom_templates: [
+          {
+            template_id: "deep_dive",
+            display_name: "Deep dive",
+            sections: [{ title: "Summary", guidance: "Points." }],
+            tone_rules: "Clear.",
+          },
+        ],
+      },
+    });
+    expect(result!.settings.customTemplates).toEqual(["Deep dive"]);
+  });
+
   it.each<[string, unknown]>([
     ["not an object", null],
     ["settings missing", { ...GOOD_GET, settings: undefined }],
@@ -89,10 +110,19 @@ describe("parseSettingsGet", () => {
 });
 
 const GOOD_STATUS = {
-  keys: { groq: true, gemini: false, anthropic: false, cartesia: false },
+  keys: {
+    groq: true,
+    gemini: false,
+    anthropic: false,
+    openai: false,
+    openrouter: false,
+    azure_openai: false,
+    cartesia: false,
+  },
   vault: { configured: true, path: "C:/vault" },
   models: [{ file: "parakeet.bin", present: true, bytes: 1234 }],
   google_connected: false,
+  microsoft_connected: false,
   onboarding_complete: false,
   setup_complete: false,
 };

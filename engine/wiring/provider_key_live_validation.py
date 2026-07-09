@@ -30,9 +30,11 @@ from engine.router.completion_contract import (
 from engine.router.provider_client_registry import build_provider_clients
 from engine.router.routing_table import (
     ANTHROPIC_MODEL,
+    AZURE_OPENAI_DEFAULT_MODEL,
     GEMINI_FLASH_MODEL,
     GROQ_FAST_MODEL,
     OPENAI_MINI_MODEL,
+    OPENROUTER_DEFAULT_MODEL,
 )
 from engine.security.kill_switch import kill_switch_engaged
 from engine.security.provider_key_store import ProviderKeyStore
@@ -44,6 +46,8 @@ _VALIDATION_MODEL_BY_PROVIDER = {
     Provider.GEMINI: GEMINI_FLASH_MODEL,
     Provider.ANTHROPIC: ANTHROPIC_MODEL,
     Provider.OPENAI: OPENAI_MINI_MODEL,
+    Provider.OPENROUTER: OPENROUTER_DEFAULT_MODEL,
+    Provider.AZURE_OPENAI: AZURE_OPENAI_DEFAULT_MODEL,
 }
 
 _VALIDATION_TIMEOUT_SECONDS = 15.0

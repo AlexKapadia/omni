@@ -1,7 +1,9 @@
 /**
- * Rolling live summary panel — left column header above the notepad.
+ * Rolling live summary — a collapsible left-column drawer (default collapsed to
+ * keep the live view transcript-forward). Renders nothing until the engine has
+ * emitted a rolling summary, so the drawer never shows an empty shell.
  */
-import { SectionLabel } from "../section-label";
+import { CollapsibleDrawer } from "./collapsible-drawer";
 import { useLiveSummary } from "../../lib/live-summary-store";
 
 export function LiveSummaryPanel() {
@@ -9,18 +11,13 @@ export function LiveSummaryPanel() {
   if (summaryMd.length === 0) return null;
 
   return (
-    <section
-      aria-label="Rolling summary"
-      className="border-b border-[var(--grey-200)] bg-[var(--wash-surface)]"
-      style={{ padding: "12px 20px" }}
-    >
-      <SectionLabel>Summary so far</SectionLabel>
+    <CollapsibleDrawer title="Summary so far">
       <div
-        className="mt-[var(--space-2)] whitespace-pre-wrap font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
-        style={{ fontSize: 12, lineHeight: 1.5 }}
+        className="whitespace-pre-wrap bg-[var(--wash-surface)] font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]"
+        style={{ fontSize: 12, lineHeight: 1.5, padding: "0 20px 12px" }}
       >
         {summaryMd}
       </div>
-    </section>
+    </CollapsibleDrawer>
   );
 }

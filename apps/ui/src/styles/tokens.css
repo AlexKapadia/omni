@@ -1,61 +1,76 @@
 /*
- * Omni design tokens — extracted from docs/design/reference/"Omni Design.dc.html" (v1.0).
- * Contract: docs/design/design-brief.md. Strictly monochrome — state is weight,
- * scale, motion and depth, never hue.
+ * Omni design tokens — "Daylight" v2. Contract: docs/design/redesign-brief-v2.md
+ * §4 (visual language). Supersedes the v1 "total chromatic silence" contract
+ * (docs/design/design-brief.md): paper-on-desk layering — a warm-tinted
+ * canvas with pure-white raised surfaces, one evergreen accent, an ember for
+ * live state, and an editorial serif for titles.
  *
  * FONTS: Google Fonts are NOT loaded here (local-only invariant: no external
- * requests). Space Grotesk (600), Inter (400/500/600) and JetBrains Mono
- * (400/500) will be self-hosted via @font-face in a separate fonts.css;
- * until then the stacks below fall back to system fonts.
+ * requests). Source Serif 4 (600), Space Grotesk (600), Inter (400/500/600)
+ * and JetBrains Mono (400/500) are self-hosted via fonts.css (@fontsource
+ * imports, see src/styles/fonts.css) — imported once from each entry point.
  *
- * Token NAMES below are pinned project-wide: set values, add more, never rename.
- * Values marked TODO(design) are defaulted where the design file is silent;
- * everything else is quoted exactly from the reference.
+ * Token NAMES are pinned project-wide: set values, add more, never rename.
+ * This rewrite is ADDITIVE-and-revalued: every v1/v2-ink-blue name below
+ * keeps its name; values change per the Daylight brief; new alias names
+ * (--surface, --surface-sunken, --border, --border-strong, --ink-tertiary,
+ * --ember, --font-wordmark) point at the same underlying value as their
+ * pre-existing counterpart so both the old and new vocabularies work.
+ * Every changed token below carries a short WHY comment.
  */
 
 :root {
-  /* ---- Palette — "total chromatic silence" ---- */
-  --canvas: #FFFFFF;   /* canvas */
-  --ink: #0A0A0A;      /* ink — text, primary buttons, "Me" */
-  --grey-50: #F7F7F7;  /* surface — hover fills, active nav, washes */
-  --grey-200: #EDEDED; /* border / divider */
-  --grey-300: #D4D4D4; /* disabled, placeholders, control borders */
-  --grey-400: #A3A3A3; /* DECORATION ONLY (2.52:1 on #FFF — fails AA as text):
+  /* ---- Palette — "paper on desk" (Daylight §4.1) ---- */
+  --canvas: #FAFAF8;   /* WHY: app background — warm-tinted near-white paper, NOT cream, NOT pure white; distinguishes canvas from raised surfaces */
+  --surface: #FFFFFF;  /* WHY: NEW — cards, panels, inputs: pure-white "raised paper" that reads lighter than the tinted canvas beneath it */
+  --ink: #1C1B18;      /* WHY: warm soft black (was pure #0A0A0A) — text, primary buttons, "Me" — matches the warm neutral family */
+  --grey-50: #F3F2EF;  /* WHY: hover fills, active nav wash, wells — retuned warm to match canvas/surface (was cool #F7F7F7) */
+  --surface-sunken: var(--grey-50); /* WHY: NEW alias — wells, code/transcript beds, track fills (brief §4.1 name); same value as --grey-50 */
+  --grey-200: #E9E8E4; /* WHY: hairlines — warm-retuned (was #EDEDED) */
+  --border: var(--grey-200); /* WHY: NEW alias — brief §4.1 "Hairlines" name for the same hairline colour */
+  --grey-300: #D6D4CE; /* WHY: disabled, placeholders, control borders — warm-retuned (was #D4D4D4) */
+  --border-strong: var(--grey-300); /* WHY: NEW alias — brief §4.1 "Control borders" name for the same value */
+  --grey-400: #8F8C84; /* DECORATION ONLY (3.21:1 on --canvas, fails AA as text — verified):
                           borders, dividers, "Them" bubble outline, status/idle
                           dots, list-bullet glyphs, decorative icons. Secondary
                           TEXT must use --ink-secondary (below), not this. */
-  --grey-600: #525252; /* tertiary emphasis — secondary prose, ghost buttons */
+  --ink-tertiary: var(--grey-400); /* WHY: NEW alias — brief §4.1 "Meta/decoration only, never body text" name for the same value */
+  --grey-600: #6B6862; /* WHY: tertiary emphasis — secondary prose, ghost buttons; now the SAME value as --ink-secondary (see below) under the Daylight warm-neutral consolidation, kept as a distinct name because call sites already reference it */
 
   /* Secondary/label/meta TEXT colour — the lightest grey that still clears
-     WCAG 2.2 AA (contrast >= 4.5:1) on BOTH in-app text backgrounds, so the
-     "airy" feel is preserved without collapsing into --grey-600 (~7.8:1).
-     Measured: 5.10:1 on --canvas #FFFFFF and 4.76:1 on --grey-50 #F7F7F7.
-     (#767676, the classic AA-min grey, would fail at 4.24:1 on #F7F7F7.)
+     WCAG 2.2 AA (contrast >= 4.5:1) on BOTH in-app text backgrounds.
+     Measured (verified 2026-07-08): 5.31:1 on --canvas #FAFAF8 and 5.55:1 on
+     --surface #FFFFFF (both comfortably above the 4.5:1 gate).
      a11y: exists so secondary text meets AA — never revert text to --grey-400. */
-  --ink-secondary: #6E6E6E;
-  /* Note: #E8E8E8 (design-doc page) and #E2E2E2 (doc frame border) are
-     design-document canvas values only — never in-app surfaces. */
+  --ink-secondary: #6B6862;
+  /* Note: --grey-400 is decoration-only; body/secondary text always uses
+     --ink-secondary, which now shares --grey-600's value by design. */
 
   /* ---- Washes & shadows ---- */
-  --wash-surface: linear-gradient(#FFFFFF, #F7F7F7); /* "max permitted wash" — vertical only */
-  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.08);    /* "the only shadow" */
-  --shadow-knob: 0 1px 3px rgba(0, 0, 0, 0.15);      /* toggle knob, off state */
-  --shadow-keycap: 0 1px 0 #D4D4D4;                  /* hotkey keycaps */
+  --wash-surface: linear-gradient(#FFFFFF, #F3F2EF); /* WHY: "max permitted wash" — retuned end-stop to the new --grey-50 so the gradient stays inside the Daylight neutral family */
+  --shadow-raise: 0 1px 2px rgba(28, 27, 24, 0.06); /* WHY: NEW — resting-card elevation (brief §4.3 "two-level elevation total"); rgba uses --ink's warm black, not pure black */
+  --shadow-float: 0 8px 24px rgba(0, 0, 0, 0.08);    /* "the only [large] shadow" — unchanged; floating layers (palette, pill, popovers, toasts) */
+  --shadow-knob: 0 1px 3px rgba(0, 0, 0, 0.15);      /* toggle knob, off state — unchanged */
+  --shadow-keycap: 0 1px 0 #D4D4D4;                  /* hotkey keycaps — unchanged (v1 value, not part of the Daylight palette table) */
 
   /* ---- Typography ---- */
-  --font-display: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif; /* weight 600 only */
-  --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;            /* 400 / 500 / 600 */
-  --font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace; /* 400 / 500 */
+  --font-display: 'Source Serif 4', Georgia, serif; /* WHY: Daylight §4.2 — editorial "trusted archive" warmth for titles/heroes/empty states; replaces Space Grotesk everywhere except the wordmark. Weight 600 only. */
+  --font-wordmark: 'Space Grotesk', 'Segoe UI', system-ui, sans-serif; /* WHY: NEW — brand anchor only (rail wordmark); carries the v1 --font-display stack forward since Space Grotesk moves out of general display duty */
+  --font-body: 'Inter', 'Segoe UI', system-ui, sans-serif;            /* 400 / 500 / 600 — unchanged */
+  --font-mono: 'JetBrains Mono', 'Cascadia Mono', Consolas, monospace; /* 400 / 500 — unchanged */
 
-  /* Type scale — size / line-height / letter-spacing (family + weight in brief) */
-  --text-hero-size: 56px;      --text-hero-lh: 1.0; --text-hero-ls: -0.04em; /* SG 600 · onboarding, brand only */
-  --text-page-size: 40px;      --text-page-lh: 1.1; --text-page-ls: -0.03em; /* SG 600 · empty states, Ask */
-  --text-title-size: 28px;     --text-title-lh: 1.2; --text-title-ls: -0.02em; /* SG 600 · note + screen titles */
-  --text-section-size: 20px;   --text-section-lh: 1.3; --text-section-ls: -0.02em; /* SG 600 */
+  /* Type scale — size / line-height / letter-spacing (family + weight in brief).
+   * P1 scope is palette/type-face only: numeric scale values are unchanged;
+   * only the face-name annotations below are corrected now that --font-display
+   * is Source Serif 4 (SS4) instead of Space Grotesk (SG). */
+  --text-hero-size: 56px;      --text-hero-lh: 1.0; --text-hero-ls: -0.04em; /* SS4 600 · onboarding, brand only */
+  --text-page-size: 40px;      --text-page-lh: 1.1; --text-page-ls: -0.03em; /* SS4 600 · empty states, Ask */
+  --text-title-size: 28px;     --text-title-lh: 1.2; --text-title-ls: -0.02em; /* SS4 600 · note + screen titles */
+  --text-section-size: 20px;   --text-section-lh: 1.3; --text-section-ls: -0.02em; /* SS4 600 */
   --text-emphasis-size: 16px;  --text-emphasis-lh: 1.5; /* Inter 500 · row/card titles */
   --text-body-size: 14px;      --text-body-lh: 1.6;     /* Inter 400 · UI default */
   --text-transcript-size: 13px; --text-transcript-lh: 1.6; /* JB Mono 400 · always mono */
-  --text-meta-size: 12px;      --text-meta-lh: 1.5;     /* JB Mono 400–500 · ink-secondary text */
+  --text-meta-size: 12px;      --text-meta-lh: 1.5;     /* JB Mono 400-500 · ink-secondary text */
   --label-ls: 0.08em; /* mono 11px uppercase section labels */
 
   /* ---- Spacing — --space-N = N x 4px ---- */
@@ -75,15 +90,15 @@
   --space-12: 48px;
   --space-16: 64px; /* canvas breathing room */
 
-  /* ---- Radii — "4 chips · 8 controls · 12 cards · 999 pills" ---- */
-  --radius-chip: 4px;
-  --radius-control: 8px;
-  --radius-card: 12px;
-  --radius-pill: 999px;
-  --radius-keycap: 6px;   /* settings hotkey keycaps */
-  --radius-bubble: 10px;  /* transcript "Them" bubbles */
+  /* ---- Radii — Daylight §4.3: "cards 14px · controls 10px" ---- */
+  --radius-chip: 4px;        /* unchanged */
+  --radius-control: 10px;    /* WHY: was 8px — Daylight §4.3 control radius */
+  --radius-card: 14px;       /* WHY: was 12px — Daylight §4.3 card radius */
+  --radius-pill: 999px;      /* unchanged */
+  --radius-keycap: 6px;      /* settings hotkey keycaps — unchanged */
+  --radius-bubble: 10px;     /* transcript "Them" bubbles — unchanged (kept per brief instruction) */
 
-  /* ---- Motion ---- */
+  /* ---- Motion — unchanged; prefers-reduced-motion freeze retained below ---- */
   --dur-micro: 180ms;        /* micro-interaction: hover, press, toggle */
   --dur-page: 300ms;         /* view transition: route changes, panel open */
   --dur-panel: 200ms;        /* answers panel / toast / popover: y +8 -> 0, no bounce */
@@ -95,6 +110,79 @@
   --ease-out: cubic-bezier(0, 0, 0.2, 1);    /* micro, view, enhance, panel */
   --ease-in-out: cubic-bezier(0.4, 0, 0.2, 1); /* approve card, logo aperture */
   /* Global rules: 60fps, animate transform/opacity only. */
+
+  /* ==========================================================================
+   * v2 — Daylight accent + semantic state (redesign-brief-v2.md, 2026-07-08).
+   * ADDITIVE only: every name above is unchanged. The accent family below
+   * REPLACES the just-shipped ink-blue wholesale (no migration debt — brief
+   * §4.1 "the v2 ink-blue tokens are replaced wholesale"). One deep evergreen
+   * teal carries primary actions/links/selection (<=8% of surface); state
+   * colours are used for STATE ONLY, never decoration. All values are OKLCH
+   * and were WCAG-verified 2026-07-08 (computed via the Oklab->linear-sRGB
+   * matrices, Björn Ottosson; see contrast numbers inline): text roles clear
+   * >=4.5:1 on both --canvas and --surface; graphic roles clear >=3:1.
+   * ========================================================================== */
+
+  /* Accent — deep evergreen teal (replaces ink-blue). --accent doubles as
+     button fill (white text on it = 6.76:1, verified >=4.5:1 — no L
+     adjustment was needed, the brief's 46% L already clears AA with margin)
+     and link text on --surface (6.76:1) / --canvas (6.46:1). Keep total
+     accent area small (Accent Budget <=8%). */
+  --accent: oklch(46% 0.09 175);           /* primary buttons, links, active — #006855, white-on-accent 6.76:1 (verified) */
+  --accent-strong: oklch(40% 0.09 175);    /* hover / pressed / stronger link — #005745, white-on-accent 8.60:1 */
+  --accent-muted: oklch(95% 0.02 175);     /* selected-nav wash / subtle tint bg — #E2F3EE */
+  --accent-border: oklch(85% 0.04 175);    /* border on a tinted surface — #B4D7CC */
+  --on-accent: #FFFFFF;                     /* text/icon on an --accent fill */
+  --focus-ring: var(--accent);              /* keyboard focus outline colour */
+
+  /* Live capture — warm coral-red. State only (recording dot + "Recording"
+     label). --ember is the brief §4.1 name; --live is the pre-existing name
+     components already reference — same value, kept in sync intentionally. */
+  --live: oklch(58% 0.19 30);              /* recording dot / ring (graphic 4.70:1 vs white, clears >=3:1) — #D33D2C */
+  --ember: var(--live);                     /* WHY: NEW alias — brief §4.1 name for the same live-state colour */
+  --live-strong: oklch(48% 0.2 30);        /* "Recording" text (7.18:1 vs --surface) — #B30000 */
+
+  /* Semantic state. `-text` = readable text on canvas/surface; base =
+     icon/dot/border graphic; `-bg` = subtle tint behind a message (text uses
+     `-text` on it). Re-verified against the new warm --canvas (#FAFAF8,
+     relative luminance 0.9547 vs pure white's 1.0): all three text tokens
+     still clear >=4.5:1 with margin, so hue/chroma/L are unchanged — only
+     the contrast figures in these comments were recomputed and updated. */
+  --success-text: oklch(50% 0.13 150);    /* 5.41:1 on --canvas, 5.65:1 on --surface */
+  --success: oklch(58% 0.14 150);         /* graphic >=3:1 */
+  --success-bg: oklch(97% 0.02 150);
+  --warning-text: oklch(47% 0.11 70);     /* 6.68:1 on --canvas, 6.99:1 on --surface */
+  --warning: oklch(62% 0.15 70);          /* graphic >=3:1 */
+  --warning-bg: oklch(97% 0.03 80);
+  --error-text: oklch(50% 0.19 25);       /* 6.34:1 on --canvas, 6.63:1 on --surface */
+  --error: oklch(55% 0.2 25);             /* graphic >=3:1 */
+  --error-bg: oklch(97% 0.02 25);
+  --info-text: var(--accent);             /* info reuses the accent family — 6.46:1 on --canvas */
+  --info-bg: var(--accent-muted);
+
+  --font-label: var(--font-body);         /* section labels, meta — sentence case */
+
+  /* ---- Z-index semantic scale (Impeccable: never 999/9999) ---- */
+  --z-dropdown: 100;
+  --z-sticky: 200;
+  --z-modal-backdrop: 300;
+  --z-modal: 400;
+  --z-toast: 500;
+  --z-tooltip: 600;
+
+  /* ---- Additional accent variants ---- */
+  --accent-subtle: oklch(90% 0.03 175);  /* hover wash on secondary buttons — recoloured to evergreen (was ink-blue), #CBE5DD */
+
+  /* ---- Input control tokens ---- */
+  --control-height: 40px;         /* standard input/button height */
+  --control-height-sm: 32px;      /* compact variant */
+  --control-padding-x: 14px;      /* horizontal padding inside controls */
+
+  /* ---- Progress/track ---- */
+  --track-bg: var(--grey-200);
+  --track-fill: var(--accent);
+  --track-height: 4px;
+  --track-radius: 2px;
 }
 
 /* ---- Keyframes (exact, from the reference) ---- */
@@ -107,7 +195,7 @@
    aperture loop:  animation: omniAperture 5.6s cubic-bezier(0.4,0,0.2,1) infinite;
                    transform-origin: 50px 50px (on the r=38 mark circle);
    skeleton:       animation: omniShimmer 1.6s linear infinite;
-                   background: linear-gradient(90deg,#F7F7F7 25%,#EDEDED 50%,#F7F7F7 75%);
+                   background: linear-gradient(90deg,#F3F2EF 25%,#E9E8E4 50%,#F3F2EF 75%);
                    background-size: 640px 100%; height: 14px; border-radius: 4px; */
 
 /* ---- Reduced motion — "freeze all loops, keep end states" ---- */
@@ -116,4 +204,62 @@
     animation: none !important;
     transition: none !important;
   }
+}
+
+/* ---- Color Themes (Daylight v2) ---- */
+:root[data-theme="ink-blue"] {
+  --canvas: #F5F7FA;
+  --surface: #FFFFFF;
+  --surface-sunken: #ECEFF4;
+  --border: #E4E8F0;
+  --border-strong: #D2D8E4;
+  --ink: #0F172A;
+  --ink-secondary: #475569;
+  --accent: oklch(45% 0.12 250);
+  --accent-strong: oklch(40% 0.12 250);
+  --accent-muted: oklch(95% 0.02 250);
+  --accent-border: oklch(85% 0.04 250);
+  --accent-subtle: oklch(90% 0.03 250);
+}
+:root[data-theme="ember"] {
+  --canvas: #FAF9F6;
+  --surface: #FFFFFF;
+  --surface-sunken: #F5F2EB;
+  --border: #EDE8DE;
+  --border-strong: #DFD7C8;
+  --ink: #2B1D1B;
+  --ink-secondary: #6E5B58;
+  --accent: oklch(58% 0.19 30);
+  --accent-strong: oklch(50% 0.2 30);
+  --accent-muted: oklch(96% 0.02 30);
+  --accent-border: oklch(88% 0.04 30);
+  --accent-subtle: oklch(92% 0.03 30);
+}
+:root[data-theme="amethyst"] {
+  --canvas: #FAF8FC;
+  --surface: #FFFFFF;
+  --surface-sunken: #F3EEF7;
+  --border: #EDE5F3;
+  --border-strong: #DFD2EA;
+  --ink: #1E0F2E;
+  --ink-secondary: #5C4872;
+  --accent: oklch(48% 0.15 295);
+  --accent-strong: oklch(40% 0.15 295);
+  --accent-muted: oklch(96% 0.02 295);
+  --accent-border: oklch(88% 0.04 295);
+  --accent-subtle: oklch(92% 0.03 295);
+}
+:root[data-theme="charcoal"] {
+  --canvas: #FAFAFA;
+  --surface: #FFFFFF;
+  --surface-sunken: #F4F4F4;
+  --border: #E5E5E5;
+  --border-strong: #CCCCCC;
+  --ink: #0A0A0A;
+  --ink-secondary: #525252;
+  --accent: #1C1B18;
+  --accent-strong: #000000;
+  --accent-muted: #F3F2EF;
+  --accent-border: #D6D4CE;
+  --accent-subtle: #E9E8E4;
 }

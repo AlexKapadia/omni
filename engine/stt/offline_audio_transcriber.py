@@ -103,6 +103,25 @@ def transcribe_samples(
     return segments
 
 
+def transcribe_samples_with_backend(
+    backend: object,
+    samples: npt.NDArray[np.float32],
+    *,
+    stream: str = "them",
+) -> list[OfflineSegment]:
+    """Transcribe offline audio with any ``SttBackend`` implementation."""
+    segments = backend.transcribe_samples(samples, stream=stream)  # type: ignore[attr-defined]
+    return [
+        OfflineSegment(
+            stream=segment.stream,
+            text=segment.text,
+            t_start=segment.t_start,
+            t_end=segment.t_end,
+        )
+        for segment in segments
+    ]
+
+
 def load_transcriber(models_dir: Path | None = None) -> ParakeetNemoTranscriber:
     from engine.stt.model_weights_downloader import PARAKEET_FILENAME, models_directory
     from engine.stt.parakeet_nemo_transcriber import stt_dependencies_available

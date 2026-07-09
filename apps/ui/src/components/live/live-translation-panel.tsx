@@ -1,7 +1,9 @@
 /**
- * Rolling live translation panel — shows translated transcript lines.
+ * Rolling live translation — a collapsible left-column drawer (default
+ * collapsed for a transcript-forward default). Translated lines stay mono
+ * (evidence layer). Renders nothing until a translated line exists.
  */
-import { SectionLabel } from "../section-label";
+import { CollapsibleDrawer } from "./collapsible-drawer";
 import { useLiveTranslation } from "../../lib/live-translation-store";
 
 export function LiveTranslationPanel() {
@@ -9,13 +11,11 @@ export function LiveTranslationPanel() {
   if (lines.length === 0) return null;
 
   return (
-    <section
-      aria-label="Live translation"
-      className="border-b border-[var(--grey-200)] bg-[var(--wash-surface)]"
-      style={{ padding: "12px 20px" }}
-    >
-      <SectionLabel>Translation</SectionLabel>
-      <div className="mt-[var(--space-2)] flex flex-col gap-[var(--space-1)]">
+    <CollapsibleDrawer title="Translation">
+      <div
+        className="flex flex-col gap-[var(--space-1)] bg-[var(--wash-surface)]"
+        style={{ padding: "0 20px 12px" }}
+      >
         {lines.map((line, index) => (
           <div
             key={`${line.stream}-${index}`}
@@ -27,6 +27,6 @@ export function LiveTranslationPanel() {
           </div>
         ))}
       </div>
-    </section>
+    </CollapsibleDrawer>
   );
 }

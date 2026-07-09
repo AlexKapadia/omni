@@ -92,8 +92,8 @@ function KeyRow({
             placeholder="Paste key"
             value={draft}
             onChange={(event) => setDraft(event.target.value)}
-            className="border border-[var(--grey-300)] bg-transparent font-[family-name:var(--font-mono)] text-[var(--ink)] outline-none placeholder:text-[var(--grey-300)] focus:border-[var(--ink)]"
-            style={{ borderRadius: "var(--radius-control)", padding: "6px 10px", fontSize: "var(--text-meta-size)", width: 180 }}
+            className="omni-input font-[family-name:var(--font-mono)]"
+            style={{ fontSize: "var(--text-meta-size)", height: "var(--control-height-sm)", width: 180, paddingLeft: 10, paddingRight: 10 }}
           />
           <OmniButton variant="primary" small type="submit" disabled={saving || draft.length === 0}>
             {saving ? "Saving key" : "Save key"}
@@ -166,7 +166,7 @@ export function ApiKeysSection({
         </p>
       )}
       <p className="m-0 pb-[var(--space-3)] text-[var(--ink-secondary)]" style={{ fontSize: 11 }}>
-        Keys are encrypted with Windows DPAPI and never leave this device.
+        Keys are encrypted on this device and never leave it.
       </p>
     </SettingsGroupCard>
   );

@@ -59,7 +59,11 @@ describe("LibraryScreen states", () => {
     render(<LibraryScreen onStartCapture={onStartCapture} />);
     expect(screen.getByText("No meetings yet")).toBeTruthy();
     expect(screen.getByText(/two labelled transcript streams/)).toBeTruthy();
-    fireEvent.click(screen.getAllByRole("button", { name: "Start capture" })[1]!);
+    // Header + empty-state both speak the "Record" vocabulary; the empty-state
+    // CTA is the second one and wires to the real capture handler.
+    const ctas = screen.getAllByRole("button", { name: "Record a meeting" });
+    expect(ctas).toHaveLength(2);
+    fireEvent.click(ctas[1]!);
     expect(onStartCapture).toHaveBeenCalled();
   });
 

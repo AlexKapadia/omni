@@ -39,6 +39,9 @@ class Provider(StrEnum):
     ANTHROPIC = "anthropic"
     OPENAI = "openai"
     OLLAMA = "ollama"
+    OPENROUTER = "openrouter"
+    AZURE_OPENAI = "azure_openai"
+    LM_STUDIO = "lm_studio"
 
 
 @dataclass(frozen=True)

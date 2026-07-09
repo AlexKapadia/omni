@@ -68,17 +68,24 @@ class EnhancedNotesResult:
     latency_ms: int
 
 
-def build_enhancement_system_frame(template: NoteTemplate) -> str:
+def build_enhancement_system_frame(template: NoteTemplate, summary_language: str = "") -> str:
     """Render a template into the caller-authored instruction frame."""
     section_lines = "\n".join(
         f"## {spec.title}\n(Guidance: {spec.guidance})" for spec in template.sections
     )
+    language_rule = ""
+    if summary_language.strip():
+        language_rule = (
+            f"\nLanguage: write all output in {summary_language.strip()} "
+            "(keep proper nouns from the sources as written).\n"
+        )
     return (
         "You turn a meeting's rough notes and verbatim transcript into polished "
         f"meeting notes using the '{template.display_name}' format.\n\n"
         f"Structure the notes with exactly these markdown sections, in order "
         f"(omit a section only where its guidance says so):\n{section_lines}\n\n"
         f"Tone: {template.tone_rules}\n\n"
+        f"{language_rule}"
         "Fidelity rules (binding):\n"
         "- Never state a fact, number, name, date, or commitment that is not "
         "present in the notes or transcript. If something is unclear, say it "
@@ -119,6 +126,7 @@ async def run_enhanced_notes(
     template: NoteTemplate,
     user_notes: str,
     transcript_lines: list[str],
+    summary_language: str = "",
 ) -> EnhancedNotesResult:
     """Execute one enhancement call and return sanitised, footered markdown.
 
@@ -131,7 +139,7 @@ async def run_enhanced_notes(
     )
     routed = await router.route(
         TaskType.ENHANCED_NOTES.value,
-        build_enhancement_system_frame(template),
+        build_enhancement_system_frame(template, summary_language),
         (message,),
         max_tokens=8192,
     )

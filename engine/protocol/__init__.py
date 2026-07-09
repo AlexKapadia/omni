@@ -49,6 +49,12 @@ from engine.protocol.google_connect_payloads import (
     GoogleConnectCommandPayload,
     build_google_connect_completed_payload,
 )
+from engine.protocol.microsoft_connect_payloads import (
+    COMMAND_MICROSOFT_CONNECT,
+    EVENT_MICROSOFT_CONNECT_COMPLETED,
+    MicrosoftConnectCommandPayload,
+    build_microsoft_connect_completed_payload,
+)
 from engine.protocol.heartbeat_payload import build_heartbeat_payload
 from engine.protocol.ledger_summary_payloads import (
     COMMAND_LEDGER_SUMMARY,
@@ -58,6 +64,7 @@ from engine.protocol.ledger_summary_payloads import (
 from engine.protocol.meeting_finalization_payloads import (
     COMMAND_IMPORT_MEDIA,
     COMMAND_MEETING_RETRANSCRIBE,
+    COMMAND_MEETING_TEXT_REPLACE,
     COMMAND_MEETING_EXPORT,
     COMMAND_MEETING_FINALIZE,
     COMMAND_MEETING_GET,
@@ -68,6 +75,7 @@ from engine.protocol.meeting_finalization_payloads import (
     EVENT_ENHANCE_STARTED,
     ImportMediaCommandPayload,
     MeetingRetranscribeCommandPayload,
+    MeetingTextReplacePayload,
     MeetingExportCommandPayload,
     MeetingFinalizeCommandPayload,
     MeetingGetCommandPayload,
@@ -118,6 +126,7 @@ __all__ = [
     "COMMAND_DETECTION_DISMISS",
     "COMMAND_DEVICES_LIST",
     "COMMAND_GOOGLE_CONNECT",
+    "COMMAND_MICROSOFT_CONNECT",
     "COMMAND_KEYS_SAVE",
     "COMMAND_KEYS_VALIDATE",
     "COMMAND_LEDGER_SUMMARY",
@@ -128,6 +137,7 @@ __all__ = [
     "COMMAND_TRANSCRIPT_SEGMENT_UPDATE",
     "COMMAND_IMPORT_MEDIA",
     "COMMAND_MEETING_RETRANSCRIBE",
+    "COMMAND_MEETING_TEXT_REPLACE",
     "COMMAND_MODELS_DOWNLOAD",
     "COMMAND_SETTINGS_GET",
     "COMMAND_SETTINGS_UPDATE",
@@ -141,6 +151,7 @@ __all__ = [
     "EVENT_ENHANCE_READY",
     "EVENT_ENHANCE_STARTED",
     "EVENT_GOOGLE_CONNECT_COMPLETED",
+    "EVENT_MICROSOFT_CONNECT_COMPLETED",
     "EVENT_MEETING_DETECTED",
     "EVENT_MODELS_DOWNLOAD_COMPLETED",
     "EVENT_MODELS_DOWNLOAD_FAILED",
@@ -159,6 +170,7 @@ __all__ = [
     "EnvelopeKind",
     "EventBroadcastHub",
     "GoogleConnectCommandPayload",
+    "MicrosoftConnectCommandPayload",
     "KeysSaveCommandPayload",
     "KeysValidateCommandPayload",
     "LedgerSummaryCommandPayload",
@@ -180,6 +192,7 @@ __all__ = [
     "build_enhance_ready_payload",
     "build_enhance_started_payload",
     "build_google_connect_completed_payload",
+    "build_microsoft_connect_completed_payload",
     "build_heartbeat_payload",
     "build_meeting_detected_payload",
     "build_models_download_completed_payload",

@@ -10,6 +10,7 @@ def build_calendar_upcoming_payload(
     start_iso: str,
     end_iso: str,
     attendee_emails: tuple[str, ...],
+    provider: str = "google",
 ) -> dict[str, object]:
     return {
         "event_id": event_id,
@@ -17,4 +18,5 @@ def build_calendar_upcoming_payload(
         "start_iso": start_iso,
         "end_iso": end_iso,
         "attendee_emails": list(attendee_emails),
+        "provider": provider,
     }

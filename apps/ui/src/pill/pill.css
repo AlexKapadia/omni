@@ -47,19 +47,29 @@ body,
   color: var(--ink-secondary); /* idle: 00:00 — AA-compliant secondary text */
 }
 
-/* Mode chip: mono 11 caps. Idle NOTE is ghost #D4D4D4; listening is ink. */
+/* Mode chip: sentence-case labels (Note / Command / Paste) — no more shouty
+ * NOTE/COMMAND/INSERT eyebrows. Idle Note is ghost #D4D4D4; listening is ink. */
 .pill-mode-chip {
-  font-family: var(--font-mono);
-  font-size: 11px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-family: var(--font-label);
+  font-size: 12px;
   font-weight: 500;
-  letter-spacing: var(--label-ls);
-  text-transform: uppercase;
   color: var(--ink);
   padding: 3px 10px;
+  white-space: nowrap;
 }
 
 .pill-mode-chip--idle {
   color: var(--grey-300);
+}
+
+/* Locked hands-free chip: an outlined ink pill carrying the padlock + copy. */
+.pill-mode-chip--locked {
+  color: var(--ink);
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-pill);
 }
 
 /* Command parsed: chip inverts — background #0A0A0A, white, radius 999. */

@@ -45,10 +45,16 @@ class FakeAskGateway(AskAnswerGateway):
     def __init__(self) -> None:
         super().__init__(db_path=Path("unused.db"), migrations_dir=Path("unused"))
         self.queries: list[str] = []
+        self.meeting_ids: list[str | None] = []
+        self.scopes: list[str] = []
         self.raises: Exception | None = None
 
-    async def answer(self, query: str) -> AskAnswer:
+    async def answer(
+        self, query: str, meeting_id: str | None = None, scope: str = "all"
+    ) -> AskAnswer:
         self.queries.append(query)
+        self.meeting_ids.append(meeting_id)
+        self.scopes.append(scope)
         if self.raises is not None:
             raise self.raises
         return ANSWER
@@ -162,6 +168,37 @@ def test_unexpected_gateway_crash_is_an_error_reply_not_a_dead_socket() -> None:
         # ping still answers: the crash never killed the connection.
         pong = send_and_reply(ws, command("ping", {}, "p-1"))
     assert pong["name"] == "pong" and pong["id"] == "p-1"
+
+
+def test_ask_query_with_meeting_id_is_forwarded_to_gateway() -> None:
+    app, gateway = make_app()
+    with TestClient(app) as client, client.websocket_connect("/ws") as ws:
+        reply = send_and_reply(
+            ws,
+            command(
+                "ask.query",
+                {"query": "What was decided?", "meeting_id": "m-99"},
+                "q-meet",
+            ),
+        )
+    assert reply["name"] == "ask.answer"
+    assert gateway.queries == ["What was decided?"]
+    assert gateway.meeting_ids == ["m-99"]
+
+
+def test_ask_query_dictation_only_scope_is_forwarded() -> None:
+    app, gateway = make_app()
+    with TestClient(app) as client, client.websocket_connect("/ws") as ws:
+        reply = send_and_reply(
+            ws,
+            command(
+                "ask.query",
+                {"query": "What did I dictate?", "scope": "dictation_only"},
+                "q-dict",
+            ),
+        )
+    assert reply["name"] == "ask.answer"
+    assert gateway.scopes == ["dictation_only"]
 
 
 async def test_dispatch_without_a_gateway_refuses_honestly() -> None:

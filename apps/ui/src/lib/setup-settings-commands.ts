@@ -17,24 +17,36 @@ export const KEYS_VALIDATE_COMMAND = "keys.validate";
 export const LEDGER_SUMMARY_COMMAND = "ledger.summary";
 export const MODELS_DOWNLOAD_COMMAND = "models.download";
 export const GOOGLE_CONNECT_COMMAND = "google.connect";
+export const MICROSOFT_CONNECT_COMMAND = "microsoft.connect";
 
 /** Streaming events (correlated by name, not by reply id). */
 export const MODELS_DOWNLOAD_PROGRESS_EVENT = "models.download.progress";
 export const MODELS_DOWNLOAD_FAILED_EVENT = "models.download.failed";
 export const MODELS_DOWNLOAD_COMPLETED_EVENT = "models.download.completed";
 export const GOOGLE_CONNECT_COMPLETED_EVENT = "google.connect.completed";
+export const MICROSOFT_CONNECT_COMPLETED_EVENT = "microsoft.connect.completed";
+export const CALENDAR_UPCOMING_EVENT = "calendar.upcoming";
 
 /**
  * API-key providers. Groq + Gemini are required for a working install; Claude
  * (anthropic) and Cartesia are optional per-task providers.
  */
-export type KeyProvider = "groq" | "gemini" | "anthropic" | "openai" | "cartesia";
+export type KeyProvider =
+  | "groq"
+  | "gemini"
+  | "anthropic"
+  | "openai"
+  | "openrouter"
+  | "azure_openai"
+  | "cartesia";
 
 export const KEY_PROVIDERS: readonly KeyProvider[] = [
   "groq",
   "gemini",
   "anthropic",
   "openai",
+  "openrouter",
+  "azure_openai",
   "cartesia",
 ];
 
@@ -47,6 +59,8 @@ export const KEY_PROVIDER_LABELS: Readonly<Record<KeyProvider, string>> = {
   gemini: "Gemini",
   anthropic: "Claude",
   openai: "OpenAI",
+  openrouter: "OpenRouter",
+  azure_openai: "Azure OpenAI",
   cartesia: "Cartesia",
 };
 

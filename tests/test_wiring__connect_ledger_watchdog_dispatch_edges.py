@@ -354,7 +354,7 @@ async def test_build_finalizer_with_a_configured_vault(
         gateway = DictationCommandGateway(
             hub=EventBroadcastHub(), db_path=tmp_db_path, migrations_dir=MIGRATIONS
         )
-        finalizer = gateway._build_finalizer(connection)
+        finalizer = await gateway._build_finalizer(connection)
         assert isinstance(finalizer, DictationReleaseFinalizer)
     finally:
         await connection.close()
@@ -373,7 +373,7 @@ async def test_build_finalizer_without_a_vault_degrades_to_no_indexer(
             hub=EventBroadcastHub(), db_path=tmp_db_path, migrations_dir=MIGRATIONS
         )
         # No configured vault: construction still succeeds (command/inject work).
-        finalizer = gateway._build_finalizer(connection)
+        finalizer = await gateway._build_finalizer(connection)
         assert isinstance(finalizer, DictationReleaseFinalizer)
     finally:
         await connection.close()

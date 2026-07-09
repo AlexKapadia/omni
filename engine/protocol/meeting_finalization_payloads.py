@@ -30,6 +30,7 @@ COMMAND_MEETING_EXPORT = "meeting.export"
 COMMAND_TRANSCRIPT_SEGMENT_UPDATE = "transcript.segment.update"
 COMMAND_IMPORT_MEDIA = "import.media"
 COMMAND_MEETING_RETRANSCRIBE = "meeting.retranscribe"
+COMMAND_MEETING_TEXT_REPLACE = "meeting.text.replace"
 EVENT_ENHANCE_STARTED = "enhance.started"
 EVENT_ENHANCE_READY = "enhance.ready"
 EVENT_ENHANCE_FAILED = "enhance.failed"
@@ -74,7 +75,7 @@ class MeetingExportCommandPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     meeting_id: str = Field(min_length=1, max_length=128)
-    format: str = Field(pattern=r"^(srt|vtt|txt|pdf|docx)$")
+    format: str = Field(pattern=r"^(srt|vtt|txt|pdf|docx|md)$")
 
 
 class TranscriptSegmentUpdatePayload(BaseModel):
@@ -90,12 +91,31 @@ class ImportMediaCommandPayload(BaseModel):
 
     path: str = Field(min_length=1, max_length=1024)
     title: str | None = Field(default=None, max_length=200)
+    identify_speakers: bool = False
+
+
+EVENT_IMPORT_MEDIA_PROGRESS = "import.media.progress"
 
 
 class MeetingRetranscribeCommandPayload(BaseModel):
     model_config = ConfigDict(extra="forbid")
 
     meeting_id: str = Field(min_length=1, max_length=128)
+
+
+class MeetingTextReplacePayload(BaseModel):
+    """Find/replace across transcript segments and/or enhanced notes."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    meeting_id: str = Field(min_length=1, max_length=128)
+    find: str = Field(min_length=1, max_length=500)
+    replace: str = Field(max_length=500)
+    target: str = Field(pattern=r"^(transcript|enhanced_notes|both)$")
+
+
+def build_import_media_progress_payload(stage: str, fraction: float) -> dict[str, Any]:
+    return {"stage": stage, "fraction": fraction}
 
 
 def build_enhance_started_payload(meeting_id: str) -> dict[str, Any]:

@@ -36,6 +36,7 @@ from engine.dictation.dictation_mode_splitter import DictationMode
 # --- message names (pinned, dot-namespaced like "capture.start") ---
 DICTATION_BEGIN_COMMAND_NAME = "dictation.begin"
 DICTATION_END_COMMAND_NAME = "dictation.end"
+DICTATION_HISTORY_LIST_COMMAND_NAME = "dictation.history.list"
 DICTATION_PARTIAL_EVENT_NAME = "dictation.partial"
 DICTATION_FINAL_EVENT_NAME = "dictation.final"
 DICTATION_ERROR_EVENT_NAME = "dictation.error"
@@ -92,3 +93,7 @@ def build_dictation_final_payload(result: DictationFinalResult) -> dict[str, obj
 def build_dictation_error_payload(reason: str) -> dict[str, object]:
     """{reason}: plain-voice failure the pill can show honestly."""
     return {"reason": reason}
+
+
+def build_dictation_history_list_payload(entries: list[dict[str, object]]) -> dict[str, object]:
+    return {"entries": entries}

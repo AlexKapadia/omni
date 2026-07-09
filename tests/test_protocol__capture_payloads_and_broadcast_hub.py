@@ -23,17 +23,37 @@ from engine.protocol import (
 
 
 def test_transcript_partial_payload_has_the_exact_pinned_keys() -> None:
-    payload = build_transcript_partial_payload("them", "hello world", 1.0, 2.5, 7)
-    assert set(payload.keys()) == {"stream", "text", "t_start", "t_end", "seq"}
+    payload = build_transcript_partial_payload(
+        "them", "hello world", 1.0, 2.5, 7, speaker_id="1", speaker_label="Speaker 1"
+    )
+    assert set(payload.keys()) == {
+        "stream", "text", "t_start", "t_end", "seq", "speaker_id", "speaker_label",
+    }
     assert payload == {
-        "stream": "them", "text": "hello world", "t_start": 1.0, "t_end": 2.5, "seq": 7,
+        "stream": "them",
+        "text": "hello world",
+        "t_start": 1.0,
+        "t_end": 2.5,
+        "seq": 7,
+        "speaker_id": "1",
+        "speaker_label": "Speaker 1",
     }
 
 
 def test_transcript_final_payload_has_the_exact_pinned_keys() -> None:
-    payload = build_transcript_final_payload("me", "done", 1.0, 2.0, 9, "seg-1", 850.5)
+    payload = build_transcript_final_payload(
+        "me", "done", 1.0, 2.0, 9, "seg-1", 850.5, speaker_id="me", speaker_label="Alex"
+    )
     assert set(payload.keys()) == {
-        "stream", "text", "t_start", "t_end", "seq", "segment_id", "lag_ms",
+        "stream",
+        "text",
+        "t_start",
+        "t_end",
+        "seq",
+        "segment_id",
+        "lag_ms",
+        "speaker_id",
+        "speaker_label",
     }
     assert payload["segment_id"] == "seg-1"
     assert payload["lag_ms"] == 850.5

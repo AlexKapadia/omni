@@ -23,6 +23,7 @@ from pathlib import Path
 
 from engine.enhance.note_templates import AUTO_TEMPLATE_ID, BUILTIN_TEMPLATES
 from engine.google.dpapi_google_token_store import GoogleTokenStore
+from engine.microsoft.dpapi_microsoft_token_store import MicrosoftTokenStore
 from engine.router.completion_contract import TaskType
 from engine.router.router_errors import MisconfiguredRouteError
 from engine.router.routing_table import resolve_route
@@ -43,6 +44,15 @@ from engine.storage.app_settings_repository import (
     SETTING_LIVE_CAPTIONS_OVERLAY,
     SETTING_AEC_ENABLED,
     SETTING_LIVE_TRANSLATION_LANG,
+    SETTING_SUMMARY_LANGUAGE,
+    SETTING_SUMMARY_MODEL_ID,
+    SETTING_SPEAKER_IDENTITY,
+    SETTING_SPEAKER_VOICE_EMBEDDING,
+    SETTING_DICTATION_CLEANUP_STYLE,
+    SETTING_STT_ENGINE,
+    SETTING_STT_MODEL_ID,
+    SETTING_STT_OPENAI_BASE_URL,
+    SETTING_SELECTION_TRANSLATION_LANG,
     read_all_settings,
     write_setting,
 )
@@ -57,12 +67,13 @@ from engine.wiring.settings_value_validation import (
 )
 
 # Defaults reported by settings.get for keys never written. keep_audio is
-# FALSE by security default (audio discarded after transcription);
-# the hotkey default mirrors the Rust shell's DICTATION_HOLD_KEY ("F9").
+# TRUE by default (recordings are kept as MP3 alongside the transcript; the
+# user can opt out in Privacy). The hotkey default mirrors the Rust shell's
+# DICTATION_HOLD_KEY ("F9").
 SETTINGS_DEFAULTS: dict[str, object] = {
     SETTING_VAULT_DIR: None,
     SETTING_PUSH_TO_TALK_HOTKEY: "F9",
-    SETTING_KEEP_AUDIO: False,
+    SETTING_KEEP_AUDIO: True,
     SETTING_DISCLOSURE_REMINDER: True,
     SETTING_KILL_SWITCH: False,
     SETTING_INSTANT_EXECUTE_WHITELIST: [],
@@ -74,6 +85,15 @@ SETTINGS_DEFAULTS: dict[str, object] = {
     SETTING_LIVE_CAPTIONS_OVERLAY: True,
     SETTING_AEC_ENABLED: False,
     SETTING_LIVE_TRANSLATION_LANG: "",
+    SETTING_SUMMARY_LANGUAGE: "",
+    SETTING_SUMMARY_MODEL_ID: "gemini-2.5-flash",
+    SETTING_SPEAKER_IDENTITY: "Me",
+    SETTING_SPEAKER_VOICE_EMBEDDING: "",
+    SETTING_DICTATION_CLEANUP_STYLE: "classic",
+    SETTING_STT_ENGINE: "parakeet",
+    SETTING_STT_MODEL_ID: "",
+    SETTING_STT_OPENAI_BASE_URL: "",
+    SETTING_SELECTION_TRANSLATION_LANG: "English",
 }
 
 # On-device rows shown alongside the routed tasks: transcription and
@@ -114,6 +134,7 @@ class AppSettingsCommandGateway:
         key_store: ProviderKeyStore | None = None,
         models_dir: Path | None = None,
         google_token_store: GoogleTokenStore | None = None,
+        microsoft_token_store: MicrosoftTokenStore | None = None,
     ) -> None:
         self._db_path = db_path
         self._migrations_dir = migrations_dir
@@ -121,6 +142,9 @@ class AppSettingsCommandGateway:
         self._models_dir = models_dir
         self._google_token_store = (
             google_token_store if google_token_store is not None else GoogleTokenStore()
+        )
+        self._microsoft_token_store = (
+            microsoft_token_store if microsoft_token_store is not None else MicrosoftTokenStore()
         )
         self._on_detection_settings_applied: Callable[[dict[str, object]], None] | None = None
 
@@ -198,8 +222,11 @@ class AppSettingsCommandGateway:
         """settings.get -> {settings, kill_switch_engaged, routing,
         template_options} — everything real, nothing invented."""
         effective = await self._read_effective_settings()
+        settings_out = dict(effective)
+        embedding = settings_out.pop(SETTING_SPEAKER_VOICE_EMBEDDING, "")
+        settings_out["speaker_voice_enrolled"] = bool(str(embedding).strip()) if embedding else False
         return {
-            "settings": effective,
+            "settings": settings_out,
             # The LIVE truth (env + runtime override), not just the stored
             # preference — the status display must never contradict reality.
             "kill_switch_engaged": kill_switch_engaged(),
@@ -286,7 +313,15 @@ class AppSettingsCommandGateway:
         effective = await self._read_effective_settings()
         keys = {
             provider: self._key_store.get_key(provider) is not None
-            for provider in ("groq", "gemini", "anthropic", "openai", "cartesia")
+            for provider in (
+                "groq",
+                "gemini",
+                "anthropic",
+                "openai",
+                "openrouter",
+                "azure_openai",
+                "cartesia",
+            )
         }
         vault_dir = effective.get(SETTING_VAULT_DIR)
         vault_configured = isinstance(vault_dir, str) and Path(vault_dir).is_dir()
@@ -307,6 +342,10 @@ class AppSettingsCommandGateway:
             google_connected = self._google_token_store.load_tokens() is not None
         except Exception:
             google_connected = False  # a corrupt blob reads as not connected
+        try:
+            microsoft_connected = self._microsoft_token_store.load_tokens() is not None
+        except Exception:
+            microsoft_connected = False
         onboarding_complete = effective.get(SETTING_ONBOARDING_COMPLETE) is True
         # The product's required pair is Groq + Gemini; Anthropic/Cartesia
         # are optional slots (session decision — never required to ship).
@@ -324,6 +363,7 @@ class AppSettingsCommandGateway:
             },
             "models": models,
             "google_connected": google_connected,
+            "microsoft_connected": microsoft_connected,
             "onboarding_complete": onboarding_complete,
             "setup_complete": setup_complete,
         }

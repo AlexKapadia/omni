@@ -28,6 +28,8 @@ from pathlib import Path
 import aiosqlite
 
 from engine.enhance.meeting_extraction_pipeline import run_meeting_extraction
+from engine.storage.app_settings_repository import SETTING_SPEAKER_IDENTITY, read_setting
+from engine.stt.speaker_voice_profile import resolve_speaker_label
 from engine.enhance.meeting_finalization_result_types import (
     FinalizationResult,
     FinalizeRefusedError,
@@ -66,6 +68,7 @@ from engine.storage.meetings_repository import (
     fetch_meeting_row,
     list_meeting_rows,
     record_meeting_finalization,
+    update_meeting_enhanced_notes,
     utc_now_iso,
 )
 from engine.storage.sqlite_connection import open_sqlite_connection
@@ -75,8 +78,9 @@ from engine.storage.transcript_segments_repository import (
     list_transcript_segment_rows,
     update_transcript_segment_text,
 )
-from engine.export.document_export import export_transcript_docx, export_transcript_pdf
+from engine.export.document_export import export_meeting_docx, export_meeting_pdf
 from engine.export.transcript_export import (
+    export_meeting_markdown,
     export_transcript_srt,
     export_transcript_txt,
     export_transcript_vtt,
@@ -155,6 +159,39 @@ class MeetingFinalizationService:
         finally:
             await connection.close()
 
+    async def replace_meeting_text(
+        self, meeting_id: str, find: str, replace: str, target: str
+    ) -> dict[str, int] | None:
+        """Find/replace in transcript segments and/or enhanced notes. None if unknown."""
+        await apply_migrations(self.db_path, self.migrations_dir)
+        connection = await open_sqlite_connection(self.db_path)
+        try:
+            row = await fetch_meeting_row(connection, meeting_id)
+            if row is None or row.ended_at is None:
+                return None
+            transcript_hits = 0
+            notes_hits = 0
+            if target in ("transcript", "both"):
+                segments = await list_transcript_segment_rows(connection, meeting_id)
+                for segment in segments:
+                    if find not in segment.text:
+                        continue
+                    new_text = segment.text.replace(find, replace)
+                    if await update_transcript_segment_text(
+                        connection, meeting_id, segment.segment_id, new_text
+                    ):
+                        transcript_hits += 1
+            if target in ("enhanced_notes", "both") and row.enhanced_notes_md:
+                if find in row.enhanced_notes_md:
+                    new_md = row.enhanced_notes_md.replace(find, replace)
+                    if await update_meeting_enhanced_notes(connection, meeting_id, new_md):
+                        notes_hits = 1
+            if transcript_hits or notes_hits:
+                await connection.commit()
+            return {"transcript_segments": transcript_hits, "enhanced_notes": notes_hits}
+        finally:
+            await connection.close()
+
     async def export_transcript(self, meeting_id: str, fmt: str) -> dict[str, object] | None:
         """Export transcript; None when meeting unknown."""
         await apply_migrations(self.db_path, self.migrations_dir)
@@ -164,26 +201,51 @@ class MeetingFinalizationService:
             if row is None:
                 return None
             segments = await list_transcript_segment_rows(connection, meeting_id)
+            identity_raw = await read_setting(connection, SETTING_SPEAKER_IDENTITY)
+            identity = identity_raw if isinstance(identity_raw, str) and identity_raw.strip() else "Me"
         finally:
             await connection.close()
         if fmt == "srt":
-            return {"content": export_transcript_srt(segments), "format": fmt}
+            return {"content": export_transcript_srt(segments, identity), "format": fmt}
         if fmt == "vtt":
-            return {"content": export_transcript_vtt(segments), "format": fmt}
+            return {"content": export_transcript_vtt(segments, identity), "format": fmt}
         if fmt == "txt":
-            return {"content": export_transcript_txt(segments), "format": fmt}
+            return {"content": export_transcript_txt(segments, identity), "format": fmt}
         if fmt == "pdf":
-            data = export_transcript_pdf(segments)
+            data = export_meeting_pdf(
+                row.title,
+                row.notes_text or "",
+                row.enhanced_notes_md or "",
+                segments,
+                identity,
+            )
             return {
                 "content": base64.b64encode(data).decode("ascii"),
                 "encoding": "base64",
                 "format": fmt,
             }
         if fmt == "docx":
-            data = export_transcript_docx(segments)
+            data = export_meeting_docx(
+                row.title,
+                row.notes_text or "",
+                row.enhanced_notes_md or "",
+                segments,
+                identity,
+            )
             return {
                 "content": base64.b64encode(data).decode("ascii"),
                 "encoding": "base64",
+                "format": fmt,
+            }
+        if fmt == "md":
+            return {
+                "content": export_meeting_markdown(
+                    row.title,
+                    row.notes_text or "",
+                    row.enhanced_notes_md or "",
+                    segments,
+                    identity,
+                ),
                 "format": fmt,
             }
         return None
@@ -213,8 +275,10 @@ class MeetingFinalizationService:
                 EVENT_ENHANCE_STARTED, build_enhance_started_payload(meeting_id)
             )
             segments = await list_transcript_segment_rows(connection, meeting_id)
+            identity_raw = await read_setting(connection, SETTING_SPEAKER_IDENTITY)
+            identity = identity_raw if isinstance(identity_raw, str) and identity_raw.strip() else "Me"
             transcript_lines = [
-                f"{'Me' if s.stream == 'me' else 'Them'}: {s.text}" for s in segments
+                f"{resolve_speaker_label(s.speaker_id, identity)}: {s.text}" for s in segments
             ]
             router = self._router_factory(ledger_recorder_for(connection))
             warnings: list[str] = []
@@ -264,8 +328,18 @@ class MeetingFinalizationService:
             note_rel = note_path.relative_to(vault_root).as_posix()
 
             # STEP enhance + STEP actions region (both isolated).
+            from engine.storage.app_settings_repository import SETTING_SUMMARY_LANGUAGE
+
+            summary_language_raw = await read_setting(connection, SETTING_SUMMARY_LANGUAGE)
+            summary_language = summary_language_raw if isinstance(summary_language_raw, str) else ""
             enhance_ok, enhanced_md = await run_enhance_step(
-                router, template, notepad_text, transcript_lines, note_path, warnings
+                router,
+                template,
+                notepad_text,
+                transcript_lines,
+                note_path,
+                warnings,
+                summary_language,
             )
             write_actions_region_step(note_path, outcome, warnings)
 

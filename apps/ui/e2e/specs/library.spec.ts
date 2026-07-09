@@ -9,7 +9,7 @@ import { test, expect } from "../harness/fixtures";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await expect(page.getByRole("heading", { name: "Library", level: 1 })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Meetings", level: 1 })).toBeVisible();
   // The rows arrive once the engine connection is up (cold-boot recovery) —
   // wait for the first real row rather than asserting on a boot-race snapshot.
   await expect(page.getByRole("button", { name: "Open Northwind Renewal" })).toBeVisible({

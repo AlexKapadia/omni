@@ -73,8 +73,8 @@ async def test_update_persists_and_get_reads_it_back(
     await dispatch_settings_command(_command("settings.get", {}), gateway, got)
     settings = got.sent[0].payload["settings"]
     assert settings[SETTING_VAULT_DIR] == str(vault)
-    # keep_audio defaults to the SAFE value (audio discarded after transcription).
-    assert settings[SETTING_KEEP_AUDIO] is False
+    # keep_audio defaults ON: recordings are kept as MP3 alongside the transcript.
+    assert settings[SETTING_KEEP_AUDIO] is True
 
 
 async def test_unknown_key_is_refused_and_nothing_persists(
@@ -220,6 +220,8 @@ async def test_setup_status_reports_presence_only_and_completion_gate(
         "gemini": True,
         "anthropic": False,
         "openai": False,
+        "openrouter": False,
+        "azure_openai": False,
         "cartesia": False,
     }
     # No key MATERIAL anywhere in the reply — presence booleans only.

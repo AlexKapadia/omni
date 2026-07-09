@@ -21,6 +21,9 @@ from engine.router.routing_table import (
     GROQ_FAST_MODEL,
     OPENAI_MINI_MODEL,
     OLLAMA_DEFAULT_MODEL,
+    OPENROUTER_DEFAULT_MODEL,
+    AZURE_OPENAI_DEFAULT_MODEL,
+    LMSTUDIO_DEFAULT_MODEL,
 )
 
 _TOKENS_PER_PRICE_UNIT = Decimal(1_000_000)
@@ -42,6 +45,9 @@ MODEL_PRICES_USD_PER_MILLION: dict[str, tuple[Decimal, Decimal]] = {
     ANTHROPIC_MODEL: (Decimal("3.00"), Decimal("15.00")),
     OPENAI_MINI_MODEL: (Decimal("0.15"), Decimal("0.60")),
     OLLAMA_DEFAULT_MODEL: (Decimal("0.00"), Decimal("0.00")),
+    OPENROUTER_DEFAULT_MODEL: (Decimal("0.15"), Decimal("0.60")),
+    AZURE_OPENAI_DEFAULT_MODEL: (Decimal("0.15"), Decimal("0.60")),
+    LMSTUDIO_DEFAULT_MODEL: (Decimal("0.00"), Decimal("0.00")),
 }
 
 

@@ -28,3 +28,5 @@ class AskQueryCommandPayload(BaseModel):
     # Non-empty, bounded: an empty question has no honest answer path and a
     # megabyte "question" is an abuse attempt, not a query.
     query: str = Field(min_length=1, max_length=MAX_ASK_QUERY_CHARS)
+    meeting_id: str | None = Field(default=None, min_length=1, max_length=128)
+    scope: str = Field(default="all", pattern=r"^(all|dictation_only|meeting)$")

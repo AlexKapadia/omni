@@ -9,8 +9,11 @@
  * honest about an offline engine), starting, live, stopped, and error — no
  * state is faked.
  */
-import { useEffect, useState, type ReactNode } from "react";
+import { useEffect, useState, useRef, type ReactNode } from "react";
+import { useStore } from "zustand";
+import { Mic } from "lucide-react";
 import { OmniButton } from "../components/button";
+import { OmniMark } from "../components/omni-mark";
 import { AnswersPanel } from "../components/live/answers-panel";
 import { LiveSummaryPanel } from "../components/live/live-summary-panel";
 import { LiveTranslationPanel } from "../components/live/live-translation-panel";
@@ -24,6 +27,8 @@ import { requestCaptureStart } from "../lib/capture-commands";
 import { useEngineStatus } from "../lib/engine-status-store";
 import { bindNotepadToMeeting, notepadStore } from "../lib/notepad-store";
 import { useTranscript } from "../lib/transcript-store";
+import { appSettingsStore } from "./settings-screen";
+import { setMicrophone } from "../lib/settings-store";
 
 /** Ticks once a second while live so the timer and bubbles share one clock. */
 function useElapsedSeconds(startedAtMs: number | null): number {
@@ -35,6 +40,130 @@ function useElapsedSeconds(startedAtMs: number | null): number {
   }, [startedAtMs]);
   if (startedAtMs === null) return 0;
   return Math.max(0, (nowMs - startedAtMs) / 1000);
+}
+
+function MicCheckWidget() {
+  const store = appSettingsStore;
+  const devicesSource = useStore(store, (s) => s.devicesSource);
+  const microphone = useStore(store, (s) => s.microphone);
+  const options = useStore(store, (s) => s.microphoneOptions);
+
+  const [micActive, setMicActive] = useState(false);
+  const [micLevel, setMicLevel] = useState(0);
+  const audioContextRef = useRef<AudioContext | null>(null);
+  const analyserRef = useRef<AnalyserNode | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const animationFrameRef = useRef<number | null>(null);
+
+  useEffect(() => {
+    let active = true;
+    if (typeof navigator === "undefined" || !navigator.mediaDevices) {
+      setMicActive(false);
+      return;
+    }
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((stream) => {
+        if (!active) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        setMicActive(true);
+
+        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+        const ctx = new AudioContextClass();
+        audioContextRef.current = ctx;
+
+        const source = ctx.createMediaStreamSource(stream);
+        const analyser = ctx.createAnalyser();
+        analyser.fftSize = 256;
+        analyserRef.current = analyser;
+        source.connect(analyser);
+
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
+
+        const updateLevel = () => {
+          if (!analyserRef.current) return;
+          analyserRef.current.getByteFrequencyData(dataArray);
+          let sum = 0;
+          for (let i = 0; i < bufferLength; i++) {
+            sum += dataArray[i];
+          }
+          const average = sum / bufferLength;
+          setMicLevel(Math.min(100, Math.round((average / 128) * 100)));
+          animationFrameRef.current = requestAnimationFrame(updateLevel);
+        };
+        updateLevel();
+      })
+      .catch(() => {
+        setMicActive(false);
+      });
+
+    return () => {
+      active = false;
+      if (animationFrameRef.current !== null) {
+        cancelAnimationFrame(animationFrameRef.current);
+      }
+      if (streamRef.current) {
+        streamRef.current.getTracks().forEach((track) => track.stop());
+      }
+      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
+        void audioContextRef.current.close();
+      }
+    };
+  }, [microphone]);
+
+  return (
+    <div className="w-full p-4 border border-[var(--grey-200)] rounded-[var(--radius-card)] bg-[var(--grey-50)] flex flex-col gap-3 text-left">
+      <div className="flex items-center gap-2">
+        <Mic size={16} className="text-[var(--accent)]" />
+        <span className="text-xs font-semibold text-[var(--ink)]">Microphone check</span>
+      </div>
+
+      {devicesSource === "engine" ? (
+        <select
+          aria-label="Select Microphone"
+          value={microphone}
+          onChange={(e) => setMicrophone(store, e.target.value)}
+          className="w-full omni-input"
+          style={{ fontSize: 13, height: "var(--control-height-sm)", paddingLeft: 8, paddingRight: 8 }}
+        >
+          {options.map((option) => (
+            <option key={option} value={option}>
+              {option}
+            </option>
+          ))}
+        </select>
+      ) : (
+        <span className="text-xs text-[var(--ink-secondary)]">
+          {devicesSource === "pending"
+            ? "Reading devices from Omni Steroid..."
+            : "Omni Steroid is offline — devices unavailable"}
+        </span>
+      )}
+
+      {micActive ? (
+        <div className="flex flex-col gap-1.5">
+          <div className="flex justify-between text-[10px] font-mono text-[var(--ink-secondary)]">
+            <span>Audio level</span>
+            <span>{micLevel}%</span>
+          </div>
+          <div className="h-1.5 bg-[var(--grey-200)] rounded-full overflow-hidden">
+            <div 
+              className="h-full bg-[var(--accent)] rounded-full transition-all duration-75"
+              style={{ width: `${micLevel}%` }}
+            />
+          </div>
+        </div>
+      ) : (
+        <span className="text-[11px] text-[var(--ink-secondary)]">
+          Grant microphone access to check input level.
+        </span>
+      )}
+    </div>
+  );
 }
 
 function PreCaptureState({
@@ -56,7 +185,10 @@ function PreCaptureState({
 
   return (
     <div className="flex h-full items-center justify-center">
-      <div className="flex max-w-md flex-col items-start gap-[var(--space-3)] px-[var(--space-8)]">
+      <div className="flex w-full max-w-md flex-col items-stretch gap-[var(--space-4)] px-[var(--space-8)] text-center">
+        <div className="omni-breathe mb-[var(--space-2)] self-center">
+          <OmniMark size={64} />
+        </div>
         <h1
           className="m-0 font-[family-name:var(--font-display)] font-semibold text-[var(--ink)]"
           style={{
@@ -73,22 +205,33 @@ function PreCaptureState({
         >
           {body}
         </p>
+
+        {!engineDown && <MicCheckWidget />}
+
         <OmniButton
           variant="primary"
           disabled={engineDown || starting}
           onClick={() => requestCaptureStart()}
+          className="w-full justify-center"
         >
           {starting ? "Starting capture" : "Start capture"}
         </OmniButton>
         {engineDown && (
-          <p className="m-0 text-[var(--ink-secondary)]" style={{ fontSize: 13 }}>
+          <div
+            className="w-full text-center px-[var(--space-4)] py-[var(--space-3)] border border-solid border-[var(--warning)] bg-[var(--warning-bg)] text-[var(--warning-text)] rounded-[var(--radius-control)]"
+            style={{ fontSize: 13 }}
+          >
             The engine is offline — capture needs the engine running on this device.
-          </p>
+          </div>
         )}
         {errorMessage !== null && (
-          <p role="alert" className="m-0 text-[var(--grey-600)]" style={{ fontSize: 13 }}>
+          <div
+            role="alert"
+            className="w-full text-center px-[var(--space-4)] py-[var(--space-3)] border border-solid border-[var(--error)] bg-[var(--error-bg)] text-[var(--error-text)] rounded-[var(--radius-control)]"
+            style={{ fontSize: 13 }}
+          >
             {errorMessage}
-          </p>
+          </div>
         )}
         {children}
       </div>
@@ -113,7 +256,7 @@ export function LiveMeetingScreen() {
       <div className="relative h-full">
         <MeetingDetectedToast />
         <PreCaptureState
-          heading="Live meeting"
+          heading="Record a meeting"
           body="Capture the room and your mic as two labelled streams, transcribed on this device. No bot joins the call and nothing leaves this machine."
           errorMessage={errorMessage}
         />
@@ -147,7 +290,10 @@ export function LiveMeetingScreen() {
       <MeetingDetectedToast />
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1">
-          <div className="flex min-w-0 flex-col" style={{ flex: 2 }}>
+          {/* Left column: auxiliary panels as collapsible drawers (summary and
+              translation default-closed; notes default-open) so the default
+              view stays transcript-forward. */}
+          <div className="flex min-w-0 flex-col overflow-y-auto border-r border-solid border-[var(--grey-200)]" style={{ flex: 1 }}>
             <LiveSummaryPanel />
             <LiveTranslationPanel />
             <NotepadPane meetingTitle="Live meeting" elapsedSeconds={elapsedSeconds} />

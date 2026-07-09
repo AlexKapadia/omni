@@ -29,27 +29,32 @@ const defaultProvider: AskAnswerProvider = createEngineAskAnswerProvider();
 function QueryInput({
   provider,
   emphasized,
+  value,
+  onChange,
+  onSubmit,
 }: {
   readonly provider: AskAnswerProvider;
   readonly emphasized: boolean;
+  readonly value: string;
+  readonly onChange: (val: string) => void;
+  readonly onSubmit: () => void;
 }) {
-  const [draft, setDraft] = useState("");
   const thinking = useAsk((s) => s.status === "thinking");
 
-  const submit = (event: FormEvent) => {
+  const handleSubmit = (event: FormEvent) => {
     event.preventDefault();
-    if (thinking) return; // one question in flight at a time
-    void askQuestion(askStore, provider, draft);
+    if (thinking) return;
+    onSubmit();
   };
 
   return (
-    <form onSubmit={submit} className="relative w-full">
+    <form onSubmit={handleSubmit} className="relative w-full">
       <input
         type="text"
-        aria-label="Ask Omni"
+        aria-label="Ask"
         placeholder="Ask across your meetings and notes"
-        value={draft}
-        onChange={(event) => setDraft(event.target.value)}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
         className={
           "w-full bg-transparent text-[var(--ink)] outline-none placeholder:text-[var(--grey-300)] " +
           (emphasized
@@ -70,6 +75,12 @@ function QueryInput({
   );
 }
 
+const SUGGESTED_PROMPTS = [
+  "What were the action items from my last meeting?",
+  "Summarize my commitments for this week.",
+  "What decisions were made recently?",
+];
+
 export function AskScreen({
   provider = defaultProvider,
 }: {
@@ -80,12 +91,20 @@ export function AskScreen({
   const answer = useAsk((s) => s.answer);
   const errorMessage = useAsk((s) => s.errorMessage);
   const openMarker = useAsk((s) => s.openCitationMarker);
+  const thinking = useAsk((s) => s.status === "thinking");
+
+  const [draft, setDraft] = useState("");
+
+  const executeQuery = (textToSubmit: string) => {
+    if (thinking || !textToSubmit.trim()) return;
+    void askQuestion(askStore, provider, textToSubmit);
+  };
 
   if (status === "empty") {
     return (
       <div className="flex h-full items-center justify-center">
         <div
-          className="flex w-full flex-col items-center gap-[var(--space-8)] text-center"
+          className="flex w-full flex-col items-center gap-[var(--space-6)] text-center"
           style={{ maxWidth: 720, padding: "72px 0" }}
         >
           <h1
@@ -96,10 +115,36 @@ export function AskScreen({
               letterSpacing: "var(--text-page-ls)",
             }}
           >
-            Ask across everything you know
+            Ask about your meetings
           </h1>
-          <QueryInput provider={provider} emphasized={false} />
-          <p className="m-0 text-[var(--ink-secondary)]" style={{ fontSize: 13 }}>
+          <QueryInput
+            provider={provider}
+            emphasized={false}
+            value={draft}
+            onChange={setDraft}
+            onSubmit={() => executeQuery(draft)}
+          />
+          
+          <div className="flex flex-col gap-2.5">
+            <span className="text-[10px] font-mono text-[var(--ink-secondary)] uppercase tracking-wider">Suggested Questions</span>
+            <div className="flex flex-wrap gap-2 justify-center">
+              {SUGGESTED_PROMPTS.map((prompt) => (
+                <button
+                  key={prompt}
+                  type="button"
+                  onClick={() => {
+                    setDraft(prompt);
+                    executeQuery(prompt);
+                  }}
+                  className="px-3.5 py-1.5 border border-[var(--grey-200)] hover:border-[var(--accent)] hover:bg-[var(--accent-subtle)] rounded-full text-xs text-[var(--ink-secondary)] hover:text-[var(--ink)] cursor-pointer transition-all duration-[var(--dur-micro)]"
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <p className="m-0 mt-4 text-[var(--ink-secondary)]" style={{ fontSize: 13 }}>
             Answers come from your vault only. Nothing leaves this device.
           </p>
         </div>
@@ -113,7 +158,13 @@ export function AskScreen({
         className="mx-auto flex w-full flex-col gap-[var(--space-10)]"
         style={{ maxWidth: 720, padding: "72px 0" }}
       >
-        <QueryInput provider={provider} emphasized />
+        <QueryInput
+          provider={provider}
+          emphasized
+          value={draft}
+          onChange={setDraft}
+          onSubmit={() => executeQuery(draft)}
+        />
 
         {status === "thinking" && (
           <div className="flex flex-col gap-[var(--space-3)]">

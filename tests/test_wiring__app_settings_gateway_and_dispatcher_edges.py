@@ -278,6 +278,8 @@ async def test_m7_dispatch_routes_settings_get_to_settings_gateway() -> None:
         ledger_gateway=other,
         models_gateway=other,
         google_gateway=other,
+        microsoft_gateway=other,
+        speaker_gateway=other,
     )
     send = _Collector()
     await dispatch_m7_command(_command("settings.get", {}), surface, send)
@@ -301,6 +303,8 @@ async def test_surface_boot_hook_invokes_settings_gateway() -> None:
         ledger_gateway=other,
         models_gateway=other,
         google_gateway=other,
+        microsoft_gateway=other,
+        speaker_gateway=other,
     )
     await surface.apply_persisted_settings_at_boot()
     assert calls == ["boot"]  # the boot hook actually delegated
@@ -319,6 +323,8 @@ async def test_surface_boot_hook_suppresses_gateway_exception() -> None:
         ledger_gateway=other,
         models_gateway=other,
         google_gateway=other,
+        microsoft_gateway=other,
+        speaker_gateway=other,
     )
     # Fail-soft: a boot-hook failure must NOT propagate (never crashes engine boot).
     await surface.apply_persisted_settings_at_boot()

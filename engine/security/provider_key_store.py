@@ -29,7 +29,16 @@ from engine.security.secret_redaction import SecretApiKey
 # router depends on security, never the reverse).
 # "cartesia" (M7): the optional voice-provider key rides the same DPAPI
 # custody; the router never builds a client for it (voice resolves it).
-KNOWN_PROVIDERS = ("groq", "gemini", "anthropic", "openai", "ollama", "cartesia")
+KNOWN_PROVIDERS = (
+    "groq",
+    "gemini",
+    "anthropic",
+    "openai",
+    "openrouter",
+    "azure_openai",
+    "ollama",
+    "cartesia",
+)
 
 # Dev-mode fallback env vars, per provider (populated by the dev runner).
 _ENV_VAR_BY_PROVIDER = {
@@ -37,6 +46,8 @@ _ENV_VAR_BY_PROVIDER = {
     "gemini": "GEMINI_API_KEY",
     "anthropic": "ANTHROPIC_API_KEY",
     "openai": "OPENAI_API_KEY",
+    "openrouter": "OPENROUTER_API_KEY",
+    "azure_openai": "AZURE_OPENAI_API_KEY",
     "cartesia": "CARTESIA_API_KEY",
 }
 
@@ -101,6 +112,11 @@ class ProviderKeyStore:
         providers = frozenset(p for p in KNOWN_PROVIDERS if self.get_key(p) is not None)
         if os.environ.get("OMNI_OLLAMA_BASE_URL", "").strip():
             providers = providers | frozenset({"ollama"})
+        if os.environ.get("OMNI_LMSTUDIO_BASE_URL", "").strip():
+            providers = providers | frozenset({"lm_studio"})
+        endpoint = os.environ.get("OMNI_AZURE_OPENAI_ENDPOINT", "").strip()
+        if endpoint and self.get_key("azure_openai") is not None:
+            providers = providers | frozenset({"azure_openai"})
         return providers
 
     def _read_encrypted_store(self) -> dict[str, str]:

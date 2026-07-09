@@ -1,0 +1,33 @@
+/*
+ * Self-hosted webfonts for the Daylight design system (redesign-brief-v2.md
+ * §4.2). WHY self-hosted, not Google Fonts: the local-only invariant (see
+ * CLAUDE.md §5.6 "Project-specific security bindings") forbids network
+ * calls this app doesn't explicitly need — a <link> to fonts.googleapis.com
+ * would leak the user's IP and session timing to Google on every launch.
+ * @fontsource packages vendor the woff2 files into node_modules so the
+ * fonts load from disk/bundle only, with zero external requests.
+ *
+ * WHERE in the pipeline: imported once per Vite entry point (src/main.tsx,
+ * src/pill/pill-main.tsx, src/captions/captions-main.tsx) so every window —
+ * main shell, dictation pill, captions overlay — renders the real typefaces
+ * instead of falling back to system fonts (the gap this file exists to close;
+ * see redesign-brief-v2.md §1.5 "fonts.css was never shipped").
+ *
+ * Only the weights actually used by tokens.css's type scale are imported —
+ * no unused weight files bloat the bundle.
+ */
+
+/* Source Serif 4 — display/titles (--font-display), weight 600 only. */
+@import "@fontsource/source-serif-4/600.css";
+
+/* Inter — UI body (--font-body), weights 400/500/600. */
+@import "@fontsource/inter/400.css";
+@import "@fontsource/inter/500.css";
+@import "@fontsource/inter/600.css";
+
+/* JetBrains Mono — evidence/transcript/mono (--font-mono), weights 400/500. */
+@import "@fontsource/jetbrains-mono/400.css";
+@import "@fontsource/jetbrains-mono/500.css";
+
+/* Space Grotesk — wordmark only (--font-wordmark), weight 600. */
+@import "@fontsource/space-grotesk/600.css";

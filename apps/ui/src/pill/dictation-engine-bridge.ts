@@ -1,29 +1,17 @@
 /**
  * The pill window's wiring: Tauri hold events + its own engine WebSocket.
- *
- * Reuses lib/engine-connection.ts UNMODIFIED via its createSocket seam (the
- * same tee pattern as lib/live-engine-socket.ts): one socket feeds both the
- * status logic and the dictation event dispatcher. The pill is a separate
- * webview, so this connection is independent of the main window's.
- *
- * Inject flow (Wispr-Flow-beating pillar): the shell captures the focused
- * window at KEYDOWN and says whether it is an external app; on release the
- * pill asks the engine for an inject-disposition final, and when that final
- * arrives it invokes the shell's `inject_dictation_text` command against
- * the keydown-captured target — never whatever happens to be focused later.
- * Release->text totals are stamped from REAL clocks (speed showcase).
- *
- * Fail-closed invariants: inbound frames are parsed fail-closed (malformed
- * frames never touch the store); commands are only sent over an OPEN socket
- * — an offline engine surfaces as an honest pill error, never a silent
- * dead session; a failed paste is reported with the text left on the
- * clipboard, never silently dropped.
  */
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
 import { EngineConnection, type WebSocketLike } from "../lib/engine-connection";
 import { makeCommand, parseInboundMessage } from "../lib/protocol";
+import {
+  evaluateHotkeyFsm,
+  INITIAL_HOTKEY_FSM_STATE,
+  type HotkeyFsmCommand,
+  type HotkeyFsmState,
+} from "./dictation-hotkey-fsm";
 import {
   DICTATION_BEGIN_COMMAND_NAME,
   DICTATION_END_COMMAND_NAME,
@@ -34,26 +22,29 @@ import {
   parseDictationFinalPayload,
   parseDictationPartialPayload,
 } from "./dictation-events-protocol";
+import type { DictationPillState } from "./dictation-pill-state";
 import { dispatchPillEvent, type DictationPillStore } from "./dictation-pill-store";
 
-/** Rust-side event names (pinned in src-tauri/src/dictation_pill_window.rs). */
 export const HOLD_PRESSED_TAURI_EVENT = "dictation-hold-pressed";
 export const HOLD_RELEASED_TAURI_EVENT = "dictation-hold-released";
 
-/** Payload the shell emits with hold-pressed (see dictation_pill_window.rs). */
 export interface HoldPressedPayload {
   readonly inject_eligible: boolean;
   readonly target_hwnd: number;
 }
 
-/** Shell command result (pinned in src-tauri/src/dictation_text_injection.rs). */
 interface InjectionOutcome {
   readonly ok: boolean;
   readonly elapsed_ms: number;
   readonly failure_reason: string | null;
 }
 
-/** Parse the shell's hold-pressed payload fail-closed (default: note mode). */
+interface ActiveSession {
+  readonly targetHwnd: number;
+}
+
+const RELEASE_STOP_MS = 180;
+
 export function parseHoldPressedPayload(payload: unknown): HoldPressedPayload {
   if (typeof payload === "object" && payload !== null) {
     const record = payload as Record<string, unknown>;
@@ -63,28 +54,24 @@ export function parseHoldPressedPayload(payload: unknown): HoldPressedPayload {
       return { inject_eligible: eligible, target_hwnd: hwnd };
     }
   }
-  // Malformed shell payload -> the safe path: a note, never a paste.
   return { inject_eligible: false, target_hwnd: 0 };
 }
 
-/** The keydown-captured injection target for the CURRENT session. */
-let currentTargetHwnd = 0;
-/** Real release stamp for the honest release->text total (speed showcase). */
-let releasedAtMs: number | null = null;
+/** Snapshot inject disposition before the reducer leaves `listening`. */
+export function resolveInjectRequested(state: DictationPillState): boolean {
+  if (state.phase !== "listening" && state.phase !== "processing") return false;
+  return state.injectArmed && !state.commandDetected;
+}
 
-/**
- * Route one validated inbound frame into the pill store. Exported so tests
- * can drive an isolated store with raw frames. `performInjection` is a seam
- * so tests assert the paste leg without Tauri.
- */
 export function createDictationEventDispatcher(
   store: DictationPillStore,
   performInjection: (text: string, targetHwnd: number) => Promise<InjectionOutcome> =
     invokeInjection,
+  getActiveSession: () => ActiveSession | null = () => activeSession,
 ): (data: unknown) => void {
   return (data: unknown) => {
     const result = parseInboundMessage(data);
-    if (!result.ok || result.envelope.kind !== "event") return; // fail closed
+    if (!result.ok || result.envelope.kind !== "event") return;
     const { name, payload } = result.envelope;
     if (name === DICTATION_PARTIAL_EVENT_NAME) {
       const parsed = parseDictationPartialPayload(payload);
@@ -95,10 +82,8 @@ export function createDictationEventDispatcher(
       const totalMs = releasedAtMs !== null ? Date.now() - releasedAtMs : undefined;
       dispatchPillEvent(store, { type: "final", payload: parsed, totalMs });
       if (parsed.mode === "inject") {
-        // Paste the CLEANED text (raw is retained engine-side); the target
-        // is the keydown-captured window, never the current foreground.
         const textToInject = parsed.cleaned_text ?? parsed.text;
-        const target = currentTargetHwnd;
+        const target = getActiveSession()?.targetHwnd ?? 0;
         void performInjection(textToInject, target)
           .then((outcome) => {
             dispatchPillEvent(store, {
@@ -109,7 +94,6 @@ export function createDictationEventDispatcher(
             });
           })
           .catch((error: unknown) => {
-            // Honest failure: the text was NOT pasted; say so.
             dispatchPillEvent(store, {
               type: "injection-result",
               ok: false,
@@ -117,21 +101,138 @@ export function createDictationEventDispatcher(
             });
           });
       }
+      activeSession = null;
     } else if (name === DICTATION_ERROR_EVENT_NAME) {
       const parsed = parseDictationErrorPayload(payload);
       if (parsed !== null) dispatchPillEvent(store, { type: "error", reason: parsed.reason });
+      activeSession = null;
     }
-    // Unknown events are ignored — deny by default.
   };
 }
 
-/** The real Tauri command call (module-level so the seam can default to it). */
 function invokeInjection(text: string, targetHwnd: number): Promise<InjectionOutcome> {
   return invoke<InjectionOutcome>("inject_dictation_text", { text, targetHwnd });
 }
 
 let activeSocket: WebSocket | null = null;
 let pillConnection: EngineConnection | null = null;
+let activeSession: ActiveSession | null = null;
+let releasedAtMs: number | null = null;
+let hotkeyFsm: HotkeyFsmState = INITIAL_HOTKEY_FSM_STATE;
+let releaseStopTimer: ReturnType<typeof setTimeout> | null = null;
+let injectEligibleAtPress = false;
+let sessionTargetHwnd = 0;
+
+function clearReleaseStopTimer(): void {
+  if (releaseStopTimer !== null) {
+    clearTimeout(releaseStopTimer);
+    releaseStopTimer = null;
+  }
+}
+
+function sendDictationCommand(name: string, payload: Record<string, unknown> = {}): boolean {
+  if (activeSocket === null || activeSocket.readyState !== WebSocket.OPEN) return false;
+  try {
+    activeSocket.send(JSON.stringify(makeCommand(name, payload)));
+    return true;
+  } catch {
+    return false;
+  }
+}
+
+function endSession(
+  store: DictationPillStore,
+  injectRequested: boolean,
+  resetFsm: boolean,
+): void {
+  releasedAtMs = Date.now();
+  dispatchPillEvent(store, { type: "hold-released" });
+  if (
+    !sendDictationCommand(DICTATION_END_COMMAND_NAME, {
+      inject_requested: injectRequested,
+    })
+  ) {
+    dispatchPillEvent(store, {
+      type: "error",
+      reason: "Engine connection lost — dictation was not saved",
+    });
+    activeSession = null;
+  }
+  if (resetFsm) hotkeyFsm = INITIAL_HOTKEY_FSM_STATE;
+}
+
+function runHotkeyCommands(store: DictationPillStore, commands: readonly HotkeyFsmCommand[]): void {
+  for (const command of commands) {
+    if (command === "start_recording") {
+      sessionTargetHwnd = injectEligibleAtPress ? sessionTargetHwnd : 0;
+      activeSession = { targetHwnd: sessionTargetHwnd };
+      dispatchPillEvent(store, {
+        type: "hold-pressed",
+        atMs: Date.now(),
+        injectEligible: injectEligibleAtPress,
+      });
+      if (!sendDictationCommand(DICTATION_BEGIN_COMMAND_NAME)) {
+        activeSession = null;
+        hotkeyFsm = INITIAL_HOTKEY_FSM_STATE;
+        dispatchPillEvent(store, {
+          type: "error",
+          reason: "Engine offline — dictation is unavailable",
+        });
+      }
+    } else if (command === "schedule_stop_after_release") {
+      const injectRequested = resolveInjectRequested(store.getState());
+      clearReleaseStopTimer();
+      releaseStopTimer = setTimeout(() => {
+        releaseStopTimer = null;
+        hotkeyFsm = { ...hotkeyFsm, releaseStopTimerActive: false, recording: false };
+        endSession(store, injectRequested, false);
+      }, RELEASE_STOP_MS);
+    } else if (command === "clear_release_stop_timer") {
+      clearReleaseStopTimer();
+      hotkeyFsm = { ...hotkeyFsm, releaseStopTimerActive: false };
+    } else if (command === "lock_recording") {
+      dispatchPillEvent(store, { type: "lock-engaged" });
+    } else if (command === "stop_recording") {
+      const injectRequested = resolveInjectRequested(store.getState());
+      clearReleaseStopTimer();
+      endSession(store, injectRequested, true);
+    }
+  }
+}
+
+export function startDictationPillBridge(store: DictationPillStore): () => void {
+  if (pillConnection === null) {
+    const dispatch = createDictationEventDispatcher(store);
+    pillConnection = new EngineConnection({
+      createSocket: (url) => createTeeSocket(url, dispatch),
+    });
+  }
+  pillConnection.start();
+
+  const unlisteners: Array<() => void> = [];
+  void listen(HOLD_PRESSED_TAURI_EVENT, (event) => {
+    const pressed = parseHoldPressedPayload(event.payload);
+    sessionTargetHwnd = pressed.target_hwnd;
+    injectEligibleAtPress = pressed.inject_eligible;
+    const result = evaluateHotkeyFsm(hotkeyFsm, "Pressed");
+    hotkeyFsm = result.nextState;
+    runHotkeyCommands(store, result.commands);
+  }).then((unlisten) => unlisteners.push(unlisten));
+  void listen(HOLD_RELEASED_TAURI_EVENT, () => {
+    const result = evaluateHotkeyFsm(hotkeyFsm, "Released");
+    hotkeyFsm = result.nextState;
+    runHotkeyCommands(store, result.commands);
+  }).then((unlisten) => unlisteners.push(unlisten));
+
+  return () => {
+    clearReleaseStopTimer();
+    for (const unlisten of unlisteners) unlisten();
+    hotkeyFsm = INITIAL_HOTKEY_FSM_STATE;
+    activeSession = null;
+    sessionTargetHwnd = 0;
+    releasedAtMs = null;
+  };
+}
 
 function createTeeSocket(url: string, onFrame: (data: unknown) => void): WebSocketLike {
   const inner = new WebSocket(url);
@@ -152,7 +253,7 @@ function createTeeSocket(url: string, onFrame: (data: unknown) => void): WebSock
     tee.onmessage?.({ data: event.data });
   };
   inner.onclose = () => {
-    if (activeSocket === inner) activeSocket = null; // no zombie sends
+    if (activeSocket === inner) activeSocket = null;
     tee.onclose?.();
   };
   inner.onerror = () => {
@@ -160,74 +261,4 @@ function createTeeSocket(url: string, onFrame: (data: unknown) => void): WebSock
     tee.onerror?.();
   };
   return tee;
-}
-
-/** Send one command; false (nothing sent) when the socket is not OPEN. */
-function sendDictationCommand(name: string, payload: Record<string, unknown> = {}): boolean {
-  if (activeSocket === null || activeSocket.readyState !== WebSocket.OPEN) return false;
-  try {
-    activeSocket.send(JSON.stringify(makeCommand(name, payload)));
-    return true;
-  } catch {
-    return false; // a torn socket is a refusal, not a crash
-  }
-}
-
-/**
- * Start the pill's engine connection and Tauri hold-key listeners.
- * Idempotent; returns an unlisten-cleanup for completeness (the pill window
- * lives for the whole app session).
- */
-export function startDictationPillBridge(store: DictationPillStore): () => void {
-  if (pillConnection === null) {
-    const dispatch = createDictationEventDispatcher(store);
-    pillConnection = new EngineConnection({
-      createSocket: (url) => createTeeSocket(url, dispatch),
-    });
-  }
-  pillConnection.start();
-
-  const unlisteners: Array<() => void> = [];
-  void listen(HOLD_PRESSED_TAURI_EVENT, (event) => {
-    const pressed = parseHoldPressedPayload(event.payload);
-    // Capture the injection target AT KEYDOWN — the window the user was
-    // typing in — never whatever is foreground when the final arrives.
-    currentTargetHwnd = pressed.target_hwnd;
-    releasedAtMs = null;
-    dispatchPillEvent(store, {
-      type: "hold-pressed",
-      atMs: Date.now(),
-      injectEligible: pressed.inject_eligible,
-    });
-    if (!sendDictationCommand(DICTATION_BEGIN_COMMAND_NAME)) {
-      // Honest failure: the pill must never pretend to be listening.
-      dispatchPillEvent(store, {
-        type: "error",
-        reason: "Engine offline — dictation is unavailable",
-      });
-    }
-  }).then((unlisten) => unlisteners.push(unlisten));
-  void listen(HOLD_RELEASED_TAURI_EVENT, () => {
-    // Read the disposition BEFORE reducing: the release event moves the
-    // state to processing but must ship the arming as it stood at keyup.
-    const state = store.getState();
-    const injectRequested =
-      state.phase === "listening" && state.injectArmed && !state.commandDetected;
-    releasedAtMs = Date.now();
-    dispatchPillEvent(store, { type: "hold-released" });
-    if (
-      !sendDictationCommand(DICTATION_END_COMMAND_NAME, {
-        inject_requested: injectRequested,
-      })
-    ) {
-      dispatchPillEvent(store, {
-        type: "error",
-        reason: "Engine connection lost — dictation was not saved",
-      });
-    }
-  }).then((unlisten) => unlisteners.push(unlisten));
-
-  return () => {
-    for (const unlisten of unlisteners) unlisten();
-  };
 }

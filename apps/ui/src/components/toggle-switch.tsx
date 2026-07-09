@@ -25,12 +25,12 @@ export function ToggleSwitch({
       aria-label={label}
       disabled={disabled}
       onClick={() => onChange(!checked)}
-      className="relative shrink-0 cursor-pointer border-none disabled:cursor-default"
+      className="relative shrink-0 cursor-pointer border-none disabled:cursor-default disabled:opacity-50 disabled:cursor-not-allowed outline-none focus-visible:outline focus-visible:outline-2 focus-visible:outline-[var(--accent)] focus-visible:outline-offset-2 focus-visible:rounded-full"
       style={{
         width: 36,
         height: 20,
         borderRadius: "var(--radius-pill)",
-        background: checked ? "var(--ink)" : "var(--grey-200)",
+        background: checked ? "var(--accent)" : "var(--grey-300)",
         transition: "background var(--dur-toggle) var(--ease-out)",
         padding: 0,
       }}
@@ -45,7 +45,7 @@ export function ToggleSwitch({
           height: 16,
           borderRadius: "50%",
           background: "var(--canvas)",
-          boxShadow: checked ? "none" : "var(--shadow-knob)",
+          boxShadow: "var(--shadow-knob)",
           transform: checked ? "translateX(16px)" : "translateX(0)",
           transition: "transform var(--dur-toggle) var(--ease-out)",
         }}

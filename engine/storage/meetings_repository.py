@@ -107,6 +107,19 @@ async def fetch_meeting_row(
     return None if row is None else _row_to_meeting(row)
 
 
+async def update_meeting_enhanced_notes(
+    connection: aiosqlite.Connection, meeting_id: str, enhanced_notes_md: str | None
+) -> bool:
+    """Update enhanced notes markdown only; returns False when meeting missing."""
+    cursor = await connection.execute(
+        "UPDATE meetings SET enhanced_notes_md = ? WHERE id = ?",
+        (enhanced_notes_md, meeting_id),
+    )
+    changed = cursor.rowcount > 0
+    await cursor.close()
+    return changed
+
+
 async def record_meeting_finalization(
     connection: aiosqlite.Connection,
     meeting_id: str,

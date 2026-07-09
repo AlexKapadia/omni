@@ -38,7 +38,7 @@ const ANSWER: AskAnswer = {
 };
 
 function submitQuestion(question: string) {
-  const input = screen.getByRole("textbox", { name: "Ask Omni" });
+  const input = screen.getByRole("textbox", { name: "Ask" });
   fireEvent.change(input, { target: { value: question } });
   fireEvent.submit(input.closest("form")!);
 }
@@ -46,7 +46,7 @@ function submitQuestion(question: string) {
 describe("AskScreen states", () => {
   it("EMPTY: page display, ghost input and the privacy line", () => {
     render(<AskScreen provider={{ answer: () => Promise.resolve(ANSWER) }} />);
-    expect(screen.getByText("Ask across everything you know")).toBeTruthy();
+    expect(screen.getByText("Ask about your meetings")).toBeTruthy();
     expect(
       screen.getByText("Answers come from your vault only. Nothing leaves this device."),
     ).toBeTruthy();

@@ -37,6 +37,8 @@ from pathlib import Path
 
 import aiosqlite
 
+from engine.dictation.dictation_history_repository import insert_dictation_entry
+from engine.storage.app_settings_repository import SETTING_STT_ENGINE, read_setting
 from engine.dictation.dictation_cleanup import CleanupResult, clean_dictation_text
 from engine.dictation.dictation_intent_schema import (
     DICTATION_INTENT_JSON_SCHEMA,
@@ -108,6 +110,7 @@ class DictationReleaseFinalizer:
         route: RouteCompletionFn,
         intents_connection_factory: IntentsConnectionFactory,
         vault_root_provider: VaultRootProvider,
+        cleanup_style: str = "classic",
         indexer: NoteIndexerProtocol | None = None,
         daily_folder_name: str | None = None,
         now: NowProvider = lambda: datetime.now().astimezone(),
@@ -115,6 +118,7 @@ class DictationReleaseFinalizer:
     ) -> None:
         self._route = route
         self._intents_connection_factory = intents_connection_factory
+        self._cleanup_style = cleanup_style
         self._vault_root_provider = vault_root_provider
         self._indexer = indexer
         self._daily_folder_name = daily_folder_name
@@ -147,10 +151,12 @@ class DictationReleaseFinalizer:
             )
         split = split_dictation_mode(verbatim_text)
         if split.mode is DictationMode.COMMAND:
-            return await self._finalize_command(verbatim_text, split.command_body, flush_ms)
-        if inject_requested:
-            return await self._finalize_inject(verbatim_text, flush_ms)
-        return await self._finalize_note(verbatim_text, flush_ms)
+            final = await self._finalize_command(verbatim_text, split.command_body, flush_ms)
+        elif inject_requested:
+            final = await self._finalize_inject(verbatim_text, flush_ms)
+        else:
+            final = await self._finalize_note(verbatim_text, flush_ms)
+        return final
 
     # ------------------------------------------------------------------
     # COMMAND mode: parse + record. Never execute (approval-before-execute).
@@ -228,7 +234,30 @@ class DictationReleaseFinalizer:
     async def _run_cleanup(self, verbatim_text: str) -> CleanupResult:
         """Faithfulness-guarded cleanup; NEVER raises (raw fallback inside)."""
         return await clean_dictation_text(
-            self._route, verbatim_text, self._dictionary.terms()
+            self._route,
+            verbatim_text,
+            self._dictionary.terms(),
+            style=self._cleanup_style,
+        )
+
+    async def record_history_entry(
+        self,
+        connection: aiosqlite.Connection,
+        result: DictationFinalResult,
+    ) -> None:
+        if not result.text.strip():
+            return
+        stt_engine = await read_setting(connection, SETTING_STT_ENGINE)
+        await insert_dictation_entry(
+            connection,
+            created_at_iso=datetime.now(tz=UTC).isoformat(),
+            mode=result.mode.value,
+            raw_text=result.text,
+            cleaned_text=result.cleaned_text,
+            note_path=result.note_path,
+            note_title=result.note_title,
+            cleanup_style=self._cleanup_style,
+            stt_engine=stt_engine if isinstance(stt_engine, str) else None,
         )
 
     # ------------------------------------------------------------------

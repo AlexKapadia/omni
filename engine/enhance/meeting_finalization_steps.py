@@ -95,6 +95,7 @@ async def run_enhance_step(
     transcript_lines: list[str],
     note_path: Path,
     warnings: list[str],
+    summary_language: str = "",
 ) -> tuple[bool, str | None]:
     """Enhancement + managed-region write, isolated.
 
@@ -104,7 +105,9 @@ async def run_enhance_step(
     the raw note is never lost either way.
     """
     try:
-        result = await run_enhanced_notes(router, template, notepad_text, transcript_lines)
+        result = await run_enhanced_notes(
+            router, template, notepad_text, transcript_lines, summary_language
+        )
         update_meeting_enhanced_notes(note_path, result.markdown)
         return True, result.markdown
     except (RouterError, EnhancementOutputError, VaultWriteError) as exc:

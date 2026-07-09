@@ -41,6 +41,15 @@ const READY: SettingsGetResult = {
     liveCaptionsOverlay: true,
     aecEnabled: false,
     liveTranslationLang: "",
+    summaryLanguage: "",
+    summaryModelId: "gemini-2.5-flash",
+    speakerIdentity: "Me",
+    speakerVoiceEnrolled: false,
+    dictationCleanupStyle: "classic",
+    sttEngine: "parakeet",
+    sttModelId: "",
+    sttOpenaiBaseUrl: "",
+    selectionTranslationLang: "English",
   },
   killSwitchEngaged: false,
   routing: [
@@ -109,11 +118,39 @@ function renderScreen(vault = { persistKey: () => Promise.resolve() }) {
   );
 }
 
+/** Reveal the Advanced tier (AI providers, usage, automation, devices). */
+async function openAdvanced(): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByRole("tab", { name: "Advanced" }));
+  });
+}
+
+describe("two-tier settings (Essentials default, Advanced on demand)", () => {
+  it("defaults to Essentials and switching reveals Advanced-only groups", async () => {
+    renderScreen();
+    // Essentials is the selected tab and shows an Essentials-only group.
+    expect(screen.getByRole("tab", { name: "Essentials" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("tab", { name: "Advanced" }).getAttribute("aria-selected")).toBe("false");
+    expect(screen.getByRole("region", { name: "Your voice" })).toBeTruthy();
+    // Advanced-only groups are NOT reachable until the user switches tiers.
+    expect(screen.queryByRole("region", { name: "API keys" })).toBeNull();
+    expect(screen.queryByRole("region", { name: "Diagnostics" })).toBeNull();
+
+    await openAdvanced();
+    expect(screen.getByRole("tab", { name: "Advanced" }).getAttribute("aria-selected")).toBe("true");
+    expect(screen.getByRole("region", { name: "API keys" })).toBeTruthy();
+    expect(screen.getByRole("region", { name: "Diagnostics" })).toBeTruthy();
+    // Essentials content is no longer mounted once Advanced is active.
+    expect(screen.queryByRole("region", { name: "Your voice" })).toBeNull();
+  });
+});
+
 describe("API key masking (binding security invariant)", () => {
   const SECRET = "sk-ant-Zx9Qw7Rt5Yu3Io1PR2Qw";
 
   it("the saved key value NEVER appears in the DOM afterwards", async () => {
     renderScreen();
+    await openAdvanced();
     const input = screen.getByLabelText("Claude API key") as HTMLInputElement;
     expect(input.type).toBe("password");
     fireEvent.change(input, { target: { value: SECRET } });
@@ -128,10 +165,10 @@ describe("API key masking (binding security invariant)", () => {
 });
 
 describe("privacy controls wired to settings.update", () => {
-  it("keep-audio defaults OFF and toggling persists keep_audio", async () => {
+  it("keep-audio reflects the persisted setting and toggling persists keep_audio", async () => {
     renderScreen();
     const toggle = screen.getByRole("switch", { name: "Keep audio after transcription" });
-    expect(toggle.getAttribute("aria-checked")).toBe("false"); // security default
+    expect(toggle.getAttribute("aria-checked")).toBe("false"); // fixture opts out explicitly
     await act(async () => {
       fireEvent.click(toggle);
     });
@@ -139,23 +176,26 @@ describe("privacy controls wired to settings.update", () => {
     expect(toggle.getAttribute("aria-checked")).toBe("true");
   });
 
-  it("kill switch persists and the engaged state discloses in the router card", async () => {
+  it("pause-all-cloud-AI persists and the paused state discloses in the router card", async () => {
     renderScreen();
-    expect(screen.queryByText(/Kill switch engaged/)).toBeNull();
+    // The de-jargoned control lives in Essentials; the disclosure lives in the
+    // Advanced routing matrix — both reflect the ENGINE state, not the toggle.
     await act(async () => {
-      fireEvent.click(screen.getByRole("switch", { name: "Kill switch" }));
+      fireEvent.click(screen.getByRole("switch", { name: "Pause all cloud AI" }));
     });
     expect(updates).toContainEqual({ killSwitch: true });
-    // The engaged disclosure reflects the ENGINE state, not the local toggle.
+    await openAdvanced();
+    expect(screen.queryByText(/every external route above is refused/)).toBeNull();
     act(() => setKillSwitchEngaged(settings, true));
     expect(screen.getByText(/every external route above is refused/)).toBeTruthy();
   });
 });
 
 describe("router matrix is read-only real policy", () => {
-  it("renders the resolved routes and exposes NO radios (read-only)", () => {
+  it("renders the resolved routes and exposes NO radios (read-only)", async () => {
     renderScreen();
-    const router = within(screen.getByRole("region", { name: "AI router" }));
+    await openAdvanced();
+    const router = within(screen.getByRole("region", { name: "AI providers" }));
     expect(router.getByText("note enhancement")).toBeTruthy();
     expect(router.getByText("gemini")).toBeTruthy();
     expect(router.getByText("on-device")).toBeTruthy();
@@ -164,8 +204,9 @@ describe("router matrix is read-only real policy", () => {
 });
 
 describe("real ledger", () => {
-  it("renders a real task row and its exact cost string", () => {
+  it("renders a real task row and its exact cost string", async () => {
     renderScreen();
+    await openAdvanced();
     const ledger = within(screen.getByRole("region", { name: "Cost and latency" }));
     expect(ledger.getByText("note enhancement")).toBeTruthy();
     // "$4.12" is the verbatim engine string, in both the task and total rows.

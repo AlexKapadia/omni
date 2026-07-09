@@ -14,8 +14,8 @@ import { test, expect } from "../harness/fixtures";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Live meeting" }).click();
-  await expect(page.getByRole("heading", { name: "Live meeting" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Record" }).click();
+  await expect(page.getByRole("heading", { name: "Record a meeting" })).toBeVisible();
 });
 
 test("shows the idle pre-capture state with the real privacy promise", async ({ page }) => {

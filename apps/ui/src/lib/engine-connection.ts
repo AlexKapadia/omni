@@ -127,6 +127,8 @@ export class EngineConnection {
         uptimeS: heartbeat.uptime_s,
         engineVersion: heartbeat.engine_version,
         sttReady: heartbeat.stt_ready,
+        sttEngine: heartbeat.stt_engine ?? null,
+        sttDevice: heartbeat.stt_device ?? null,
       });
       return;
     }

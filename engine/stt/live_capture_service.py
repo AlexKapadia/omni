@@ -46,7 +46,14 @@ from engine.protocol.capture_event_payloads import (
     build_capture_stopped_payload,
 )
 from engine.protocol.event_broadcast_hub import EventBroadcastHub
-from engine.storage.app_settings_repository import SETTING_AEC_ENABLED, read_setting_bool
+from engine.storage.app_settings_repository import (
+    SETTING_AEC_ENABLED,
+    SETTING_SPEAKER_IDENTITY,
+    SETTING_SPEAKER_VOICE_EMBEDDING,
+    read_setting,
+    read_setting_bool,
+)
+from engine.stt.speaker_voice_profile import SpeakerSessionLabeler
 from engine.storage.meetings_repository import insert_meeting, mark_meeting_ended, utc_now_iso
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
@@ -121,9 +128,10 @@ class LiveCaptureService:
         self._connection: aiosqlite.Connection | None = None  # Open during a session.
         self._anchor_monotonic = 0.0
         self._emitter: TranscriptEventEmitter | None = None  # Per-session.
-        # Opt-in raw-audio retention (default OFF): None unless the user's
-        # keep_audio setting is True for this session (audio-discard default).
+        # Raw-audio retention (default ON): a recorder unless the user's
+        # keep_audio setting is explicitly False (kept audio saved as MP3).
         self._keep_audio_recorder: KeepAudioRecorder | None = None
+        self._speaker_labeler: SpeakerSessionLabeler | None = None
 
     @property
     def is_stt_ready(self) -> bool:
@@ -152,9 +160,13 @@ class LiveCaptureService:
         await self._models.ensure_loaded()  # Raises with a clear reason.
 
         meeting_id = str(uuid.uuid4())
-        # Schema first (idempotent), then the session's own connection.
         await apply_migrations(self._db_path, self._migrations_dir)
         connection = await open_sqlite_connection(self._db_path)
+        identity_raw = await read_setting(connection, SETTING_SPEAKER_IDENTITY)
+        embedding_raw = await read_setting(connection, SETTING_SPEAKER_VOICE_EMBEDDING)
+        identity = identity_raw if isinstance(identity_raw, str) and identity_raw.strip() else "Me"
+        embedding_json = embedding_raw if isinstance(embedding_raw, str) else ""
+        speaker_labeler = SpeakerSessionLabeler.from_settings(identity, embedding_json)
         try:
             await insert_meeting(connection, meeting_id, title or "Untitled meeting", utc_now_iso())
             self._anchor_monotonic = time.monotonic()
@@ -176,13 +188,14 @@ class LiveCaptureService:
         self._controller = controller
         self._meeting_id = meeting_id
         self._emitter = emitter = TranscriptEventEmitter(
-            self._hub, connection, meeting_id, self._anchor_monotonic
+            self._hub, connection, meeting_id, self._anchor_monotonic, speaker_labeler
         )
+        self._speaker_labeler = speaker_labeler
         self._pipelines = {
             label: self._build_pipeline(label) for label in (StreamLabel.THEM, StreamLabel.ME)
         }
-        # keep-audio opt-in: recorder constructed ONLY when the user's setting
-        # is True (default OFF -> None -> audio discarded after transcription).
+        # keep-audio default ON: recorder constructed unless the user's setting
+        # is explicitly False (opt-out -> None -> audio discarded post-transcription).
         self._keep_audio_recorder = await create_keep_audio_recorder_if_enabled(
             connection, meeting_id
         )
@@ -220,13 +233,14 @@ class LiveCaptureService:
         for pipeline in self._pipelines.values():
             await pipeline.finalize()  # Emits any in-flight finals.
         if self._keep_audio_recorder is not None:
-            self._keep_audio_recorder.close()  # finalise WAV headers; no more frames
+            self._keep_audio_recorder.close()  # finalise WAV, transcode to MP3
             self._keep_audio_recorder = None
         await mark_meeting_ended(self._connection, meeting_id, utc_now_iso())
         await self._connection.close()
         if self._emitter is not None:
             self._emitter.log_latency_summary()  # Closing latency report.
         self._emitter = None
+        self._speaker_labeler = None
         self._connection = None
         self._controller = None
         self._pipelines = {}
@@ -255,13 +269,23 @@ class LiveCaptureService:
 
         async def on_partial(words: list[WordToken]) -> None:
             emitter = self._emitter
-            if emitter is not None:  # Session may tear down mid-flight.
-                await emitter.emit_partial(label, words)
+            pipeline = self._pipelines.get(label)
+            if emitter is not None:
+                active = pipeline.active_speaker_id if pipeline is not None else None
+                await emitter.emit_partial(label, words, active_speaker_id=active)
 
-        async def on_final(words: list[WordToken], t_open: float, t_close: float) -> None:
+        async def on_final(
+            words: list[WordToken], t_open: float, t_close: float, audio: npt.NDArray[np.float32]
+        ) -> None:
             emitter = self._emitter
-            if emitter is not None:  # Session may tear down mid-flight.
-                await emitter.emit_final(label, words)
+            pipeline = self._pipelines.get(label)
+            if label is StreamLabel.THEM and pipeline is not None and self._speaker_labeler is not None:
+                speaker_id, _ = self._speaker_labeler.assign_them(audio)
+                pipeline.set_active_speaker_id(speaker_id)
+            elif pipeline is not None and label is StreamLabel.ME:
+                pipeline.set_active_speaker_id("me")
+            if emitter is not None:
+                await emitter.emit_final(label, words, audio=audio)
 
         return PerStreamTranscriptionPipeline(
             stream=label,

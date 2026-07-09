@@ -19,6 +19,7 @@ Security invariants:
 """
 
 from pathlib import Path
+import re
 
 from engine.enhance.note_templates import build_custom_template
 from engine.storage.app_settings_repository import (
@@ -37,7 +38,18 @@ from engine.storage.app_settings_repository import (
     SETTING_LIVE_CAPTIONS_OVERLAY,
     SETTING_AEC_ENABLED,
     SETTING_LIVE_TRANSLATION_LANG,
+    SETTING_SUMMARY_LANGUAGE,
+    SETTING_SUMMARY_MODEL_ID,
+    SETTING_SPEAKER_IDENTITY,
+    SETTING_SPEAKER_VOICE_EMBEDDING,
+    SETTING_DICTATION_CLEANUP_STYLE,
+    SETTING_STT_ENGINE,
+    SETTING_STT_MODEL_ID,
+    SETTING_STT_OPENAI_BASE_URL,
+    SETTING_SELECTION_TRANSLATION_LANG,
 )
+from engine.dictation.cleanup_styles import CLEANUP_STYLES
+from engine.stt.stt_backend_registry import STT_ENGINES
 from engine.detect.detection_settings_from_app import AUTOSTOP_SILENCE_CHOICES
 from engine.detect.detection_signal_types import KNOWN_DETECTION_SOURCES
 
@@ -138,6 +150,11 @@ def _validate_active_template(value: object) -> str:
     return template_id
 
 
+def _name_to_template_id(name: str) -> str:
+    slug = re.sub(r"[^a-z0-9]+", "_", name.strip().lower()).strip("_")
+    return slug or "custom"
+
+
 def _validate_custom_templates(value: object) -> list[dict[str, object]]:
     """Each entry must construct a valid NoteTemplate (bounds enforced by
     ``build_custom_template``); the normalised dicts are what gets stored."""
@@ -149,27 +166,41 @@ def _validate_custom_templates(value: object) -> list[dict[str, object]]:
     normalized: list[dict[str, object]] = []
     seen_ids: set[str] = set()
     for entry in value:
-        if not isinstance(entry, dict):
-            raise SettingsValueError(key, "each template must be an object")
-        raw_sections = entry.get("sections")
-        if not isinstance(raw_sections, list):
-            raise SettingsValueError(key, "each template needs a sections list")
-        try:
-            sections = [
-                (str(s.get("title", "")), str(s.get("guidance", "")))
-                for s in raw_sections
-                if isinstance(s, dict)
-            ]
-            if len(sections) != len(raw_sections):
-                raise ValueError("every section must be an object")
-            template = build_custom_template(
-                template_id=str(entry.get("template_id", "")),
-                display_name=str(entry.get("display_name", "")),
-                sections=sections,
-                tone_rules=str(entry.get("tone_rules", "")),
-            )
-        except ValueError as exc:
-            raise SettingsValueError(key, str(exc)) from exc
+        if isinstance(entry, str):
+            display_name = entry.strip()
+            if not display_name:
+                raise SettingsValueError(key, "template name cannot be empty")
+            try:
+                template = build_custom_template(
+                    template_id=_name_to_template_id(display_name),
+                    display_name=display_name,
+                    sections=[("Summary", "Capture the main points from this meeting.")],
+                    tone_rules="Clear and concise.",
+                )
+            except ValueError as exc:
+                raise SettingsValueError(key, str(exc)) from exc
+        elif isinstance(entry, dict):
+            raw_sections = entry.get("sections")
+            if not isinstance(raw_sections, list):
+                raise SettingsValueError(key, "each template needs a sections list")
+            try:
+                sections = [
+                    (str(s.get("title", "")), str(s.get("guidance", "")))
+                    for s in raw_sections
+                    if isinstance(s, dict)
+                ]
+                if len(sections) != len(raw_sections):
+                    raise ValueError("every section must be an object")
+                template = build_custom_template(
+                    template_id=str(entry.get("template_id", "")),
+                    display_name=str(entry.get("display_name", "")),
+                    sections=sections,
+                    tone_rules=str(entry.get("tone_rules", "")),
+                )
+            except ValueError as exc:
+                raise SettingsValueError(key, str(exc)) from exc
+        else:
+            raise SettingsValueError(key, "each template must be a string or object")
         if template.template_id in seen_ids:
             raise SettingsValueError(key, f"duplicate template id {template.template_id!r}")
         seen_ids.add(template.template_id)
@@ -199,14 +230,97 @@ def _validate_detection_auto_start_sources(value: object) -> list[str]:
     return sorted(normalized)
 
 
-def _validate_live_translation_lang(value: object) -> str:
-    key = SETTING_LIVE_TRANSLATION_LANG
+_MAX_SPEAKER_IDENTITY_CHARS = 64
+_MAX_EMBEDDING_JSON_CHARS = 4096
+
+
+def _validate_speaker_identity(value: object) -> str:
+    key = SETTING_SPEAKER_IDENTITY
+    if not isinstance(value, str) or not value.strip():
+        raise SettingsValueError(key, "value must be a non-empty name")
+    trimmed = value.strip()
+    if len(trimmed) > _MAX_SPEAKER_IDENTITY_CHARS:
+        raise SettingsValueError(key, "name is too long")
+    return trimmed
+
+
+def _validate_speaker_voice_embedding(value: object) -> str:
+    key = SETTING_SPEAKER_VOICE_EMBEDDING
+    if not isinstance(value, str) or not value.strip():
+        raise SettingsValueError(key, "value must be a JSON embedding")
+    trimmed = value.strip()
+    if len(trimmed) > _MAX_EMBEDDING_JSON_CHARS:
+        raise SettingsValueError(key, "embedding is too large")
+    from engine.stt.speaker_voice_profile import embedding_from_json
+
+    if embedding_from_json(trimmed) is None:
+        raise SettingsValueError(key, "embedding is not valid JSON")
+    return trimmed
+
+
+def _validate_optional_language_name(key: str, value: object) -> str:
     if not isinstance(value, str):
         raise SettingsValueError(key, "value must be a language name or empty string")
     trimmed = value.strip()
     if len(trimmed) > _MAX_TRANSLATION_LANG_CHARS:
         raise SettingsValueError(key, "language name is too long")
     return trimmed
+
+
+def _validate_live_translation_lang(value: object) -> str:
+    return _validate_optional_language_name(SETTING_LIVE_TRANSLATION_LANG, value)
+
+
+def _validate_summary_language(value: object) -> str:
+    return _validate_optional_language_name(SETTING_SUMMARY_LANGUAGE, value)
+
+
+def _validate_summary_model_id(value: object) -> str:
+    key = SETTING_SUMMARY_MODEL_ID
+    if not isinstance(value, str):
+        raise SettingsValueError(key, "value must be a string")
+    trimmed = value.strip()
+    if not trimmed:
+        raise SettingsValueError(key, "value cannot be empty")
+    return trimmed
+
+
+def _validate_cleanup_style(value: object) -> str:
+    key = SETTING_DICTATION_CLEANUP_STYLE
+    if not isinstance(value, str) or value not in CLEANUP_STYLES:
+        raise SettingsValueError(key, f"value must be one of {sorted(CLEANUP_STYLES)}")
+    return value
+
+
+def _validate_stt_engine(value: object) -> str:
+    key = SETTING_STT_ENGINE
+    if not isinstance(value, str) or value not in STT_ENGINES:
+        raise SettingsValueError(key, f"value must be one of {sorted(STT_ENGINES)}")
+    return value
+
+
+def _validate_stt_model_id(value: object) -> str:
+    key = SETTING_STT_MODEL_ID
+    if not isinstance(value, str):
+        raise SettingsValueError(key, "value must be a string")
+    trimmed = value.strip()
+    if not trimmed or len(trimmed) > 128:
+        raise SettingsValueError(key, "model id must be 1-128 characters")
+    return trimmed
+
+
+def _validate_stt_openai_base_url(value: object) -> str:
+    key = SETTING_STT_OPENAI_BASE_URL
+    if not isinstance(value, str):
+        raise SettingsValueError(key, "value must be a URL string or empty")
+    trimmed = value.strip()
+    if len(trimmed) > 500:
+        raise SettingsValueError(key, "URL is too long")
+    return trimmed
+
+
+def _validate_selection_translation_lang(value: object) -> str:
+    return _validate_optional_language_name(SETTING_SELECTION_TRANSLATION_LANG, value)
 
 
 def _validate_autostop_silence_s(value: object) -> int:
@@ -259,6 +373,24 @@ def validate_settings_values(values: dict[str, object]) -> dict[str, object]:
             normalized[key] = _validate_autostop_silence_s(value)
         elif key == SETTING_LIVE_TRANSLATION_LANG:
             normalized[key] = _validate_live_translation_lang(value)
+        elif key == SETTING_SUMMARY_LANGUAGE:
+            normalized[key] = _validate_summary_language(value)
+        elif key == SETTING_SUMMARY_MODEL_ID:
+            normalized[key] = _validate_summary_model_id(value)
+        elif key == SETTING_SPEAKER_IDENTITY:
+            normalized[key] = _validate_speaker_identity(value)
+        elif key == SETTING_SPEAKER_VOICE_EMBEDDING:
+            normalized[key] = _validate_speaker_voice_embedding(value)
+        elif key == SETTING_DICTATION_CLEANUP_STYLE:
+            normalized[key] = _validate_cleanup_style(value)
+        elif key == SETTING_STT_ENGINE:
+            normalized[key] = _validate_stt_engine(value)
+        elif key == SETTING_STT_MODEL_ID:
+            normalized[key] = _validate_stt_model_id(value)
+        elif key == SETTING_STT_OPENAI_BASE_URL:
+            normalized[key] = _validate_stt_openai_base_url(value)
+        elif key == SETTING_SELECTION_TRANSLATION_LANG:
+            normalized[key] = _validate_selection_translation_lang(value)
     if not normalized:
         raise SettingsValueError("values", "no persistable settings in the update")
     return normalized

@@ -51,7 +51,13 @@ class EventCollector:
     async def on_partial(self, words: list[WordToken]) -> None:
         self.partials.append(list(words))
 
-    async def on_final(self, words: list[WordToken], t_open: float, t_close: float) -> None:
+    async def on_final(
+        self,
+        words: list[WordToken],
+        t_open: float,
+        t_close: float,
+        _segment_audio: npt.NDArray[np.float32] | None = None,
+    ) -> None:
         self.finals.append((list(words), t_open, t_close))
 
 

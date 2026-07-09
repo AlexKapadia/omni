@@ -93,13 +93,14 @@ fn resolve_engine_command() -> Command {
         // (see tauri.conf.json bundle.resources). If resolution fails we
         // still return a spawnable-looking command; the retry loop reports
         // the miss instead of the shell crashing.
+        let engine_binary = if cfg!(windows) { "omni-engine.exe" } else { "omni-engine" };
         let engine_path = std::env::current_exe()
             .ok()
             .and_then(|exe| {
                 exe.parent()
-                    .map(|dir| dir.join("omni-engine").join("omni-engine.exe"))
+                    .map(|dir| dir.join("omni-engine").join(engine_binary))
             })
-            .unwrap_or_else(|| PathBuf::from("omni-engine.exe"));
+            .unwrap_or_else(|| PathBuf::from(engine_binary));
         Command::new(engine_path)
     }
 }

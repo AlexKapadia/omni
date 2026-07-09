@@ -36,15 +36,16 @@ test("Library home has no serious/critical WCAG 2.2 AA violations", async ({ pag
 test("Settings has no serious/critical WCAG 2.2 AA violations", async ({ page }) => {
   await page.goto("/");
   await page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Settings" }).click();
-  await expect(page.getByRole("table", { name: "Routing policy" })).toBeVisible({ timeout: 20_000 });
+  // Settings loads on the Essentials tier; wait for a real settings-backed group.
+  await expect(page.getByRole("region", { name: "Your voice" })).toBeVisible({ timeout: 20_000 });
   const violations = await seriousViolations(page);
   expect(violations, JSON.stringify(violations.map((v) => v.id), null, 2)).toEqual([]);
 });
 
 test("Ask (answered) has no serious/critical WCAG 2.2 AA violations", async ({ page }) => {
   await page.goto("/");
-  await page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Ask Omni" }).click();
-  await page.getByRole("textbox", { name: "Ask Omni" }).fill("What did we agree on the Northwind renewal?");
+  await page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Ask" }).click();
+  await page.getByRole("textbox", { name: "Ask" }).fill("What did we agree on the Northwind renewal?");
   await page.keyboard.press("Enter");
   await expect(page.getByRole("article", { name: "Answer" })).toBeVisible({ timeout: 40_000 });
   const violations = await seriousViolations(page);

@@ -20,6 +20,20 @@ describe("parseTranscriptPartialPayload", () => {
     expect(parseTranscriptPartialPayload(VALID_PARTIAL)).toEqual(VALID_PARTIAL);
   });
 
+  it("accepts optional speaker_id and speaker_label", () => {
+    expect(
+      parseTranscriptPartialPayload({
+        ...VALID_PARTIAL,
+        speaker_id: "1",
+        speaker_label: "Speaker 1",
+      }),
+    ).toEqual({
+      ...VALID_PARTIAL,
+      speaker_id: "1",
+      speaker_label: "Speaker 1",
+    });
+  });
+
   it("accepts empty text (a partial can open with silence)", () => {
     expect(parseTranscriptPartialPayload({ ...VALID_PARTIAL, text: "" })).not.toBeNull();
   });
@@ -51,6 +65,20 @@ describe("parseTranscriptPartialPayload", () => {
 describe("parseTranscriptFinalPayload", () => {
   it("accepts the exact pinned shape, verbatim", () => {
     expect(parseTranscriptFinalPayload(VALID_FINAL)).toEqual(VALID_FINAL);
+  });
+
+  it("accepts optional speaker_id and speaker_label", () => {
+    expect(
+      parseTranscriptFinalPayload({
+        ...VALID_FINAL,
+        speaker_id: "2",
+        speaker_label: "Speaker 2",
+      }),
+    ).toEqual({
+      ...VALID_FINAL,
+      speaker_id: "2",
+      speaker_label: "Speaker 2",
+    });
   });
 
   it("accepts lag_ms of exactly 0 (boundary)", () => {

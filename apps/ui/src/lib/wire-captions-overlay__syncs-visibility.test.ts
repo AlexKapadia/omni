@@ -28,6 +28,10 @@ const baseSettings = {
   liveCaptionsOverlay: true,
   aecEnabled: false,
   liveTranslationLang: "",
+  summaryLanguage: "",
+  speakerIdentity: "Me",
+  speakerVoiceEnrolled: false,
+  summaryModelId: "gemini-2.5-flash",
 };
 
 describe("wireCaptionsOverlay", () => {

@@ -48,6 +48,12 @@ import {
   liveTranslationStore,
   type LiveTranslationStore,
 } from "./live-translation-store";
+import {
+  CALENDAR_UPCOMING_EVENT,
+  applyCalendarUpcoming,
+  calendarUpcomingStore,
+  type CalendarUpcomingStore,
+} from "./calendar-upcoming-store";
 import { CAPTURE_STARTED_EVENT_NAME } from "./capture-protocol";
 import { maybeAutoStartCaptureOnDetection } from "./auto-start-reaction";
 import {
@@ -75,6 +81,7 @@ export interface IntelligenceStores {
   readonly liveAnswers: LiveAnswersStore;
   readonly liveSummary: LiveSummaryStore;
   readonly liveTranslation: LiveTranslationStore;
+  readonly calendarUpcoming: CalendarUpcomingStore;
   readonly vaultSuggestions: VaultSuggestionsStore;
   readonly detection: MeetingDetectionStore;
   readonly finalize: MeetingFinalizeStore;
@@ -115,6 +122,8 @@ export function createIntelligenceFrameListener(
       applyVaultSuggestion(stores.vaultSuggestions, payload);
     } else if (name === TRANSLATION_UPDATED_EVENT_NAME) {
       applyTranslationUpdated(stores.liveTranslation, payload);
+    } else if (name === CALENDAR_UPCOMING_EVENT) {
+      applyCalendarUpcoming(stores.calendarUpcoming, payload);
     } else if (name === CAPTURE_STARTED_EVENT_NAME) {
       // A fresh meeting: hits belong to one meeting, the suggestion card is
       // consumed, and any previous finalize flow is over.
@@ -158,6 +167,7 @@ export function wireLiveIntelligence(
       liveAnswers: liveAnswersStore,
       liveSummary: liveSummaryStore,
       liveTranslation: liveTranslationStore,
+      calendarUpcoming: calendarUpcomingStore,
       vaultSuggestions: vaultSuggestionsStore,
       detection: meetingDetectionStore,
       finalize: meetingFinalizeStore,

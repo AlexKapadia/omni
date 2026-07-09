@@ -40,6 +40,15 @@ const READY: SettingsGetResult = {
     liveCaptionsOverlay: true,
     aecEnabled: false,
     liveTranslationLang: "",
+    summaryLanguage: "",
+    summaryModelId: "gemini-2.5-flash",
+    speakerIdentity: "Me",
+    speakerVoiceEnrolled: false,
+    dictationCleanupStyle: "classic",
+    sttEngine: "parakeet",
+    sttModelId: "",
+    sttOpenaiBaseUrl: "",
+    selectionTranslationLang: "English",
   },
   killSwitchEngaged: false,
   routing: [],
@@ -87,19 +96,28 @@ function renderScreen() {
   );
 }
 
-describe("instant-execute whitelist (deny by default)", () => {
-  it("every intent defaults OFF", () => {
+/** The whitelist, hotkey, and automation controls live under Advanced. */
+async function openAdvanced(): Promise<void> {
+  await act(async () => {
+    fireEvent.click(screen.getByRole("tab", { name: "Advanced" }));
+  });
+}
+
+describe("auto-run safe actions whitelist (deny by default)", () => {
+  it("every intent defaults OFF", async () => {
     renderScreen();
+    await openAdvanced();
     const whitelistToggles = screen
       .getAllByRole("switch")
-      .filter((t) => (t.getAttribute("aria-label") ?? "").startsWith("Instant execute"));
+      .filter((t) => (t.getAttribute("aria-label") ?? "").startsWith("Auto-run "));
     expect(whitelistToggles).toHaveLength(INSTANT_INTENT_TYPES.length);
     for (const t of whitelistToggles) expect(t.getAttribute("aria-checked")).toBe("false");
   });
 
   it("enabling one persists exactly that intent type", async () => {
     renderScreen();
-    const toggle = screen.getByRole("switch", { name: "Instant execute Create calendar events" });
+    await openAdvanced();
+    const toggle = screen.getByRole("switch", { name: "Auto-run Create calendar events" });
     await act(async () => fireEvent.click(toggle));
     expect(updates).toContainEqual({ instantExecuteWhitelist: ["create_event"] });
     expect(toggle.getAttribute("aria-checked")).toBe("true");
@@ -111,6 +129,7 @@ describe("instant-execute whitelist (deny by default)", () => {
 describe("hotkey capture", () => {
   it("records a real combination and persists push_to_talk_hotkey", async () => {
     renderScreen();
+    await openAdvanced();
     expect(screen.getByText("Ctrl")).toBeTruthy();
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Change" })));
     const cancel = screen.getByRole("button", { name: "Cancel" });

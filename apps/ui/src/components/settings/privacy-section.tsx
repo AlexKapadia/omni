@@ -1,8 +1,9 @@
 /**
  * Settings — Privacy group card, wired to the REAL settings.update command.
  *
- * keep-audio defaults OFF (audio discarded after transcription — the
- * local-only invariant); the kill switch halts every external call and its
+ * keep-audio defaults ON (recordings are saved as MP3 on this device
+ * alongside the transcript; still local-only — nothing is uploaded); the user
+ * can opt out here. The kill switch halts every external call and its
  * sub-caption reflects the engine's live engaged state. Each toggle updates
  * optimistically and reverts with an honest message if the engine refuses.
  */
@@ -20,7 +21,7 @@ export function PrivacySection({
   readonly store: SettingsStore;
   readonly update: SettingsUpdater;
 }) {
-  const keepAudio = useStore(store, (s) => s.settings?.keepAudio ?? false);
+  const keepAudio = useStore(store, (s) => s.settings?.keepAudio ?? true);
   const disclosureReminder = useStore(store, (s) => s.settings?.disclosureReminder ?? false);
   const killSwitch = useStore(store, (s) => s.settings?.killSwitch ?? false);
   const killSwitchEngaged = useStore(store, (s) => s.killSwitchEngaged);
@@ -37,7 +38,7 @@ export function PrivacySection({
         title="Keep audio after transcription"
         subCaption={
           keepAudio
-            ? "recordings stay on this device until you delete them"
+            ? "recordings are saved as MP3 on this device until you delete them"
             : "off: audio is discarded the moment transcription completes"
         }
       >
@@ -58,18 +59,18 @@ export function PrivacySection({
         />
       </SettingsRow>
       <SettingsRow
-        title="Kill switch"
+        title="Pause all cloud AI"
         subCaption={
           killSwitchEngaged
-            ? "engaged: every external model call is refused"
-            : "halts every external model call — capture and notes keep working on-device"
+            ? "paused: every cloud AI request is refused right now"
+            : "stops every cloud AI request — capture and notes keep working on this device"
         }
         last={error === null}
       >
         <ToggleSwitch
           checked={killSwitch}
           onChange={(next) => void apply({ killSwitch: next })}
-          label="Kill switch"
+          label="Pause all cloud AI"
         />
       </SettingsRow>
       {error !== null && (

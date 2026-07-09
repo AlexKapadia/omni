@@ -15,6 +15,7 @@ import {
   LEDGER_SUMMARY_COMMAND,
   MODELS_DOWNLOAD_COMMAND,
   GOOGLE_CONNECT_COMMAND,
+  MICROSOFT_CONNECT_COMMAND,
   SETTINGS_GET_COMMAND,
   SETTINGS_UPDATE_COMMAND,
   SETUP_STATUS_COMMAND,
@@ -132,4 +133,16 @@ export async function connectGoogle(
       ? { client_id: credentials.clientId.trim(), client_secret: credentials.clientSecret.trim() }
       : {};
   await request(GOOGLE_CONNECT_COMMAND, payload, READ_TIMEOUT_MS);
+}
+
+/** Begin the Microsoft OAuth connect; completion arrives as an event. */
+export async function connectMicrosoft(
+  request: SetupRequestFn = requestSetupCommand,
+  credentials?: { readonly clientId: string; readonly clientSecret: string },
+): Promise<void> {
+  const payload =
+    credentials !== undefined
+      ? { client_id: credentials.clientId.trim(), client_secret: credentials.clientSecret.trim() }
+      : {};
+  await request(MICROSOFT_CONNECT_COMMAND, payload, READ_TIMEOUT_MS);
 }

@@ -15,6 +15,7 @@ import { sendEngineEnvelope, subscribeToEngineFrames } from "./live-engine-socke
 import { makeCommand, parseInboundMessage, type Envelope } from "./protocol";
 import {
   GOOGLE_CONNECT_COMPLETED_EVENT,
+  MICROSOFT_CONNECT_COMPLETED_EVENT,
   MODELS_DOWNLOAD_COMPLETED_EVENT,
   MODELS_DOWNLOAD_FAILED_EVENT,
   MODELS_DOWNLOAD_PROGRESS_EVENT,
@@ -136,6 +137,20 @@ export function subscribeToGoogleConnect(
     const parsed = parseInboundMessage(data);
     if (!parsed.ok || parsed.envelope.kind !== "event") return;
     if (parsed.envelope.name !== GOOGLE_CONNECT_COMPLETED_EVENT) return;
+    const completed = parseGoogleCompleted(parsed.envelope.payload);
+    if (completed !== null) onCompleted(completed);
+  });
+}
+
+/** Subscribe to the single microsoft.connect.completed event. */
+export function subscribeToMicrosoftConnect(
+  onCompleted: (completed: GoogleConnectCompleted) => void,
+  socket: EngineSocketTransport = liveSocket,
+): () => void {
+  return socket.subscribeFrames((data) => {
+    const parsed = parseInboundMessage(data);
+    if (!parsed.ok || parsed.envelope.kind !== "event") return;
+    if (parsed.envelope.name !== MICROSOFT_CONNECT_COMPLETED_EVENT) return;
     const completed = parseGoogleCompleted(parsed.envelope.payload);
     if (completed !== null) onCompleted(completed);
   });

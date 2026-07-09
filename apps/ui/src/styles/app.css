@@ -22,6 +22,15 @@ body {
   overflow: hidden; /* desktop shell: panes scroll internally, never the window */
 }
 
+/* a11y (WCAG 2.2 — 2.4.7 focus visible): one consistent keyboard-focus ring
+ * across the app, in the accent. Only on :focus-visible so pointer clicks stay
+ * quiet. Components may override placement, not remove it. */
+:focus-visible {
+  outline: 2px solid var(--focus-ring);
+  outline-offset: 2px;
+  border-radius: var(--track-radius);
+}
+
 /* Token-driven animation utilities. Keyframes live in tokens.css (design-agent
  * owned); these classes only bind them to elements with token durations.
  * Both freeze under the prefers-reduced-motion rule below. */
@@ -46,6 +55,51 @@ body {
   /* 1.6s is quoted from the design reference (tokens.css usage note); no
    * --dur-shimmer token exists yet — value pinned to the doc, not invented. */
   animation: omniShimmer 1.6s linear infinite;
+}
+
+
+/* Unified text input base */
+.omni-input {
+  height: var(--control-height);
+  padding: 0 var(--control-padding-x);
+  border: 1px solid var(--grey-300);
+  border-radius: var(--radius-control);
+  background: var(--surface); /* Daylight: inputs are raised paper, not the tinted canvas beneath them */
+  color: var(--ink);
+  font-family: var(--font-body);
+  font-size: var(--text-body-size);
+  line-height: var(--text-body-lh);
+  outline: none;
+  transition: border-color var(--dur-micro) var(--ease-out);
+}
+.omni-input::placeholder { color: var(--ink-secondary); }
+.omni-input:hover { border-color: var(--grey-600); }
+.omni-input:focus-visible {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-muted);
+}
+
+/* Progress track */
+.omni-progress-track {
+  height: var(--track-height);
+  background: var(--track-bg);
+  border-radius: var(--track-radius);
+  overflow: hidden;
+}
+.omni-progress-fill {
+  height: 100%;
+  width: 100%;
+  background: var(--track-fill);
+  border-radius: var(--track-radius);
+  transform-origin: left;
+  transition: transform var(--dur-page) var(--ease-out);
+}
+
+/* Section divider */
+.omni-section-divider {
+  border: none;
+  border-top: 1px solid var(--grey-200);
+  margin: var(--space-8) 0;
 }
 
 /* Accessibility: never animate for users who asked not to be animated.

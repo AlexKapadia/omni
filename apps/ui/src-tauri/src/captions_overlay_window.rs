@@ -25,7 +25,7 @@ pub fn setup_captions_overlay(app: &AppHandle) -> tauri::Result<()> {
         CAPTIONS_WINDOW_LABEL,
         WebviewUrl::App("captions.html".into()),
     )
-    .title("Omni Captions")
+    .title("Omni Steroid Captions")
     .inner_size(CAPTIONS_WIDTH, CAPTIONS_HEIGHT)
     .decorations(false)
     .transparent(true)

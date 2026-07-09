@@ -178,14 +178,22 @@ downloads, verifies, installs; emits progress) and `updater_restart_app`.
 1. Bump the version in `apps/ui/src-tauri/tauri.conf.json` **and**
    `pyproject.toml` **and** `packaging/omni-engine-version-info.txt`.
 2. `git tag v<version> && git push origin v<version>`.
-3. `.github/workflows/release.yml` (windows-latest) then: verifies the
-   tag matches the app version → builds the lean sidecar → **boot-tests
-   `/health` for real** → builds + signs the NSIS/MSI bundles
-   (tauri-action) → creates a **draft** GitHub Release with the
-   installers, their `.sig` files, and the `latest.json` updater manifest.
+3. `.github/workflows/release.yml` runs a **matrix** on `windows-latest`,
+   `macos-latest`, and `ubuntu-latest`: verifies the tag matches the app
+   version → builds the lean sidecar → **boot-tests `/health` for real** →
+   builds + signs platform bundles (NSIS/MSI on Windows; DMG/app on macOS;
+   deb/AppImage on Linux via tauri-action) → creates a **draft** GitHub Release
+   with installers, `.sig` files, and the `latest.json` updater manifest.
 4. Inspect the draft, then **publish** — publishing is what makes
    `releases/latest/download/latest.json` live, which is when installed
    apps start updating.
+
+### STT runtime on macOS/Linux
+
+Windows uses `stt-runtime/install-stt-runtime.ps1`. macOS and Linux use
+`packaging/install-stt-runtime.sh` with the same locked requirements
+exported from `uv.lock`. The private venv lands under the platform
+equivalent of `%LOCALAPPDATA%\Omni\pyenv`.
 
 ### One-time repo secret setup (manual — an agent must never do this)
 
@@ -219,7 +227,9 @@ The key has an empty password (generated with `--ci`), so
 
 ## 7. What a contributor needs
 
-- Windows 10/11, `uv`, Node 22 + pnpm 10, Rust stable (MSVC), WebView2.
+- **Windows 10/11** (full capture), or **macOS / Linux** for shell + mic work
+  (loopback may need BlackHole or PipeWire monitor).
+- `uv`, Node 22 + pnpm 10, Rust stable (MSVC on Windows), WebView2 (Windows).
 - No secrets: dev builds run unsigned locally (set
   `TAURI_SIGNING_PRIVATE_KEY` only when you need updater artifacts,
   or generate your own key with `pnpm tauri signer generate --ci -w <path>`).

@@ -23,6 +23,7 @@ export type CaptureStatus = "idle" | "starting" | "live" | "stopping" | "stopped
 
 export interface TranscriptSegment {
   readonly stream: StreamLabel;
+  readonly speakerLabel: string;
   readonly text: string;
   readonly tStart: number;
   readonly tEnd: number;
@@ -33,6 +34,7 @@ export interface TranscriptSegment {
 
 export interface TranscriptPartial {
   readonly stream: StreamLabel;
+  readonly speakerLabel: string;
   readonly text: string;
   readonly tStart: number;
   readonly tEnd: number;
@@ -92,12 +94,19 @@ function displayOrder(a: TranscriptSegment, b: TranscriptSegment): number {
   return a.stream < b.stream ? -1 : a.stream > b.stream ? 1 : 0;
 }
 
+function defaultSpeakerLabel(stream: StreamLabel, payload: TranscriptPartialPayload): string {
+  if (payload.speaker_label !== undefined && payload.speaker_label.length > 0) {
+    return payload.speaker_label;
+  }
+  return stream === "me" ? "Me" : "Them";
+}
+
 export function applyTranscriptFinal(store: TranscriptStore, payload: TranscriptFinalPayload): void {
   store.setState((state) => {
-    // Replay defence: a segment_id already rendered must never duplicate.
     if (state.segments.some((s) => s.segmentId === payload.segment_id)) return state;
     const segment: TranscriptSegment = {
       stream: payload.stream,
+      speakerLabel: defaultSpeakerLabel(payload.stream, payload),
       text: payload.text,
       tStart: payload.t_start,
       tEnd: payload.t_end,
@@ -132,6 +141,7 @@ export function applyTranscriptPartial(
     if (existing !== null && existing.seq > payload.seq) return state;
     const partial: TranscriptPartial = {
       stream: payload.stream,
+      speakerLabel: defaultSpeakerLabel(payload.stream, payload),
       text: payload.text,
       tStart: payload.t_start,
       tEnd: payload.t_end,

@@ -10,6 +10,7 @@ written during drain and finalised on stop.
 
 import asyncio
 import contextlib
+import shutil
 import time
 from collections.abc import Callable
 from pathlib import Path
@@ -293,13 +294,21 @@ async def test_keep_audio_written_during_session_and_closed_on_stop(
 
     t = time.monotonic()
     _push_audio(backend.handles[StreamLabel.ME], 1.0, 0.5, t)
+    # WAV is streamed during capture (crash-safe append) before close transcodes.
     await _wait_until(lambda: (audio_dir / meeting_id / "me.wav").is_file())
     await service.stop()
 
-    # Finalised on stop: recorder released and a real, playable WAV on disk.
+    # Finalised on stop: recorder released; the retained copy is MP3 when ffmpeg
+    # is available (WAV removed), else the WAV survives fail-soft.
     assert _has_recorder(service) is False
-    me_wav = audio_dir / meeting_id / "me.wav"
-    with wave.open(str(me_wav), "rb") as handle:
-        assert handle.getnchannels() == 1
-        assert handle.getsampwidth() == 2
-        assert handle.getnframes() > 0  # frames actually landed via the drain loop
+    session_dir = audio_dir / meeting_id
+    if shutil.which("ffmpeg") is not None:
+        me_mp3 = session_dir / "me.mp3"
+        assert me_mp3.is_file() and me_mp3.stat().st_size > 0
+        assert not (session_dir / "me.wav").exists()  # transcoded and removed
+    else:
+        me_wav = session_dir / "me.wav"
+        with wave.open(str(me_wav), "rb") as handle:
+            assert handle.getnchannels() == 1
+            assert handle.getsampwidth() == 2
+            assert handle.getnframes() > 0  # frames actually landed via the drain loop

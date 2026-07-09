@@ -68,14 +68,25 @@ def build_capture_device_changed_payload(device_name: str, recovered_ms: float) 
 
 
 def build_transcript_partial_payload(
-    stream: str, text: str, t_start: float, t_end: float, seq: int
+    stream: str,
+    text: str,
+    t_start: float,
+    t_end: float,
+    seq: int,
+    *,
+    speaker_id: str,
+    speaker_label: str,
 ) -> dict[str, Any]:
-    """``transcript.partial``: live in-progress text for one open segment.
-
-    ``t_start``/``t_end`` are seconds from meeting start; ``seq`` orders
-    events per stream so the UI can drop stale partials.
-    """
-    return {"stream": stream, "text": text, "t_start": t_start, "t_end": t_end, "seq": seq}
+    """``transcript.partial``: live in-progress text for one open segment."""
+    return {
+        "stream": stream,
+        "text": text,
+        "t_start": t_start,
+        "t_end": t_end,
+        "seq": seq,
+        "speaker_id": speaker_id,
+        "speaker_label": speaker_label,
+    }
 
 
 def build_transcript_final_payload(
@@ -86,12 +97,11 @@ def build_transcript_final_payload(
     seq: int,
     segment_id: str,
     lag_ms: float,
+    *,
+    speaker_id: str,
+    speaker_label: str,
 ) -> dict[str, Any]:
-    """``transcript.final``: one persisted segment, verbatim model text.
-
-    ``segment_id`` matches the ``transcript_segments`` DB row; ``lag_ms``
-    is audio-end -> emit latency (performance instrumentation mandate).
-    """
+    """``transcript.final``: one persisted segment, verbatim model text."""
     return {
         "stream": stream,
         "text": text,
@@ -100,4 +110,6 @@ def build_transcript_final_payload(
         "seq": seq,
         "segment_id": segment_id,
         "lag_ms": lag_ms,
+        "speaker_id": speaker_id,
+        "speaker_label": speaker_label,
     }

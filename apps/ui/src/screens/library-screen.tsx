@@ -9,9 +9,14 @@
  * empty, and populated with a separate no-matches state for a live query.
  */
 import { useEffect, useMemo, useState } from "react";
+import { useStore } from "zustand";
+import { Search } from "lucide-react";
 import { OmniButton } from "../components/button";
+import { ToggleSwitch } from "../components/toggle-switch";
+import { OmniMark } from "../components/omni-mark";
 import { SectionLabel } from "../components/section-label";
 import { SkeletonShimmer } from "../components/skeleton-shimmer";
+import { calendarUpcomingStore } from "../lib/calendar-upcoming-store";
 import {
   formatClockShort,
   formatDayLabel,
@@ -45,6 +50,7 @@ import {
   type DetailLoader,
   type MeetingFinalizer,
 } from "./library-meeting-detail-pane";
+import { wireLibraryDragDrop } from "../lib/wire-library-drag-drop";
 
 /** LIVE engine repository (meetings.list over the WS protocol). */
 const defaultRepository: MeetingsRepository = createLiveMeetingsRepository();
@@ -66,7 +72,7 @@ function MeetingRow({
         type="button"
         aria-label={`Open ${meeting.title}`}
         onClick={() => onOpen(meeting.id)}
-        className="grid w-full cursor-pointer items-baseline border-0 border-t border-solid border-[var(--grey-200)] bg-transparent text-left hover:bg-[var(--grey-50)]"
+        className="grid w-full cursor-pointer items-baseline border-0 border-t border-solid border-[var(--grey-200)] bg-transparent text-left hover:bg-[var(--grey-50)] hover:translate-x-[2px] hover:shadow-[var(--shadow-float)]"
         // Doc row spec: 88px | 1fr | 120px, gap 24, padding 18px 16px, -16px bleed.
         style={{
           gridTemplateColumns: "88px 1fr 120px",
@@ -75,6 +81,7 @@ function MeetingRow({
           margin: "0 -16px",
           width: "calc(100% + 32px)",
           borderRadius: "var(--radius-control)",
+          transition: "transform var(--dur-micro) var(--ease-out), background-color var(--dur-micro) var(--ease-out), box-shadow var(--dur-micro) var(--ease-out)",
         }}
       >
         <span
@@ -123,6 +130,8 @@ export function LibraryScreen({
   const engineStatus = useEngineStatus((s) => s.status);
   const [importBusy, setImportBusy] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [identifySpeakers, setIdentifySpeakers] = useState(false);
+  const upcomingCalendar = useStore(calendarUpcomingStore, (s) => s.latest);
 
   useEffect(() => {
     // Load once per app session (mount-only by design); the error state's
@@ -144,6 +153,12 @@ export function LibraryScreen({
       void loadMeetings(meetingsStore, repository);
     }
   }, [engineStatus, repository]);
+
+  useEffect(() => {
+    return wireLibraryDragDrop(() => {
+      void loadMeetings(meetingsStore, repository);
+    });
+  }, [repository]);
 
   const visible = useMemo(() => filterMeetings(meetings, query), [meetings, query]);
   const groups = useMemo(() => {
@@ -167,7 +182,9 @@ export function LibraryScreen({
     if (path === null) return;
     setImportBusy(true);
     try {
-      const meetingId = await importMediaFile(path);
+      const meetingId = await importMediaFile(path, undefined, {
+        identifySpeakers,
+      });
       await loadMeetings(meetingsStore, repository);
       openDetail(meetingId);
     } catch (err) {
@@ -190,7 +207,7 @@ export function LibraryScreen({
               letterSpacing: "var(--text-title-ls)",
             }}
           >
-            Library
+            Meetings
           </h1>
           {status === "ready" && meetings.length > 0 && (
             <span
@@ -201,13 +218,23 @@ export function LibraryScreen({
             </span>
           )}
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-col items-end gap-2">
+          <div className="flex items-center gap-2 text-sm text-[var(--ink-secondary)]">
+            <ToggleSwitch
+              checked={identifySpeakers}
+              onChange={setIdentifySpeakers}
+              label="Identify speakers"
+            />
+            <span>Identify speakers (slower)</span>
+          </div>
+          <div className="flex gap-2">
           <OmniButton variant="secondary" disabled={importBusy} onClick={() => void importMedia()}>
             {importBusy ? "Importing…" : "Import media"}
           </OmniButton>
           <OmniButton variant="primary" onClick={onStartCapture}>
-            Start capture
+            Record a meeting
           </OmniButton>
+          </div>
         </div>
       </header>
       {importMessage !== null && (
@@ -215,20 +242,37 @@ export function LibraryScreen({
           {importMessage}
         </p>
       )}
+      {upcomingCalendar !== null && (
+        <p
+          role="status"
+          className="m-0 mt-[var(--space-2)] text-[var(--ink-secondary)]"
+          style={{ fontSize: 13 }}
+        >
+          Upcoming ({upcomingCalendar.provider}): {upcomingCalendar.title} —{" "}
+          {formatStartsIn(upcomingCalendar.startIso) ?? upcomingCalendar.startIso}
+        </p>
+      )}
 
-      <div className="mt-[var(--space-6)]">
+      <div className="relative mt-[var(--space-6)]" style={{ width: 240 }}>
+        <Search
+          className="absolute text-[var(--ink-secondary)] pointer-events-none"
+          style={{
+            left: 12,
+            top: "50%",
+            transform: "translateY(-50%)",
+            width: 16,
+            height: 16,
+          }}
+        />
         <input
           type="search"
           aria-label="Search meetings"
           placeholder="Search meetings"
           value={query}
           onChange={(event) => setMeetingsQuery(meetingsStore, event.target.value)}
-          className="border border-[var(--grey-300)] bg-transparent text-[var(--ink)] outline-none placeholder:text-[var(--ink-secondary)] focus:border-[var(--ink)]"
+          className="omni-input w-full"
           style={{
-            borderRadius: "var(--radius-control)",
-            padding: "9px 14px",
-            fontSize: "var(--text-body-size)",
-            width: 240,
+            paddingLeft: 36,
           }}
         />
       </div>
@@ -255,6 +299,9 @@ export function LibraryScreen({
 
         {status === "ready" && meetings.length === 0 && (
           <div className="flex max-w-md flex-col items-start gap-[var(--space-3)]">
+            <div style={{ opacity: 0.15, marginBottom: "var(--space-2)" }}>
+              <OmniMark size={48} />
+            </div>
             <h2
               className="m-0 font-[family-name:var(--font-display)] font-semibold text-[var(--ink)]"
               style={{ fontSize: "var(--text-section-size)", letterSpacing: "var(--text-section-ls)" }}
@@ -266,7 +313,7 @@ export function LibraryScreen({
               and your notes. No bot joins your calls — audio is captured on this machine only.
             </p>
             <OmniButton variant="secondary" onClick={onStartCapture}>
-              Start capture
+              Record a meeting
             </OmniButton>
           </div>
         )}
@@ -280,7 +327,7 @@ export function LibraryScreen({
         {status === "ready" &&
           groups.map(([dayLabel, rows]) => (
             <section key={dayLabel} aria-label={dayLabel}>
-              <div style={{ padding: "40px 0 16px" }}>
+              <div style={{ padding: "var(--space-10) 0 var(--space-4)" }}>
                 <SectionLabel>{dayLabel}</SectionLabel>
               </div>
               <ul className="m-0 p-0">

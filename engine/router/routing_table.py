@@ -25,6 +25,9 @@ GEMINI_PRO_MODEL = "gemini-2.5-pro"
 ANTHROPIC_MODEL = "claude-sonnet-4-5"
 OPENAI_MINI_MODEL = "gpt-4o-mini"
 OLLAMA_DEFAULT_MODEL = "llama3.2"
+OPENROUTER_DEFAULT_MODEL = "openai/gpt-4o-mini"
+AZURE_OPENAI_DEFAULT_MODEL = "gpt-4o-mini"
+LMSTUDIO_DEFAULT_MODEL = "local-model"
 
 
 @dataclass(frozen=True)
@@ -50,6 +53,9 @@ _GEMINI_FLASH = ProviderModelSlot(Provider.GEMINI, GEMINI_FLASH_MODEL)
 _GEMINI_PRO = ProviderModelSlot(Provider.GEMINI, GEMINI_PRO_MODEL)
 _OPENAI_MINI = ProviderModelSlot(Provider.OPENAI, OPENAI_MINI_MODEL)
 _OLLAMA_DEFAULT = ProviderModelSlot(Provider.OLLAMA, OLLAMA_DEFAULT_MODEL)
+_OPENROUTER_DEFAULT = ProviderModelSlot(Provider.OPENROUTER, OPENROUTER_DEFAULT_MODEL)
+_AZURE_DEFAULT = ProviderModelSlot(Provider.AZURE_OPENAI, AZURE_OPENAI_DEFAULT_MODEL)
+_LMSTUDIO_DEFAULT = ProviderModelSlot(Provider.LM_STUDIO, LMSTUDIO_DEFAULT_MODEL)
 
 
 @dataclass(frozen=True)
@@ -95,7 +101,7 @@ ROUTING_TABLE: dict[TaskType, RouteSpec] = {
     ),
     TaskType.ASK_SYNTHESIS: RouteSpec(
         primary=AnthropicIfKeyedSlot(otherwise=_GEMINI_FLASH),
-        fallbacks=(_GEMINI_FLASH, _GEMINI_PRO, _OPENAI_MINI, _OLLAMA_DEFAULT),
+        fallbacks=(_GEMINI_FLASH, _GEMINI_PRO, _OPENAI_MINI, _OPENROUTER_DEFAULT, _AZURE_DEFAULT, _OLLAMA_DEFAULT, _LMSTUDIO_DEFAULT),
         latency_budget_p95_ms=3_500,  # interactive Q&A
     ),
     TaskType.LONG_CONTEXT_BULK: RouteSpec(

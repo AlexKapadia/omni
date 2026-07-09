@@ -7,8 +7,8 @@
  * Layout per components doc §04: height 64, top hairline, padding 0 32px,
  * gap 24; Stop is a secondary button pushed right.
  */
-import { BreathingRing } from "../breathing-ring";
 import { OmniButton } from "../button";
+import { RecordingIndicator } from "./recording-indicator";
 import { formatMeetingClock, useTranscript } from "../../lib/transcript-store";
 import { requestCaptureStop } from "../../lib/capture-commands";
 
@@ -35,7 +35,15 @@ export function CaptureBar({ elapsedSeconds }: { readonly elapsedSeconds: number
       className="flex shrink-0 items-center border-t border-[var(--grey-200)]"
       style={{ height: 64, padding: "0 32px", gap: "var(--space-6)" }}
     >
-      <BreathingRing size={12} breathing={isLive} />
+      <RecordingIndicator live={isLive} />
+      {isLive && (
+        <span
+          className="font-[family-name:var(--font-label)] font-medium text-[var(--live-strong)]"
+          style={{ fontSize: "var(--text-meta-size)" }}
+        >
+          Recording
+        </span>
+      )}
       <span
         className="font-[family-name:var(--font-mono)] text-[var(--ink)]"
         style={{ fontSize: "var(--text-transcript-size)" }} // doc: timer mono 13px

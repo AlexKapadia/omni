@@ -5,7 +5,7 @@
  * notepad typing into the store, and the stopped/error end states.
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { LiveMeetingScreen } from "./live-meeting-screen";
 import { engineStatusStore, INITIAL_ENGINE_STATUS } from "../lib/engine-status-store";
 import {
@@ -105,6 +105,29 @@ describe("live state", () => {
       target: { value: "- ask about pricing\n- July start" },
     });
     expect(notepadStore.getState().text).toBe("- ask about pricing\n- July start");
+  });
+
+  it("the notes drawer is a REAL toggle: it folds away the notepad and unfolds it", async () => {
+    goLive();
+    render(<LiveMeetingScreen />);
+    // Notes default OPEN (primary writing surface): the textbox is present.
+    const toggle = screen.getByRole("button", { name: /Live meeting/ });
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("textbox", { name: "Notepad" })).toBeTruthy();
+    // Collapse actually removes the notepad — not a decorative chevron.
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+    expect(toggle.getAttribute("aria-expanded")).toBe("false");
+    await waitFor(() =>
+      expect(screen.queryByRole("textbox", { name: "Notepad" })).toBeNull(),
+    );
+    // Expand restores it, verbatim buffer intact behind the store.
+    await act(async () => {
+      fireEvent.click(toggle);
+    });
+    expect(toggle.getAttribute("aria-expanded")).toBe("true");
+    expect(screen.getByRole("textbox", { name: "Notepad" })).toBeTruthy();
   });
 
   it("Stop capture over a dead socket fails closed with the offline message", () => {

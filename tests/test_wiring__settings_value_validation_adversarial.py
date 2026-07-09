@@ -266,10 +266,24 @@ def test_custom_templates_rejects_more_than_20() -> None:
     assert err.reason == "at most 20 custom templates"
 
 
-def test_custom_templates_rejects_non_dict_entry() -> None:
+def test_custom_templates_accepts_string_entry_and_normalises() -> None:
+    out = validate_settings_values({SETTING_CUSTOM_TEMPLATES: ["My Notes"]})
+    stored = out[SETTING_CUSTOM_TEMPLATES]
+    assert isinstance(stored, list)
+    assert stored[0]["template_id"] == "my_notes"
+    assert stored[0]["display_name"] == "My Notes"
+
+
+def test_custom_templates_rejects_empty_string_entry() -> None:
     assert (
-        _refused({SETTING_CUSTOM_TEMPLATES: ["not-a-dict"]}).reason
-        == "each template must be an object"
+        _refused({SETTING_CUSTOM_TEMPLATES: ["  "]}).reason == "template name cannot be empty"
+    )
+
+
+def test_custom_templates_rejects_invalid_entry_type() -> None:
+    assert (
+        _refused({SETTING_CUSTOM_TEMPLATES: [1]}).reason
+        == "each template must be a string or object"
     )
 
 

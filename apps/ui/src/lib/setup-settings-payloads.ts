@@ -26,7 +26,7 @@ export interface EngineSettings {
   /** Absolute vault path, or null until the user picks one in onboarding. */
   readonly vaultDir: string | null;
   readonly pushToTalkHotkey: readonly string[];
-  readonly keepAudio: boolean; // default false — discard after transcription
+  readonly keepAudio: boolean; // default true — keep recordings as MP3 on-device
   readonly disclosureReminder: boolean;
   readonly killSwitch: boolean; // the user's setting (engaged state is separate)
   readonly instantExecuteWhitelist: readonly InstantIntentType[];
@@ -43,6 +43,17 @@ export interface EngineSettings {
   readonly aecEnabled: boolean;
   /** Target language for live translation (empty disables). */
   readonly liveTranslationLang: string;
+  /** Language for enhanced meeting notes (empty = English). */
+  readonly summaryLanguage: string;
+  /** Display name for your microphone lines in transcripts. */
+  readonly speakerIdentity: string;
+  readonly speakerVoiceEnrolled: boolean;
+  readonly dictationCleanupStyle: "classic" | "business" | "tech";
+  readonly sttEngine: "parakeet" | "whisper" | "openai_compatible";
+  readonly sttModelId: string;
+  readonly sttOpenaiBaseUrl: string;
+  readonly selectionTranslationLang: string;
+  readonly summaryModelId: string;
 }
 
 export interface RoutingAttempt {
@@ -108,6 +119,25 @@ function parseStringArray(value: unknown): readonly string[] | null {
   return out;
 }
 
+function parseCustomTemplates(value: unknown): readonly string[] | null {
+  if (!Array.isArray(value)) return null;
+  const out: string[] = [];
+  for (const item of value) {
+    if (typeof item === "string") {
+      const trimmed = item.trim();
+      if (!trimmed) return null;
+      out.push(trimmed);
+      continue;
+    }
+    if (!isPlainObject(item)) return null;
+    const name =
+      asNonEmptyString(item["display_name"]) ?? asNonEmptyString(item["template_id"]);
+    if (name === null) return null;
+    out.push(name);
+  }
+  return out;
+}
+
 function parseEngineSettings(value: unknown): EngineSettings | null {
   if (!isPlainObject(value)) return null;
   const vaultDir = value["vault_dir"] === null ? null : asNonEmptyString(value["vault_dir"]);
@@ -118,7 +148,7 @@ function parseEngineSettings(value: unknown): EngineSettings | null {
   const killSwitch = asBoolean(value["kill_switch"]);
   const whitelist = parseWhitelist(value["instant_execute_whitelist"]);
   const activeTemplate = asString(value["active_template"]);
-  const customTemplates = parseStringArray(value["custom_templates"]);
+  const customTemplates = parseCustomTemplates(value["custom_templates"]);
   const onboardingComplete = asBoolean(value["onboarding_complete"]);
   const detectionAutoStartSources =
     parseStringArray(value["detection_auto_start_sources"]) ?? [];
@@ -126,11 +156,39 @@ function parseEngineSettings(value: unknown): EngineSettings | null {
   const liveCaptionsOverlay = asBoolean(value["live_captions_overlay"]);
   const aecEnabled = asBoolean(value["aec_enabled"]);
   const liveTranslationLang = asString(value["live_translation_lang"]);
+  const summaryLanguage = asString(value["summary_language"]);
+  const speakerIdentity = asString(value["speaker_identity"]);
+  const speakerVoiceEnrolled = asBoolean(value["speaker_voice_enrolled"]);
+  const dictationCleanupStyle =
+    asString(value["dictation_cleanup_style"]) ?? "classic";
+  const sttEngine = asString(value["stt_engine"]) ?? "parakeet";
+  const sttModelId = asString(value["stt_model_id"]) ?? "";
+  const sttOpenaiBaseUrl = asString(value["stt_openai_base_url"]) ?? "";
+  const selectionTranslationLang = asString(value["selection_translation_lang"]) ?? "English";
+  const summaryModelId = asString(value["summary_model_id"]) ?? "gemini-2.5-flash";
   if (hotkey === null || keepAudio === null || disclosureReminder === null) return null;
   if (killSwitch === null || whitelist === null || activeTemplate === null) return null;
   if (customTemplates === null || onboardingComplete === null) return null;
   if (autostopSilenceS === null || liveCaptionsOverlay === null) return null;
-  if (aecEnabled === null || liveTranslationLang === null) return null;
+  if (aecEnabled === null || liveTranslationLang === null || summaryLanguage === null) return null;
+  if (speakerIdentity === null || speakerVoiceEnrolled === null) return null;
+  if (
+    dictationCleanupStyle !== "classic" &&
+    dictationCleanupStyle !== "business" &&
+    dictationCleanupStyle !== "tech"
+  ) {
+    return null;
+  }
+  if (
+    sttEngine !== "parakeet" &&
+    sttEngine !== "whisper" &&
+    sttEngine !== "openai_compatible"
+  ) {
+    return null;
+  }
+  if (sttModelId === null || sttOpenaiBaseUrl === null || selectionTranslationLang === null) {
+    return null;
+  }
   return {
     vaultDir,
     pushToTalkHotkey: hotkey,
@@ -146,6 +204,15 @@ function parseEngineSettings(value: unknown): EngineSettings | null {
     liveCaptionsOverlay,
     aecEnabled,
     liveTranslationLang,
+    summaryLanguage,
+    speakerIdentity,
+    speakerVoiceEnrolled,
+    dictationCleanupStyle,
+    sttEngine,
+    sttModelId,
+    sttOpenaiBaseUrl,
+    selectionTranslationLang,
+    summaryModelId,
   };
 }
 
@@ -225,6 +292,7 @@ export interface SetupStatus {
   readonly vault: { readonly configured: boolean; readonly path: string | null };
   readonly models: readonly SetupModelStatus[];
   readonly googleConnected: boolean;
+  readonly microsoftConnected: boolean;
   readonly onboardingComplete: boolean;
   readonly setupComplete: boolean;
 }
@@ -234,9 +302,30 @@ function parseKeyFlags(value: unknown): Readonly<Record<KeyProvider, boolean>> |
   const groq = asBoolean(value["groq"]);
   const gemini = asBoolean(value["gemini"]);
   const anthropic = asBoolean(value["anthropic"]);
+  const openai = asBoolean(value["openai"]);
+  const openrouter = asBoolean(value["openrouter"]);
+  const azureOpenai = asBoolean(value["azure_openai"]);
   const cartesia = asBoolean(value["cartesia"]);
-  if (groq === null || gemini === null || anthropic === null || cartesia === null) return null;
-  return { groq, gemini, anthropic, cartesia };
+  if (
+    groq === null ||
+    gemini === null ||
+    anthropic === null ||
+    openai === null ||
+    openrouter === null ||
+    azureOpenai === null ||
+    cartesia === null
+  ) {
+    return null;
+  }
+  return {
+    groq,
+    gemini,
+    anthropic,
+    openai,
+    openrouter,
+    azure_openai: azureOpenai,
+    cartesia,
+  };
 }
 
 function parseModel(value: unknown): SetupModelStatus | null {
@@ -255,10 +344,18 @@ export function parseSetupStatus(payload: Record<string, unknown>): SetupStatus 
   const vaultRaw = payload["vault"];
   const models = parseList(payload["models"], parseModel);
   const googleConnected = asBoolean(payload["google_connected"]);
+  const microsoftConnected = asBoolean(payload["microsoft_connected"]);
   const onboardingComplete = asBoolean(payload["onboarding_complete"]);
   const setupComplete = asBoolean(payload["setup_complete"]);
   if (keys === null || !isPlainObject(vaultRaw) || models === null) return null;
-  if (googleConnected === null || onboardingComplete === null || setupComplete === null) return null;
+  if (
+    googleConnected === null ||
+    microsoftConnected === null ||
+    onboardingComplete === null ||
+    setupComplete === null
+  ) {
+    return null;
+  }
   const configured = asBoolean(vaultRaw["configured"]);
   const path = vaultRaw["path"] === null ? null : asNonEmptyString(vaultRaw["path"]);
   if (configured === null || (path === null && vaultRaw["path"] !== null)) return null;
@@ -267,6 +364,7 @@ export function parseSetupStatus(payload: Record<string, unknown>): SetupStatus 
     vault: { configured, path },
     models,
     googleConnected,
+    microsoftConnected,
     onboardingComplete,
     setupComplete,
   };

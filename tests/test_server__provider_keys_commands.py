@@ -104,9 +104,9 @@ async def test_unknown_provider_is_refused_by_payload(
     gateway = ProviderKeysCommandGateway(key_store=ProviderKeyStore(store_path=tmp_path / "k.bin"))
     send = _Collector()
     await dispatch_keys_command(
-        _command("keys.save", {"provider": "openai", "key": _SECRET}), gateway, send
+        _command("keys.save", {"provider": "mistral", "key": _SECRET}), gateway, send
     )
-    # 'openai' is outside the closed provider enum — invalid payload.
+    # 'mistral' is outside the closed provider enum — invalid payload.
     assert send.sent[0].name == "error"
 
 

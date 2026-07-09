@@ -52,6 +52,8 @@ function fakeActions(onDoneSpy: () => void): OnboardingActions {
       onDoneSpy();
       onDone(DONE_STATUS);
     },
+    enrollSpeaker: async () => undefined,
+    saveEngineSelection: async () => undefined,
   };
 }
 
@@ -70,7 +72,7 @@ async function saveAndValidate(label: string): Promise<void> {
 }
 
 describe("first-run wizard drives every control", () => {
-  it("walks welcome → vault → keys → models → finish, exercising each element", async () => {
+  it("walks welcome → speaker → vault → models → finish (keys + calendar), exercising each element", async () => {
     const flowStore: OnboardingFlowStore = createOnboardingFlowStore();
     const keysStore = createApiKeysStore();
     const onComplete = vi.fn();
@@ -87,40 +89,50 @@ describe("first-run wizard drives every control", () => {
       />,
     );
 
-    // Step 1 — welcome + privacy truths, then Begin.
+    // Step 1 — welcome + privacy truths, then Get started.
     expect(screen.getByText("No bot joins your calls.")).toBeTruthy();
-    expect(screen.getByText("Audio is discarded after transcription.")).toBeTruthy();
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Begin" })));
+    expect(screen.getByText("Recordings stay on this device as MP3.")).toBeTruthy();
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Get started" })));
 
-    // Step 2 — browse fills the path, use-folder configures it.
-    expect(screen.getByText("Choose your vault")).toBeTruthy();
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Browse" })));
-    expect((screen.getByLabelText("Vault folder path") as HTMLInputElement).value).toBe("C:/picked");
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Use this folder" })));
-    await waitFor(() => expect(screen.getByText("✓ folder ready")).toBeTruthy());
-    // Continue is enabled only once the vault is configured.
+    // Step 2 — features tour.
+    expect(screen.getByText("What Omni Steroid can do")).toBeTruthy();
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Got it, continue" })));
+
+    // Step 3 — speaker identity.
+    expect(screen.getByText("What's your name?")).toBeTruthy();
+    const nameInput = screen.getByLabelText("Your name");
+    fireEvent.change(nameInput, { target: { value: "Alex" } });
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" })));
 
-    // Step 3 — save + validate the two required keys.
-    expect(screen.getByText("Add your keys")).toBeTruthy();
+    // Step 4 — browse fills the path, Continue configures it.
+    expect(screen.getByText("Where should notes be saved?")).toBeTruthy();
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Choose folder" })));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" })));
+
+    // Step 5 — models download, then Continue.
+    expect(screen.getByText("Choose your transcription engine")).toBeTruthy();
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Download & continue" })));
+    await waitFor(() => expect(screen.getByText("Transcription engine ready")).toBeTruthy());
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" })));
+
+    // Step 6 — Finish & Optional Setup.
+    expect(screen.getByText("Finish & Optional Setup")).toBeTruthy();
+    
+    // Open API Keys collapsible
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "API Keys (Optional)" })));
     await saveAndValidate("Groq");
     await saveAndValidate("Gemini");
     expect(keysStore.getState().validation.groq.status).toBe("valid");
     expect(keysStore.getState().validation.gemini.status).toBe("valid");
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" })));
 
-    // Step 4 — models download, then Continue to Google Calendar.
-    expect(screen.getByText("Get the models")).toBeTruthy();
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Download" })));
-    await waitFor(() => expect(screen.getByText("✓ models ready")).toBeTruthy());
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" })));
+    // Open Calendar collapsible
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Calendar Integration (Optional)" })));
+    const connectBtn = () => screen.getByRole("button", { name: "Connect Google" });
+    await act(async () => fireEvent.click(connectBtn()));
+    await waitFor(() => expect(screen.getByText("✓ Google connected")).toBeTruthy());
 
-    // Step 5 — Google Calendar connect (optional) then Finish.
-    expect(screen.getByText("Connect Google Calendar")).toBeTruthy();
     const finishBtn = () => screen.getByRole("button", { name: "Finish" }) as HTMLButtonElement;
     expect(finishBtn().disabled).toBe(false);
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Connect Google" })));
-    await waitFor(() => expect(screen.getByText("✓ Google connected")).toBeTruthy());
     await act(async () => fireEvent.click(finishBtn()));
     expect(onDoneSpy).toHaveBeenCalledTimes(1);
     expect(onComplete).toHaveBeenCalledTimes(1);
@@ -139,32 +151,20 @@ describe("first-run wizard drives every control", () => {
         actions={fakeActions(vi.fn())}
       />,
     );
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Begin" })));
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" }))); // → step 3
-    expect(screen.getByText("Add your keys")).toBeTruthy();
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Back" })));
-    expect(screen.getByText("Choose your vault")).toBeTruthy(); // back on step 2
-  });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Get started" })));
+    
+    // We are on step 2. Click Got it, continue -> step 3.
+    expect(screen.getByText("What Omni Steroid can do")).toBeTruthy();
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Got it, continue" })));
 
-  it("Finish stays blocked with an explicit reason when keys are unvalidated", async () => {
-    const flowStore = createOnboardingFlowStore();
-    setVaultConfigured(flowStore, "C:/picked");
-    markModelsCompleted(flowStore, true);
-    render(
-      <OnboardingWizard
-        onComplete={vi.fn()}
-        flowStore={flowStore}
-        keysStore={createApiKeysStore()}
-        vault={{ persistKey: () => Promise.resolve() }}
-        validator={validValidator}
-        actions={fakeActions(vi.fn())}
-      />,
-    );
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Begin" })));
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" }))); // step 3
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" }))); // step 4
-    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" }))); // step 5
-    expect((screen.getByRole("button", { name: "Finish" }) as HTMLButtonElement).disabled).toBe(true);
-    expect(screen.getByText(/validate your Groq and Gemini keys/)).toBeTruthy();
+    // We are on step 3. Type name and click Continue -> step 4.
+    const nameInput = screen.getByLabelText("Your name");
+    fireEvent.change(nameInput, { target: { value: "Alex" } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" })));
+    expect(screen.getByText("Where should notes be saved?")).toBeTruthy();
+    
+    // Click Back -> step 3.
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Back" })));
+    expect(screen.getByText("What's your name?")).toBeTruthy(); // back on step 3
   });
 });

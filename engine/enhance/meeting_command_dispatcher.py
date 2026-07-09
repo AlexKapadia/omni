@@ -26,12 +26,16 @@ from engine.enhance.meeting_summary_presenter import (
     meeting_detail_payload,
     meeting_summary_payload,
 )
+from engine.storage.app_settings_repository import SETTING_SPEAKER_IDENTITY, read_setting
+from engine.storage.sqlite_connection import open_sqlite_connection
+from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.protocol import (
     COMMAND_IMPORT_MEDIA,
     COMMAND_MEETING_EXPORT,
     COMMAND_MEETING_FINALIZE,
     COMMAND_MEETING_GET,
     COMMAND_MEETING_RETRANSCRIBE,
+    COMMAND_MEETING_TEXT_REPLACE,
     COMMAND_MEETINGS_LIST,
     COMMAND_TRANSCRIPT_SEGMENT_UPDATE,
     PROTOCOL_VERSION,
@@ -39,6 +43,7 @@ from engine.protocol import (
     EnvelopeKind,
     ImportMediaCommandPayload,
     MeetingRetranscribeCommandPayload,
+    MeetingTextReplacePayload,
     MeetingExportCommandPayload,
     MeetingFinalizeCommandPayload,
     MeetingGetCommandPayload,
@@ -58,6 +63,7 @@ MEETING_COMMAND_NAMES = frozenset(
         COMMAND_TRANSCRIPT_SEGMENT_UPDATE,
         COMMAND_IMPORT_MEDIA,
         COMMAND_MEETING_RETRANSCRIBE,
+        COMMAND_MEETING_TEXT_REPLACE,
     }
 )
 
@@ -125,6 +131,9 @@ async def dispatch_meeting_command(
         return
     if command.name == COMMAND_MEETING_RETRANSCRIBE:
         await _handle_retranscribe(command, service, send)
+        return
+    if command.name == COMMAND_MEETING_TEXT_REPLACE:
+        await _handle_text_replace(command, service, send)
         return
     # Unreachable while the handler routes by MEETING_COMMAND_NAMES; keep
     # the deny-by-default reply so a routing bug cannot go silent.
@@ -211,7 +220,24 @@ async def _handle_get(
         )
         return
     row, segments, extraction = found
-    await send(_ok_reply(command.id, meeting_detail_payload(row, segments, extraction)))
+    identity = "Me"
+    try:
+        await apply_migrations(service.db_path, service.migrations_dir)
+        connection = await open_sqlite_connection(service.db_path)
+        try:
+            raw = await read_setting(connection, SETTING_SPEAKER_IDENTITY)
+            if isinstance(raw, str) and raw.strip():
+                identity = raw.strip()
+        finally:
+            await connection.close()
+    except Exception:
+        pass
+    await send(
+        _ok_reply(
+            command.id,
+            meeting_detail_payload(row, segments, extraction, speaker_identity=identity),
+        )
+    )
 
 
 async def _handle_export(
@@ -281,10 +307,27 @@ async def _handle_import_media(
         )
         return
     from engine.import_.media_import_service import import_media_file
+    from engine.protocol.meeting_finalization_payloads import (
+        EVENT_IMPORT_MEDIA_PROGRESS,
+        build_import_media_progress_payload,
+    )
+
+    hub = service._hub
+
+    async def on_progress(stage: str, fraction: float) -> None:
+        await hub.broadcast_event(
+            EVENT_IMPORT_MEDIA_PROGRESS,
+            build_import_media_progress_payload(stage, fraction),
+        )
 
     try:
         meeting_id = await import_media_file(
-            service.db_path, service.migrations_dir, payload.path, payload.title
+            service.db_path,
+            service.migrations_dir,
+            payload.path,
+            payload.title,
+            identify_speakers=payload.identify_speakers,
+            on_progress=on_progress,
         )
     except Exception as exc:
         await send(_typed_error_reply(command.id, FINALIZE_ERROR_CODE, str(exc)))
@@ -312,3 +355,57 @@ async def _handle_retranscribe(
         await send(_typed_error_reply(command.id, FINALIZE_ERROR_CODE, str(exc)))
         return
     await send(_ok_reply(command.id, {"meeting_id": payload.meeting_id}))
+
+
+async def _handle_text_replace(
+    command: Envelope, service: MeetingFinalizationService, send: SendFn
+) -> None:
+    try:
+        payload = MeetingTextReplacePayload.model_validate(command.payload)
+    except ValidationError:
+        await send(
+            error_reply(
+                command.id,
+                ProtocolErrorCode.INVALID_PAYLOAD,
+                "meeting.text.replace payload failed validation",
+            )
+        )
+        return
+    result = await service.replace_meeting_text(
+        payload.meeting_id, payload.find, payload.replace, payload.target
+    )
+    if result is None:
+        await send(
+            _typed_error_reply(
+                command.id, NOT_FOUND_ERROR_CODE, f"meeting {payload.meeting_id!r} does not exist"
+            )
+        )
+        return
+    await send(_ok_reply(command.id, result))
+
+
+async def _handle_text_replace(
+    command: Envelope, service: MeetingFinalizationService, send: SendFn
+) -> None:
+    try:
+        payload = MeetingTextReplacePayload.model_validate(command.payload)
+    except ValidationError:
+        await send(
+            error_reply(
+                command.id,
+                ProtocolErrorCode.INVALID_PAYLOAD,
+                "meeting.text.replace payload failed validation",
+            )
+        )
+        return
+    result = await service.replace_meeting_text(
+        payload.meeting_id, payload.find, payload.replace, payload.target
+    )
+    if result is None:
+        await send(
+            _typed_error_reply(
+                command.id, NOT_FOUND_ERROR_CODE, f"meeting {payload.meeting_id!r} does not exist"
+            )
+        )
+        return
+    await send(_ok_reply(command.id, result))

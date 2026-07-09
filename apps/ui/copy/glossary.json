@@ -1,0 +1,33 @@
+{
+  "_comment": "Single source of user-facing UI strings for the Omni UI rehaul. Consumed at runtime via src/lib/copy.ts (typed, frozen) — components import `copy` instead of hardcoding strings, so renames propagate from this one file. Internal SectionId/status enum values are unchanged; only display copy lives here. Human language over architecture — see PRODUCT.md. P1 (redesign-brief-v2.md) note: existing values are UNCHANGED from what components already render, so wiring components to this file is a no-op visually; 'home' and 'record' are new keys reserved for the P2 Home screen / Record-CTA build and are not yet consumed by any component.",
+  "nav": {
+    "home": "Home",
+    "library": "Meetings",
+    "live": "Record",
+    "record": "Record",
+    "ask": "Ask",
+    "dictation": "Voice notes",
+    "naomi": "Naomi",
+    "settings": "Settings",
+    "trustLine": "Your data stays on this device"
+  },
+  "engineStatus": {
+    "connecting": "Starting…",
+    "connected": "Ready",
+    "disconnected": "Omni Steroid isn’t running"
+  },
+  "common": {
+    "gotIt": "Got it",
+    "dismiss": "Dismiss",
+    "skipForNow": "Skip for now"
+  },
+  "jargonReplacements": {
+    "kill switch": "Pause all cloud AI",
+    "instant execute": "Auto-run safe actions",
+    "AI router": "AI providers",
+    "transcription engine": "Transcription quality",
+    "STT": "transcription",
+    "Me stream": "You",
+    "Them stream": "Everyone else"
+  }
+}

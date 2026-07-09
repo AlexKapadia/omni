@@ -95,11 +95,17 @@ async def test_started_final_stopped_feeds_in_order_then_flushes(
     )
     await hub.broadcast_event(
         EVENT_TRANSCRIPT_FINAL,
-        build_transcript_final_payload("them", "what is the Q3 budget?", 1.0, 2.5, 0, "s-1", 400.0),
+        build_transcript_final_payload(
+            "them", "what is the Q3 budget?", 1.0, 2.5, 0, "s-1", 400.0,
+            speaker_id="1", speaker_label="Speaker 1",
+        ),
     )
     await hub.broadcast_event(
         EVENT_TRANSCRIPT_FINAL,
-        build_transcript_final_payload("me", "let me check", 2.6, 3.4, 0, "s-2", 380.0),
+        build_transcript_final_payload(
+            "me", "let me check", 2.6, 3.4, 0, "s-2", 380.0,
+            speaker_id="me", speaker_label="Me",
+        ),
     )
     await drain_tasks()
     assert len(created) == 1
@@ -134,7 +140,10 @@ async def test_emitted_hits_broadcast_the_pinned_answers_hit_payload(
     created[0].emit_on_segment = True
     await hub.broadcast_event(
         EVENT_TRANSCRIPT_FINAL,
-        build_transcript_final_payload("them", "what is the Q3 budget?", 1.0, 2.5, 0, "s-1", 400.0),
+        build_transcript_final_payload(
+            "them", "what is the Q3 budget?", 1.0, 2.5, 0, "s-1", 400.0,
+            speaker_id="1", speaker_label="Speaker 1",
+        ),
     )
     await drain_tasks()
     hits = [e for e in received if e.name == ANSWERS_HIT_EVENT_NAME]
@@ -165,7 +174,10 @@ async def test_malformed_final_payloads_and_out_of_session_finals_are_ignored(
     # A final with no session open: nothing to feed, nothing crashes.
     await hub.broadcast_event(
         EVENT_TRANSCRIPT_FINAL,
-        build_transcript_final_payload("them", "orphan", 0.0, 1.0, 0, "s-0", 10.0),
+        build_transcript_final_payload(
+            "them", "orphan", 0.0, 1.0, 0, "s-0", 10.0,
+            speaker_id="1", speaker_label="Speaker 1",
+        ),
     )
     await hub.broadcast_event(
         EVENT_CAPTURE_STARTED, build_capture_started_payload("m-1", "command")
@@ -198,7 +210,10 @@ async def test_a_second_capture_start_replaces_the_previous_session(
     assert len(created) == 2  # fresh spotter per meeting; the old one is gone
     await hub.broadcast_event(
         EVENT_TRANSCRIPT_FINAL,
-        build_transcript_final_payload("me", "new meeting line", 0.5, 1.0, 0, "s-9", 90.0),
+        build_transcript_final_payload(
+            "me", "new meeting line", 0.5, 1.0, 0, "s-9", 90.0,
+            speaker_id="me", speaker_label="Me",
+        ),
     )
     await drain_tasks()
     assert created[0].segments == []  # the replaced session never sees new finals

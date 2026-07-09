@@ -23,6 +23,7 @@ import json
 
 from engine.storage.meetings_repository import MeetingRow
 from engine.storage.transcript_segments_repository import TranscriptSegmentRow
+from engine.stt.speaker_voice_profile import resolve_speaker_label
 
 # Library rows show a one-liner; beyond this we cut on the cap, with ellipsis.
 _SUMMARY_MAX_CHARS = 160
@@ -90,6 +91,8 @@ def meeting_detail_payload(
     row: MeetingRow,
     segments: list[TranscriptSegmentRow],
     extraction_json: str | None = None,
+    *,
+    speaker_identity: str = "Me",
 ) -> dict[str, object]:
     """The ``meeting.get`` payload — field names pinned by the TS mirror.
 
@@ -117,6 +120,8 @@ def meeting_detail_payload(
             {
                 "segment_id": s.segment_id,
                 "stream": s.stream,
+                "speaker_id": s.speaker_id,
+                "speaker_label": resolve_speaker_label(s.speaker_id, speaker_identity),
                 "text": s.text,
                 "t_start": s.t_start,
                 "t_end": s.t_end,

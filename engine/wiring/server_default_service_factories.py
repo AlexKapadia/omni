@@ -29,6 +29,8 @@ from engine.wiring.approval_cards_gateway import ApprovalCardsGateway
 from engine.wiring.detection_server_wiring import DetectionServerWiring
 from engine.wiring.dictation_command_dispatcher import DictationCommandGateway
 from engine.wiring.google_connect_command_dispatcher import GoogleConnectCommandGateway
+from engine.wiring.microsoft_connect_command_dispatcher import MicrosoftConnectCommandGateway
+from engine.wiring.speaker_enroll_command_dispatcher import SpeakerEnrollCommandGateway
 from engine.wiring.ledger_summary_command_dispatcher import LedgerSummaryCommandGateway
 from engine.wiring.live_answers_spotter_wiring import LiveAnswersSpotterWiring
 from engine.wiring.models_download_command_dispatcher import ModelsDownloadCommandGateway
@@ -114,6 +116,17 @@ def default_models_gateway_factory(hub: EventBroadcastHub) -> ModelsDownloadComm
 def default_google_gateway_factory(hub: EventBroadcastHub) -> GoogleConnectCommandGateway:
     """Real Google-connect gateway (desktop OAuth flow); construction inert."""
     return GoogleConnectCommandGateway(hub=hub)
+
+
+def default_microsoft_gateway_factory(hub: EventBroadcastHub) -> MicrosoftConnectCommandGateway:
+    """Real Microsoft-connect gateway (desktop OAuth flow); construction inert."""
+    return MicrosoftConnectCommandGateway(hub=hub)
+
+
+def default_speaker_gateway_factory() -> SpeakerEnrollCommandGateway:
+    """Real speaker-enrollment gateway; construction inert."""
+    settings = load_engine_settings()
+    return SpeakerEnrollCommandGateway(db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
 
 
 def default_card_build_wiring_factory(hub: EventBroadcastHub) -> ApprovalCardBuildWiring:

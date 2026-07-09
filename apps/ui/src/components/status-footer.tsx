@@ -1,22 +1,23 @@
 /**
- * Status footer: engine status dot, engine version, uptime, live ping latency.
+ * Status footer: status dot, app version, uptime, live ping latency.
  *
- * The user explicitly wants real-time engine speed visible at all times, so the
- * latency readout is a first-class element, not a debug afterthought. All data
- * comes from the engine status store; this component never touches the socket.
- * Monochrome by contract — status is encoded as ink/grey fill plus a text
+ * The user explicitly wants real-time speed visible at all times, so the
+ * latency readout stays a first-class element (this standing preference
+ * overrides the rehaul's "hide latency" default). Rehaul v2 only changes the
+ * typography: Inter (not mono) with tabular numerals, so the footer reads calm
+ * instead of console-like. All data comes from the engine status store; this
+ * component never touches the socket. Status is encoded as fill PLUS a text
  * label (never colour alone, for accessibility).
  */
 import { motion, useReducedMotion } from "framer-motion";
 import { tokenDurationSeconds } from "../lib/design-token-motion";
 import { useEngineStatus } from "../lib/engine-status-store";
 import type { EngineStatus } from "../lib/engine-status-store";
+import { copy } from "../lib/copy";
 
-const STATUS_LABEL: Readonly<Record<EngineStatus, string>> = {
-  connecting: "connecting to engine",
-  connected: "engine running",
-  disconnected: "engine unavailable",
-};
+// User-facing status copy (glossary: engineStatus). Human language, not
+// architecture — "engine" is an implementation detail the user shouldn't need.
+const STATUS_LABEL: Readonly<Record<EngineStatus, string>> = copy.engineStatus;
 
 /** 3671 → "1h 1m 11s"; sub-minute stays compact ("42s"). */
 export function formatUptime(uptimeS: number): string {
@@ -33,10 +34,10 @@ function StatusDot({ status }: { readonly status: EngineStatus }) {
   const reducedMotion = useReducedMotion();
   const fillClass =
     status === "connected"
-      ? "bg-[var(--ink)]"
+      ? "bg-[var(--success)]"
       : status === "connecting"
-        ? "bg-[var(--grey-400)]"
-        : "border border-[var(--grey-400)] bg-[var(--canvas)]";
+        ? "bg-[var(--warning)]"
+        : "bg-[var(--error)]";
   // Pulse period derives from the --dur-page token (no raw durations in
   // components); if the token is absent the duration is 0 and we skip the
   // animation entirely rather than divide the pulse into nothing.
@@ -46,7 +47,7 @@ function StatusDot({ status }: { readonly status: EngineStatus }) {
     <motion.span
       aria-hidden
       data-status={status}
-      className={`inline-block h-2 w-2 rounded-full ${fillClass}`}
+      className={`inline-block h-1.5 w-1.5 rounded-full ${fillClass}`}
       // Gentle pulse only while connecting; static otherwise, and always
       // static under prefers-reduced-motion.
       animate={shouldPulse ? { opacity: [1, 0.3, 1] } : { opacity: 1 }}
@@ -60,21 +61,33 @@ export function StatusFooter() {
   const uptimeS = useEngineStatus((s) => s.uptimeS);
   const engineVersion = useEngineStatus((s) => s.engineVersion);
   const lastLatencyMs = useEngineStatus((s) => s.lastLatencyMs);
+  const sttReady = useEngineStatus((s) => s.sttReady);
+  const sttEngine = useEngineStatus((s) => s.sttEngine);
+  const sttDevice = useEngineStatus((s) => s.sttDevice);
 
   return (
     <footer
       aria-label="Engine status"
-      className="flex shrink-0 items-center gap-[var(--space-4)] border-t border-[var(--grey-200)] px-[var(--space-4)] py-[var(--space-2)] font-[family-name:var(--font-mono)] text-xs text-[var(--grey-600)]"
+      style={{ height: 36, padding: "0 var(--space-4)" }}
+      className="flex shrink-0 items-center justify-between border-t border-[var(--grey-200)] font-[family-name:var(--font-label)] text-[var(--text-meta-size)] text-[var(--ink-secondary)] tabular-nums"
     >
       <span className="flex items-center gap-[var(--space-2)]">
         <StatusDot status={status} />
         <span aria-live="polite">{STATUS_LABEL[status]}</span>
       </span>
-      {engineVersion !== null && <span>v{engineVersion}</span>}
-      {status === "connected" && uptimeS !== null && <span>up {formatUptime(uptimeS)}</span>}
-      <span className="ml-auto" aria-label="Engine round-trip latency">
-        {status === "connected" && lastLatencyMs !== null ? `${Math.round(lastLatencyMs)} ms` : "— ms"}
-      </span>
+      <div className="flex items-center gap-[var(--space-4)]">
+        {engineVersion !== null && <span>v{engineVersion}</span>}
+        {status === "connected" && uptimeS !== null && <span>up {formatUptime(uptimeS)}</span>}
+        {status === "connected" && sttReady && sttEngine !== null && (
+          <span>
+            stt {sttEngine}
+            {sttDevice !== null ? `/${sttDevice}` : ""}
+          </span>
+        )}
+        <span aria-label="Engine round-trip latency">
+          {status === "connected" && lastLatencyMs !== null ? `${Math.round(lastLatencyMs)} ms` : "— ms"}
+        </span>
+      </div>
     </footer>
   );
 }

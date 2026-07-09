@@ -10,6 +10,7 @@ import { describe, expect, it } from "vitest";
 import {
   createDictationEventDispatcher,
   parseHoldPressedPayload,
+  resolveInjectRequested,
 } from "./dictation-engine-bridge";
 import { createDictationPillStore, dispatchPillEvent } from "./dictation-pill-store";
 
@@ -138,6 +139,44 @@ describe("inject final -> shell paste", () => {
     await flushMicrotasks();
     expect(pasteCalls).toBe(0);
     expect(store.getState().phase).toBe("processing"); // still waiting honestly
+  });
+});
+
+describe("resolveInjectRequested", () => {
+  it("arms inject while listening before hold-released", () => {
+    expect(
+      resolveInjectRequested({
+        phase: "listening",
+        startedAtMs: 0,
+        liveText: "",
+        commandDetected: false,
+        injectArmed: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("keeps inject armed through processing after hold-released", () => {
+    expect(
+      resolveInjectRequested({
+        phase: "processing",
+        startedAtMs: 0,
+        liveText: "hello",
+        commandDetected: false,
+        injectArmed: true,
+      }),
+    ).toBe(true);
+  });
+
+  it("denies inject when command mode is detected", () => {
+    expect(
+      resolveInjectRequested({
+        phase: "listening",
+        startedAtMs: 0,
+        liveText: "Omni schedule lunch",
+        commandDetected: true,
+        injectArmed: true,
+      }),
+    ).toBe(false);
   });
 });
 

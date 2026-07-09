@@ -139,7 +139,13 @@ class NaomiMicSttSession:
             self._onset_latched = False
         return probability
 
-    async def _handle_final(self, words: list[WordToken], _t_open: float, t_close: float) -> None:
+    async def _handle_final(
+        self,
+        words: list[WordToken],
+        _t_open: float,
+        t_close: float,
+        _segment_audio: object = None,
+    ) -> None:
         """A segment closed: emit the verbatim utterance + end-point latency."""
         text = words_to_verbatim_utterance(words)
         if not text:

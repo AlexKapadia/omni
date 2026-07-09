@@ -42,7 +42,11 @@ ROW = MeetingRow(
     enhanced_notes_md="First line of the summary.",
     finalized_at="2026-07-06T10:31:00+00:00",
 )
-SEGMENTS = [TranscriptSegmentRow(segment_id="s1", stream="them", text="hello", t_start=0.0, t_end=1.0)]
+SEGMENTS = [
+    TranscriptSegmentRow(
+        segment_id="s1", stream="them", speaker_id="1", text="hello", t_start=0.0, t_end=1.0
+    )
+]
 
 
 class FakeFinalizationService(MeetingFinalizationService):
@@ -169,6 +173,8 @@ def test_meeting_get_returns_detail_or_a_correlatable_not_found() -> None:
         {
             "segment_id": "s1",
             "stream": "them",
+            "speaker_id": "1",
+            "speaker_label": "Speaker 1",
             "text": "hello",
             "t_start": 0.0,
             "t_end": 1.0,

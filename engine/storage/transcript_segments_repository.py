@@ -24,6 +24,7 @@ class TranscriptSegmentRow:
 
     segment_id: str
     stream: str  # 'me' | 'them' (DB CHECK constraint)
+    speaker_id: str  # 'me' or '1', '2', …
     text: str  # verbatim model text (fidelity mandate)
     t_start: float
     t_end: float
@@ -38,7 +39,7 @@ async def list_transcript_segment_rows(
     ``meeting.get`` command build the transcript view from these rows.
     """
     cursor = await connection.execute(
-        "SELECT id, stream, text, t_start, t_end FROM transcript_segments"
+        "SELECT id, stream, speaker_id, text, t_start, t_end FROM transcript_segments"
         " WHERE meeting_id = ? ORDER BY t_start, id",
         (meeting_id,),
     )
@@ -48,9 +49,10 @@ async def list_transcript_segment_rows(
         TranscriptSegmentRow(
             segment_id=str(row[0]),
             stream=str(row[1]),
-            text=str(row[2]),
-            t_start=float(row[3]),
-            t_end=float(row[4]),
+            speaker_id=str(row[2]),
+            text=str(row[3]),
+            t_start=float(row[4]),
+            t_end=float(row[5]),
         )
         for row in rows
     ]
@@ -61,6 +63,7 @@ async def insert_transcript_segment(
     segment_id: str,
     meeting_id: str,
     stream: str,
+    speaker_id: str,
     text: str,
     t_start: float,
     t_end: float,
@@ -68,12 +71,10 @@ async def insert_transcript_segment(
 ) -> None:
     """Persist one finalised segment (verbatim text, meeting-relative times)."""
     await connection.execute(
-        # Parameterised: text/stream come from the pipeline but are treated
-        # as untrusted at the storage boundary regardless (deny by default).
         "INSERT INTO transcript_segments"
-        " (id, meeting_id, stream, text, t_start, t_end, created_at)"
-        " VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (segment_id, meeting_id, stream, text, t_start, t_end, created_at_iso),
+        " (id, meeting_id, stream, speaker_id, text, t_start, t_end, created_at)"
+        " VALUES (?, ?, ?, ?, ?, ?, ?, ?)",
+        (segment_id, meeting_id, stream, speaker_id, text, t_start, t_end, created_at_iso),
     )
 
 

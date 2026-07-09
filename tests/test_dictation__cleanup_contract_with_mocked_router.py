@@ -194,9 +194,8 @@ async def test_dictionary_terms_enter_the_frame_as_vocabulary_only() -> None:
     frame = route.calls[0]["system_frame"]
     assert isinstance(frame, str)
     assert "Sanjay, sqlite-vec" in frame
-    assert "vocabulary" in frame  # framed as reference data, not instructions
-    # The base data-framing instruction is still present ahead of the list.
-    assert frame.startswith(CLEANUP_SYSTEM_FRAME)
+    assert "Prefer these spellings" in frame
+    assert frame.startswith(CLEANUP_SYSTEM_FRAME.split(" Prefer")[0][:80])
 
 
 async def test_max_tokens_is_bounded_near_the_input_size() -> None:

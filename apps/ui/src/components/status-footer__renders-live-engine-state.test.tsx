@@ -49,7 +49,7 @@ describe("formatUptime is exact at every boundary", () => {
 describe("StatusFooter renders live engine state", () => {
   it("shows connecting copy and no latency before the engine is proven alive", () => {
     render(<StatusFooter />);
-    expect(screen.getByText("connecting to engine")).toBeTruthy();
+    expect(screen.getByText("Starting…")).toBeTruthy();
     expect(screen.getByText("— ms")).toBeTruthy();
     expect(screen.queryByText(/^up /)).toBeNull();
   });
@@ -63,7 +63,7 @@ describe("StatusFooter renders live engine state", () => {
       sttReady: true,
     });
     render(<StatusFooter />);
-    expect(screen.getByText("engine running")).toBeTruthy();
+    expect(screen.getByText("Ready")).toBeTruthy();
     expect(screen.getByText("v0.1.0")).toBeTruthy();
     expect(screen.getByText("up 1m 5s")).toBeTruthy();
     expect(screen.getByText("42 ms")).toBeTruthy(); // rounded, unit visible
@@ -78,7 +78,7 @@ describe("StatusFooter renders live engine state", () => {
       sttReady: true,
     });
     render(<StatusFooter />);
-    expect(screen.getByText("engine unavailable")).toBeTruthy();
+    expect(screen.getByText("Omni Steroid isn’t running")).toBeTruthy();
     // Version is identity (still true); uptime/latency are liveness (now unknown).
     expect(screen.queryByText("up 1m 5s")).toBeNull();
     expect(screen.getByText("— ms")).toBeTruthy();
@@ -86,7 +86,7 @@ describe("StatusFooter renders live engine state", () => {
 
   it("re-renders when the store changes underneath it", () => {
     render(<StatusFooter />);
-    expect(screen.getByText("connecting to engine")).toBeTruthy();
+    expect(screen.getByText("Starting…")).toBeTruthy();
     act(() => {
       engineStatusStore.setState({
         status: "connected",
@@ -96,7 +96,7 @@ describe("StatusFooter renders live engine state", () => {
         sttReady: false,
       });
     });
-    expect(screen.getByText("engine running")).toBeTruthy();
+    expect(screen.getByText("Ready")).toBeTruthy();
     expect(screen.getByText("5 ms")).toBeTruthy();
   });
 });

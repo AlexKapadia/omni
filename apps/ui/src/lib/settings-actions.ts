@@ -87,6 +87,26 @@ function toWireValues(partial: Partial<EngineSettings>): Record<string, unknown>
   if (partial.liveTranslationLang !== undefined) {
     values["live_translation_lang"] = partial.liveTranslationLang;
   }
+  if (partial.summaryLanguage !== undefined) {
+    values["summary_language"] = partial.summaryLanguage;
+  }
+  if (partial.summaryModelId !== undefined) {
+    values["summary_model_id"] = partial.summaryModelId;
+  }
+  if (partial.speakerIdentity !== undefined) {
+    values["speaker_identity"] = partial.speakerIdentity;
+  }
+  if (partial.dictationCleanupStyle !== undefined) {
+    values["dictation_cleanup_style"] = partial.dictationCleanupStyle;
+  }
+  if (partial.sttEngine !== undefined) values["stt_engine"] = partial.sttEngine;
+  if (partial.sttModelId !== undefined) values["stt_model_id"] = partial.sttModelId;
+  if (partial.sttOpenaiBaseUrl !== undefined) {
+    values["stt_openai_base_url"] = partial.sttOpenaiBaseUrl;
+  }
+  if (partial.selectionTranslationLang !== undefined) {
+    values["selection_translation_lang"] = partial.selectionTranslationLang;
+  }
   return values;
 }
 

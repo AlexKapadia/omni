@@ -13,6 +13,8 @@ def create_capture_backend() -> CaptureBackend:
         from engine.audio.pyaudiowpatch_capture_backend import PyAudioWpatchCaptureBackend
 
         return PyAudioWpatchCaptureBackend()
-    raise RuntimeError(
-        f"capture is not yet supported on {sys.platform} — Windows is fully supported today"
-    )
+    if sys.platform == "darwin" or sys.platform.startswith("linux"):
+        from engine.audio.sounddevice_capture_backend import SoundDeviceCaptureBackend
+
+        return SoundDeviceCaptureBackend()
+    raise RuntimeError(f"capture is not yet supported on {sys.platform}")

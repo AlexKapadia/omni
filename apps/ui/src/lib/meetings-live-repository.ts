@@ -101,6 +101,7 @@ function mapSummaryRow(value: unknown): MeetingSummaryRow | null {
 export interface MeetingTranscriptLine {
   readonly segmentId: string;
   readonly stream: "me" | "them";
+  readonly speakerLabel: string;
   readonly text: string;
   readonly tStart: number;
   readonly tEnd: number;
@@ -138,7 +139,14 @@ function mapTranscriptLine(value: unknown): MeetingTranscriptLine | null {
   if ((stream !== "me" && stream !== "them") || text === null) return null;
   if (typeof tStart !== "number" || typeof tEnd !== "number") return null;
   if (!Number.isFinite(tStart) || !Number.isFinite(tEnd)) return null;
-  return { segmentId, stream, text, tStart, tEnd };
+  const speakerLabelRaw = asString(line["speaker_label"]);
+  const speakerLabel =
+    speakerLabelRaw !== null && speakerLabelRaw.length > 0
+      ? speakerLabelRaw
+      : stream === "me"
+        ? "Me"
+        : "Them";
+  return { segmentId, stream, speakerLabel, text, tStart, tEnd };
 }
 
 function mapExtraction(value: unknown): MeetingExtractionData | null {
@@ -230,11 +238,16 @@ export async function updateTranscriptSegment(
 export async function importMediaFile(
   path: string,
   title?: string,
+  options?: { readonly identifySpeakers?: boolean },
   transport: EngineRequestTransport = liveTransport,
 ): Promise<string> {
   const payload = await requestEngineReply(
     "import.media",
-    { path, title: title ?? null },
+    {
+      path,
+      title: title ?? null,
+      identify_speakers: options?.identifySpeakers === true,
+    },
     120_000,
     transport,
   );

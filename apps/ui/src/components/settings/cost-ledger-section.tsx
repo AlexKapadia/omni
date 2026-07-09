@@ -32,7 +32,7 @@ function LedgerTable({ ledger }: { readonly ledger: LedgerSummary }) {
   if (byTask.length === 0 && recent.length === 0) {
     return (
       <p className="m-0 text-[var(--ink-secondary)]" style={{ fontSize: "var(--text-meta-size)" }}>
-        No model calls yet. The ledger fills as Omni runs.
+        No model calls yet. The ledger fills as Omni Steroid runs.
       </p>
     );
   }

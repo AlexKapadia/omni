@@ -4,6 +4,7 @@
 import { StrictMode } from "react";
 import { createRoot } from "react-dom/client";
 import App from "./App";
+import "./styles/fonts.css"; // self-hosted webfonts (see fonts.css docstring) — before app.css so tokens resolve to real faces on first paint
 import "./styles/app.css";
 
 const rootElement = document.getElementById("root");

@@ -118,8 +118,12 @@ def test_summary_payload_keys_and_values_are_pinned_for_the_ts_mirror() -> None:
 
 def test_detail_payload_keys_and_values_are_pinned_for_the_ts_mirror() -> None:
     segments = [
-        TranscriptSegmentRow(segment_id="s1", stream="them", text="hello", t_start=0.0, t_end=1.0),
-        TranscriptSegmentRow(segment_id="s2", stream="me", text="hi", t_start=1.2, t_end=1.8),
+        TranscriptSegmentRow(
+            segment_id="s1", stream="them", speaker_id="1", text="hello", t_start=0.0, t_end=1.0
+        ),
+        TranscriptSegmentRow(
+            segment_id="s2", stream="me", speaker_id="me", text="hi", t_start=1.2, t_end=1.8
+        ),
     ]
     payload = meeting_detail_payload(ROW, segments)
     assert payload == {
@@ -137,6 +141,8 @@ def test_detail_payload_keys_and_values_are_pinned_for_the_ts_mirror() -> None:
             {
                 "segment_id": "s1",
                 "stream": "them",
+                "speaker_id": "1",
+                "speaker_label": "Speaker 1",
                 "text": "hello",
                 "t_start": 0.0,
                 "t_end": 1.0,
@@ -144,6 +150,8 @@ def test_detail_payload_keys_and_values_are_pinned_for_the_ts_mirror() -> None:
             {
                 "segment_id": "s2",
                 "stream": "me",
+                "speaker_id": "me",
+                "speaker_label": "Me",
                 "text": "hi",
                 "t_start": 1.2,
                 "t_end": 1.8,

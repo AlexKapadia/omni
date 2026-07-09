@@ -1,6 +1,6 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "Omni",
+  "productName": "Omni Steroid",
   "version": "0.1.0",
   "identifier": "com.omni.app",
   "build": {
@@ -13,7 +13,7 @@
     "windows": [
       {
         "label": "main",
-        "title": "Omni",
+        "title": "Omni Steroid",
         "width": 1200,
         "height": 800,
         "minWidth": 900,
@@ -26,11 +26,11 @@
   },
   "bundle": {
     "active": true,
-    "targets": ["nsis", "msi"],
-    "publisher": "Omni",
+    "targets": ["nsis", "msi", "dmg", "app", "deb", "appimage"],
+    "publisher": "Omni Steroid",
     "copyright": "MIT License",
     "shortDescription": "Local-first meeting intelligence",
-    "longDescription": "Omni: local-first, bot-free meeting intelligence for Windows. On-device transcription, enhanced notes into your Obsidian vault, approval-carded actions, zero telemetry.",
+    "longDescription": "Omni Steroid: local-first, bot-free meeting intelligence. On-device transcription, enhanced notes into your Obsidian vault, approval-carded actions, zero telemetry. Windows, macOS, and Linux builds.",
     "licenseFile": "../../../LICENSE",
     "createUpdaterArtifacts": true,
     "icon": [
@@ -42,6 +42,7 @@
     "resources": {
       "../../../packaging/dist/omni-engine": "omni-engine",
       "../../../packaging/install-stt-runtime.ps1": "stt-runtime/install-stt-runtime.ps1",
+      "../../../packaging/install-stt-runtime.sh": "stt-runtime/install-stt-runtime.sh",
       "../../../packaging/stt-runtime-requirements.txt": "stt-runtime/stt-runtime-requirements.txt"
     },
     "windows": {

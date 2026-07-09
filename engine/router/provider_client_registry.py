@@ -18,6 +18,7 @@ import os
 
 from engine.router.completion_contract import Provider, ProviderCompletionClient
 from engine.router.provider_client_anthropic import AnthropicCompletionClient
+from engine.router.provider_client_azure_openai import AzureOpenAICompletionClient
 from engine.router.provider_client_gemini import GeminiCompletionClient
 from engine.router.provider_client_groq import GroqCompletionClient
 from engine.router.provider_client_openai import OpenAICompletionClient
@@ -26,6 +27,11 @@ from engine.security.secret_redaction import SecretApiKey
 
 OLLAMA_BASE_URL_ENV = "OMNI_OLLAMA_BASE_URL"
 OLLAMA_DEFAULT_MODEL = "llama3.2"
+LMSTUDIO_BASE_URL_ENV = "OMNI_LMSTUDIO_BASE_URL"
+LMSTUDIO_DEFAULT_MODEL = "local-model"
+OPENROUTER_BASE_URL = "https://openrouter.ai/api/v1"
+OPENROUTER_DEFAULT_MODEL = "openai/gpt-4o-mini"
+AZURE_OPENAI_DEFAULT_DEPLOYMENT = "gpt-4o-mini"
 
 
 def build_provider_clients(
@@ -50,8 +56,22 @@ def build_provider_clients(
     openai_key = key_store.get_key(Provider.OPENAI.value)
     if openai_key is not None:
         clients[Provider.OPENAI] = OpenAICompletionClient(openai_key)
+    openrouter_key = key_store.get_key(Provider.OPENROUTER.value)
+    if openrouter_key is not None:
+        clients[Provider.OPENROUTER] = OpenAICompletionClient(
+            openrouter_key, base_url=OPENROUTER_BASE_URL
+        )
+    azure_key = key_store.get_key(Provider.AZURE_OPENAI.value)
+    if azure_key is not None and os.environ.get("OMNI_AZURE_OPENAI_ENDPOINT", "").strip():
+        clients[Provider.AZURE_OPENAI] = AzureOpenAICompletionClient(azure_key)
     ollama_url = os.environ.get(OLLAMA_BASE_URL_ENV, "").strip()
     if ollama_url:
         base = ollama_url if ollama_url.endswith("/v1") else f"{ollama_url.rstrip('/')}/v1"
         clients[Provider.OLLAMA] = OpenAICompletionClient(SecretApiKey("ollama"), base_url=base)
+    lmstudio_url = os.environ.get(LMSTUDIO_BASE_URL_ENV, "").strip()
+    if lmstudio_url:
+        base = lmstudio_url if lmstudio_url.endswith("/v1") else f"{lmstudio_url.rstrip('/')}/v1"
+        clients[Provider.LM_STUDIO] = OpenAICompletionClient(
+            SecretApiKey("lmstudio"), base_url=base
+        )
     return clients

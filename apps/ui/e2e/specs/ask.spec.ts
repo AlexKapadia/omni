@@ -11,19 +11,19 @@ const CITATION_NAME = /\.md · L\d+/;
 
 async function gotoAsk(page: import("@playwright/test").Page): Promise<void> {
   await page.goto("/");
-  await page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Ask Omni" }).click();
-  await expect(page.getByRole("heading", { name: "Ask across everything you know" })).toBeVisible();
+  await page.getByRole("navigation", { name: "Primary" }).getByRole("button", { name: "Ask" }).click();
+  await expect(page.getByRole("heading", { name: "Ask about your meetings" })).toBeVisible();
 }
 
 async function ask(page: import("@playwright/test").Page, question: string): Promise<void> {
-  await page.getByRole("textbox", { name: "Ask Omni" }).fill(question);
+  await page.getByRole("textbox", { name: "Ask" }).fill(question);
   await page.keyboard.press("Enter");
 }
 
 test("empty state shows the page display and the privacy line", async ({ page }) => {
   await gotoAsk(page);
   await expect(page.getByText("Answers come from your vault only. Nothing leaves this device.")).toBeVisible();
-  await expect(page.getByRole("textbox", { name: "Ask Omni" })).toBeVisible();
+  await expect(page.getByRole("textbox", { name: "Ask" })).toBeVisible();
 });
 
 test("answers a real question from the vault with citations and latency", async ({ page }) => {

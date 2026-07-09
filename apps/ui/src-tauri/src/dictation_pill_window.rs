@@ -120,7 +120,7 @@ fn create_pill_window(app: &AppHandle) -> tauri::Result<()> {
         return Ok(()); // idempotent (dev hot-restart safety)
     }
     WebviewWindowBuilder::new(app, PILL_WINDOW_LABEL, WebviewUrl::App("pill.html".into()))
-        .title("Omni Dictation")
+        .title("Omni Steroid Dictation")
         .inner_size(PILL_WIDTH, PILL_HEIGHT)
         .decorations(false)
         .transparent(true)

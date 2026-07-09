@@ -48,9 +48,9 @@ Key decisions:
 
 - **One function decides the engine command** (`resolve_engine_command` in
   `src-tauri/src/engine_sidecar.rs`): dev runs the repo source via `uv`,
-  release will run the PyInstaller binary. Packaging (M7) touches only that
-  function. If the engine is missing, the shell logs and retries — it never
-  crashes.
+  release runs the PyInstaller binary per platform (`omni-engine.exe` on Windows).
+  Cross-platform release targets: NSIS/MSI, DMG/app, deb/AppImage — see
+  `tauri.conf.json` and `packaging/README.md`.
 - **"Connected" means proven alive**: the status footer flips to connected
   only after a valid `engine.heartbeat`, not on socket open, and goes to
   disconnected if heartbeats stop for 5s (fail closed).

@@ -28,9 +28,8 @@ export type DictationPillState =
       readonly startedAtMs: number;
       readonly liveText: string;
       readonly commandDetected: boolean;
-      /** True while the release will INJECT into the keydown-focused app
-       * (external target captured, not flipped to note, no wake word). */
       readonly injectArmed: boolean;
+      readonly lockedRecording?: boolean;
     }
   | {
       readonly phase: "processing";
@@ -38,6 +37,7 @@ export type DictationPillState =
       readonly liveText: string;
       readonly commandDetected: boolean;
       readonly injectArmed: boolean;
+      readonly lockedRecording?: boolean;
     }
   | {
       readonly phase: "result";
@@ -61,6 +61,7 @@ export type DictationPillEvent =
   | { readonly type: "partial"; readonly text: string }
   /** Pill affordance: flip the armed INSERT back to NOTE before release. */
   | { readonly type: "flip-to-note" }
+  | { readonly type: "lock-engaged" }
   | {
       readonly type: "final";
       readonly payload: DictationFinalPayload;
@@ -104,6 +105,7 @@ export function reduceDictationPill(
         liveText: state.liveText,
         commandDetected: state.commandDetected,
         injectArmed: state.injectArmed,
+        ...(state.lockedRecording ? { lockedRecording: true } : {}),
       };
 
     case "partial":
@@ -118,10 +120,12 @@ export function reduceDictationPill(
       };
 
     case "flip-to-note":
-      // The affordance exists only BEFORE release (design: the user sees
-      // INSERT while speaking and can redirect to a note in time).
       if (state.phase !== "listening") return state;
       return { ...state, injectArmed: false };
+
+    case "lock-engaged":
+      if (state.phase !== "listening") return state;
+      return { ...state, lockedRecording: true };
 
     case "final":
       // Only a session that is actually awaiting a final may show one —

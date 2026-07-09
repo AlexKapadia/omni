@@ -37,8 +37,8 @@ const DETAIL: MeetingDetail = {
   enhancedNotesMd: "## Summary\nRenewal agreed.",
   extraction: null,
   transcript: [
-    { segmentId: "s1", stream: "them", text: "hello there", tStart: 0, tEnd: 1 },
-    { segmentId: "s2", stream: "me", text: "hi", tStart: 1, tEnd: 2 },
+      { segmentId: "s1", stream: "them", speakerLabel: "Speaker 1", text: "hello there", tStart: 0, tEnd: 1 },
+      { segmentId: "s2", stream: "me", speakerLabel: "Alex", text: "hi", tStart: 1, tEnd: 2 },
   ],
 };
 
@@ -102,12 +102,18 @@ describe("states", () => {
     // My Notes: verbatim, whitespace preserved via <pre>.
     const pre = container!.querySelector("pre");
     expect(pre!.textContent).toBe("my raw notes\n  with exact   spacing");
-    // Transcript: present but COLLAPSED by default.
+    // Transcript: switch to the Transcript tab, then expand the disclosure.
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Transcript" }));
+    });
     const details = container!.querySelector("details");
     expect(details).not.toBeNull();
     expect(details!.hasAttribute("open")).toBe(false);
     expect(screen.getByText("2 segments — click to expand")).toBeTruthy();
-    expect(screen.getByText("hello there")).toBeTruthy(); // inside the disclosure
+    await act(async () => {
+      fireEvent.click(screen.getByText("2 segments — click to expand"));
+    });
+    expect(screen.getByText("hello there")).toBeTruthy();
     // Finalized meeting: no Enhance-now button.
     expect(screen.queryByRole("button", { name: "Enhance now" })).toBeNull();
   });

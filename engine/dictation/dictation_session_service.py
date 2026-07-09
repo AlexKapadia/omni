@@ -239,7 +239,12 @@ class DictationSessionService:
                 # Live partial for the pill: finals-so-far + current segment.
                 await self._on_partial_text(self._partial_snapshot_text(words))
 
-        async def on_final(words: list[WordToken], t_open: float, t_close: float) -> None:
+        async def on_final(
+            words: list[WordToken],
+            t_open: float,
+            t_close: float,
+            _segment_audio: object = None,
+        ) -> None:
             self._final_segments.append((t_open, words))
             self._latest_partial = []
 

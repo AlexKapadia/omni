@@ -56,7 +56,7 @@ export function InstantExecuteWhitelistSection({
   };
 
   return (
-    <SettingsGroupCard label="Instant execute">
+    <SettingsGroupCard label="Auto-run safe actions">
       {INSTANT_INTENT_TYPES.map((intent, index) => {
         const enabled = whitelist.includes(intent);
         const copy = INTENT_COPY[intent];
@@ -70,7 +70,7 @@ export function InstantExecuteWhitelistSection({
             <ToggleSwitch
               checked={enabled}
               onChange={(next) => void toggle(intent, next)}
-              label={`Instant execute ${copy.label}`}
+              label={`Auto-run ${copy.label}`}
             />
           </SettingsRow>
         );

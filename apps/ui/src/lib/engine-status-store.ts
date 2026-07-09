@@ -19,6 +19,8 @@ export interface EngineStatusState {
   readonly lastLatencyMs: number | null;
   /** Whether the on-device STT model is loaded, from the last heartbeat. */
   readonly sttReady: boolean;
+  readonly sttEngine: string | null;
+  readonly sttDevice: string | null;
 }
 
 export const INITIAL_ENGINE_STATUS: EngineStatusState = {
@@ -27,6 +29,8 @@ export const INITIAL_ENGINE_STATUS: EngineStatusState = {
   engineVersion: null,
   lastLatencyMs: null,
   sttReady: false,
+  sttEngine: null,
+  sttDevice: null,
 };
 
 export type EngineStatusStore = StoreApi<EngineStatusState>;

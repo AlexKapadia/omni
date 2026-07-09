@@ -2,9 +2,9 @@
 
 # Omni
 
-### Local-first, bot-free meeting intelligence for Windows.
+### Local-first, bot-free meeting intelligence — Windows, macOS, and Linux.
 
-Omni sits quietly on your machine, captures your meetings without a bot, transcribes them on-device, turns your rough notes into clean enhanced notes, answers questions from your own Obsidian vault, and drafts follow-up actions you approve with one click. Nothing leaves your machine unless you send it.
+Omni sits quietly on your machine, captures your meetings without a bot, transcribes them on-device (with pluggable accuracy tiers), turns your rough notes into clean enhanced notes, answers questions from your Obsidian vault and past dictations, and drafts follow-up actions you approve with one click. Global dictation, a searchable dictation history, and Naomi voice mode sit on the same engine. Nothing leaves your machine unless you send it. Featuring a high-performance visual redesign with premium organic wave branding, real-time Web Audio API sound visualization, and an elegant 5-step onboarding and home dashboard system.
 
 <br/>
 
@@ -13,10 +13,10 @@ Omni sits quietly on your machine, captures your meetings without a bot, transcr
 <br/>
 
 [![License: MIT](https://img.shields.io/badge/license-MIT-0A0A0A.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Windows%2010%20%2F%2011-0A0A0A.svg)](#quick-start)
+[![Platform](https://img.shields.io/badge/platform-Win%20%7C%20macOS%20%7C%20Linux-0A0A0A.svg)](#quick-start)
 [![Local-first](https://img.shields.io/badge/local--first-yes-0A0A0A.svg)](#privacy--security)
 [![Telemetry](https://img.shields.io/badge/telemetry-zero-0A0A0A.svg)](#privacy--security)
-[![Tests](https://img.shields.io/badge/tests-1%2C358-0A0A0A.svg)](#proof-its-good)
+[![Tests](https://img.shields.io/badge/tests-2%2C853-0A0A0A.svg)](#proof-its-good)
 [![CI](https://github.com/AlexKapadia/omni/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexKapadia/omni/actions/workflows/ci.yml)
 
 </div>
@@ -25,17 +25,18 @@ Omni sits quietly on your machine, captures your meetings without a bot, transcr
 
 ## What it is
 
-Meeting tools today make you choose: let a bot join your call and upload everything to someone else's cloud, or take notes by hand. Omni refuses that trade. It runs entirely on your Windows machine, joins nothing, uploads nothing, and treats your Obsidian vault as the single source of truth.
+Meeting tools today make you choose: let a bot join your call and upload everything to someone else's cloud, or take notes by hand. Omni refuses that trade. It runs on your machine, joins nothing, uploads nothing, and treats your Obsidian vault as the single source of truth. **Windows is first-class** for full dual-stream capture; **macOS and Linux** ship as installable apps with mic capture and monitor-based loopback when you configure BlackHole or PipeWire.
 
-- **Invisible, bot-free capture.** Omni records two clean, labelled streams — system audio via WASAPI loopback (the other participants, `them`) and your microphone (`me`) — so there is no bot in the call and it still works **through headphones**, where naive single-stream capture hears nothing.
-- **On-device transcription.** Silero VAD gates a streaming Parakeet-TDT model on your GPU. The audio is **discarded after transcription** by default — keeping it is an explicit opt-in.
+- **Invisible, bot-free capture.** On Windows, Omni records two clean, labelled streams — system audio via WASAPI loopback (the other participants, `them`) and your microphone (`me`) — so there is no bot in the call and it still works **through headphones**, where naive single-stream capture hears nothing.
+- **On-device transcription.** Silero VAD gates streaming STT — **Parakeet-TDT** for live capture by default, with **Whisper** and **BYOK cloud STT** for import and retranscribe via Settings accuracy tiers. The audio is **kept on-device as MP3** alongside the transcript by default — discarding it after transcription is an explicit opt-out in Privacy.
 - **Enhanced notes, Granola-style.** Your rough in-meeting notes are fused with the transcript into structured notes. Your own words stay primary and untouched; the AI settles its lines *around* yours, inside clearly-marked managed regions.
 - **Ask anything, live.** A local RAG index over your vault and every past transcript answers questions during and after a call — with **inline citations** that point at an exact note and line range, never at nothing.
 - **Approval-carded actions.** Omni proposes calendar events, contact upserts, and **Gmail drafts — it never sends.** Nothing executes without your explicit approval, and every executed action lands in an append-only audit log.
-- **Dictation, everywhere.** Global push-to-talk dictation that injects into any app, cleans up the transcript intelligently, and **retains the raw text** so a bad cleanup can never silently rewrite what you said.
+- **Dictation, everywhere.** Global push-to-talk with a floating pill, **locked recording** (re-press to lock), cleanup style presets, an in-app **dictation history**, and Windows inject into any app. Raw text is **retained** so a bad cleanup can never silently rewrite what you said.
+- **Meeting tools.** Chat with a meeting, search-and-replace in transcript/summary, copy/export as Markdown, PDF, or DOCX, and import audio with optional **speaker identification**.
 - **Naomi — a voice agent.** A Jarvis-style voice mode with a reactive black-water visual that answers from your vault and dispatches the same approval-carded actions, hands-free.
 
-Every capability above maps to a real screen below — real data, real citations, real cost ledger.
+Every capability above maps to a real screen below — real data, real citations, real cost ledger. Full catalog: [`docs/features.md`](docs/features.md).
 
 ---
 
@@ -111,8 +112,9 @@ The real living-water pool (WebGL, 60 fps) with the conversation and tuning pane
 A **deterministic local core** (capture, storage, approval, audit) with **learned layers on top** (STT, retrieval, synthesis):
 
 - **Tauri 2 shell + React front end** renders state and relays commands. It never holds keys or does AI work.
-- **Python engine sidecar** (PyInstaller-packed) does everything real, over a pinned WebSocket protocol on `127.0.0.1` only. `GET /health` reports liveness.
-- **Tri-provider AI router** — **Groq** for instant work, **Gemini Flash** for long-context bulk, **Claude** *(optional)* for agentic tool use and synthesis. The router sends the minimum excerpt each task needs and records cost + latency for every call.
+- **Python engine sidecar** (PyInstaller-packed) does everything real, over a pinned WebSocket protocol on `127.0.0.1` only. `GET /health` reports liveness. Heartbeats expose `stt_engine` / `stt_device` when the STT stack is ready.
+- **Pluggable STT** — Parakeet (fast), Whisper (enhanced accuracy), or OpenAI-compatible cloud STT; tier presets in Settings. Live capture stays Parakeet-first; import and retranscribe honor the selected backend.
+- **Tri-provider AI router** — **Groq** for instant work, **Gemini Flash** for long-context bulk, **Claude** *(optional)* for agentic tool use and synthesis, plus BYOK paths (OpenAI, Ollama, OpenRouter, and others). The router sends the minimum excerpt each task needs and records cost + latency for every call.
 - **Local RAG** — Markdown is chunked and indexed with **BM25 + a dense `bge-small` tier**, fused with reciprocal-rank fusion, stored in `sqlite-vec`. All retrieval is on-device.
 - **Keys via Windows DPAPI**, held only by the engine. Storage is SQLite plus your Obsidian vault. Model calls are the **only** egress, and a kill-switch halts them.
 
@@ -124,7 +126,7 @@ Omni is **bring-your-own-keys** — no backend, no accounts. It runs on your own
 
 ### Build from source
 
-Prerequisites: **[uv](https://docs.astral.sh/uv/)** (Python toolchain — provisions Python 3.11 itself), **[pnpm](https://pnpm.io/)**, and the **Rust + MSVC** toolchain Tauri needs ([portable MSVC](https://tauri.app/start/prerequisites/) works if you can't run the full Visual Studio installer).
+Prerequisites: **[uv](https://docs.astral.sh/uv/)** (Python toolchain — provisions Python 3.11 itself), **[pnpm](https://pnpm.io/)**, and the **Rust** toolchain Tauri needs. On Windows use **MSVC** ([portable MSVC](https://tauri.app/start/prerequisites/) works if you can't run the full Visual Studio installer). On macOS/Linux follow [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your platform.
 
 ```bash
 git clone https://github.com/AlexKapadia/omni
@@ -147,7 +149,9 @@ Prefer to run the pieces separately? `uv run python -m engine.server` starts jus
 
 <br/>
 
-A one-click NSIS installer with auto-update is the intended distribution path. The **first tagged release is published separately** — until it lands, build from source with the steps above. When a release exists it will appear on the [Releases page](https://github.com/AlexKapadia/omni/releases).
+Tagged releases build **Windows** (NSIS + MSI), **macOS** (DMG + `.app`), and **Linux** (deb + AppImage) via CI, with signature-verified auto-update. When a release exists it appears on the [Releases page](https://github.com/AlexKapadia/omni/releases). Until then, build from source. Packaging details: [`packaging/README.md`](packaging/README.md).
+
+**macOS/Linux loopback:** configure a virtual monitor device (e.g. BlackHole on macOS, PipeWire monitor on Linux) for full meeting capture — see [`docs/architecture.md`](docs/architecture.md#cross-platform-status).
 
 </details>
 
@@ -176,7 +180,7 @@ With no keys at all, capture, transcription, and vault features still work fully
 This is the whole point, so it is stated plainly and enforced in code, not by convention:
 
 - **Local-first.** Transcripts, embeddings, notes, and keys never leave your machine — except the minimum excerpts inside the model calls you configured.
-- **Audio is never uploaded** and is **discarded after transcription** unless you opt in to keeping it.
+- **Audio is never uploaded.** Recordings are **kept on-device as MP3** with the transcript by default; you can opt out (discard after transcription) in Privacy. Either way, audio never leaves your machine.
 - **Zero telemetry.** None. No phone-home, ever.
 - **Your keys, DPAPI-encrypted.** Entered at onboarding, encrypted per Windows user, never written in plaintext, never logged. The UI process never holds them — only the engine does.
 - **Gmail is draft-only.** Omni drafts; it never sends.
@@ -200,7 +204,7 @@ Omni ships with an [`evidence/`](evidence/) showcase — every number is a **rea
 | **Router cost** | Decimal-exact — 0 mismatches vs an independent rational cross-check |
 | **Router, live** | 15 real provider calls, **$0.00080723** total, 0 fallbacks |
 | **Determinism** | all 5 deterministic paths yield exactly 1 distinct output over repeated runs |
-| **Test suite** | **2,766** cases (1,974 Python + 792 TypeScript); engine **98.87% line / 94.74% branch** coverage |
+| **Test suite** | **2,853** cases (2,028 Python + 825 TypeScript); coverage gates line ≥ 90% / branch ≥ 85% on engine (see [`evidence/coverage-report.md`](evidence/coverage-report.md)) |
 
 Tests are written to be **adversarial** — property-based, fuzzed, boundary-exact, determinism-checked — not happy-path. The suite is the evidence, not a rubber stamp.
 
@@ -216,8 +220,8 @@ Tests are written to be **adversarial** — property-based, fuzzed, boundary-exa
 
 Omni is open source under the [**MIT License**](LICENSE).
 
-**Stack:** Tauri 2 (Rust) · React 18 · Python 3.11 (FastAPI + WebSocket) · SQLite + `sqlite-vec` · Silero VAD + Parakeet-TDT · Groq / Gemini / Claude.
+**Stack:** Tauri 2 (Rust) · React 18 · Python 3.11 (FastAPI + WebSocket) · SQLite + `sqlite-vec` · Silero VAD + Parakeet / Whisper · Groq / Gemini / Claude.
 
-The layout mirrors the data flow — `apps/ui/` (shell + front end), `engine/` (capture · stt · index · router · agents · vault · naomi · dictation), `evidence/` (the measured showcase). Issues and PRs welcome; run the checks (`uv run ruff check .`, `uv run mypy`, `uv run pytest`, and `pnpm test` in `apps/ui`) before opening one.
+The layout mirrors the data flow — `apps/ui/` (shell + front end), `engine/` (capture · stt · index · router · agents · vault · naomi · dictation · enhance · export), `evidence/` (the measured showcase), `docs/` ([index](docs/README.md)). Issues and PRs welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) for the full gate (`uv run ruff check .`, `uv run mypy`, `uv run pytest`, `pnpm test` in `apps/ui`).
 
 <sub>Built largely autonomously with Claude, under a strict test-, evidence-, and security-first operating contract. Every screenshot, number, and claim in this README is real and traceable to committed artifacts.</sub>

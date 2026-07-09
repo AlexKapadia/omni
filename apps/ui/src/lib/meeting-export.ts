@@ -3,7 +3,7 @@
  */
 import { requestEngineReply } from "./meetings-live-repository";
 
-export type MeetingExportFormat = "srt" | "vtt" | "txt" | "pdf" | "docx";
+export type MeetingExportFormat = "srt" | "vtt" | "txt" | "pdf" | "docx" | "md";
 
 export interface MeetingExportResult {
   readonly content: string;
@@ -17,6 +17,7 @@ const MIME_BY_FORMAT: Record<MeetingExportFormat, string> = {
   vtt: "text/vtt",
   txt: "text/plain",
   pdf: "application/pdf",
+  md: "text/markdown",
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
 

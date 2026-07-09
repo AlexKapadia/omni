@@ -31,6 +31,7 @@ from engine.dictation.dictation_finalization import DictationFinalResult, Dictat
 from engine.dictation.dictation_protocol_names import (
     DICTATION_BEGIN_COMMAND_NAME,
     DICTATION_END_COMMAND_NAME,
+    DICTATION_HISTORY_LIST_COMMAND_NAME,
     DICTATION_ERROR_EVENT_NAME,
     DICTATION_FINAL_EVENT_NAME,
     DICTATION_PARTIAL_EVENT_NAME,
@@ -38,7 +39,9 @@ from engine.dictation.dictation_protocol_names import (
     build_dictation_final_payload,
     build_dictation_partial_payload,
 )
+from engine.dictation.cleanup_styles import normalize_cleanup_style
 from engine.dictation.dictation_session_service import DictationSessionService
+from engine.storage.app_settings_repository import SETTING_DICTATION_CLEANUP_STYLE, read_setting
 from engine.index import VaultIndexerService
 from engine.protocol import PROTOCOL_VERSION, Envelope, EnvelopeKind, EventBroadcastHub
 from engine.router import (
@@ -52,10 +55,20 @@ from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.vault import VaultWriteError, resolve_vault_root
 
+from engine.wiring.dictation_history_command_dispatcher import (
+    dispatch_dictation_history_command,
+)
+
 logger = logging.getLogger(__name__)
 
 # The commands this dispatcher owns; the handler routes ONLY these here.
-DICTATION_COMMAND_NAMES = frozenset({DICTATION_BEGIN_COMMAND_NAME, DICTATION_END_COMMAND_NAME})
+DICTATION_COMMAND_NAMES = frozenset(
+    {
+        DICTATION_BEGIN_COMMAND_NAME,
+        DICTATION_END_COMMAND_NAME,
+        DICTATION_HISTORY_LIST_COMMAND_NAME,
+    }
+)
 
 # Additive error code (string literal beside the pinned enum, mirroring the
 # meeting dispatcher's `finalize_error`).
@@ -110,7 +123,7 @@ class DictationCommandGateway:
             DICTATION_PARTIAL_EVENT_NAME, build_dictation_partial_payload(text)
         )
 
-    def _build_finalizer(self, connection: aiosqlite.Connection) -> DictationReleaseFinalizer:
+    async def _build_finalizer(self, connection: aiosqlite.Connection) -> DictationReleaseFinalizer:
         """Real finalizer per the pinned spec: real router, real intents
         connection factory, ``resolve_vault_root``, ``VaultIndexerService``.
 
@@ -138,10 +151,14 @@ class DictationCommandGateway:
             # No configured vault: note mode will refuse honestly inside the
             # finalizer via resolve_vault_root; command/inject still work.
             indexer = None
+        style_raw = await read_setting(connection, SETTING_DICTATION_CLEANUP_STYLE)
         return DictationReleaseFinalizer(
             route=router.route,
             intents_connection_factory=intents_connection,
             vault_root_provider=resolve_vault_root,
+            cleanup_style=normalize_cleanup_style(
+                style_raw if isinstance(style_raw, str) else None
+            ),
             indexer=indexer,
         )
 
@@ -152,10 +169,17 @@ class DictationCommandGateway:
         await apply_migrations(self._db_path, self._migrations_dir)
         connection = await open_sqlite_connection(self._db_path)
         try:
-            finalizer = self._build_finalizer(connection)
-            return await finalizer.finalize(
+            finalizer = await self._build_finalizer(connection)
+            result = await finalizer.finalize(
                 text, inject_requested=inject_requested, flush_ms=flush_ms
             )
+            await connection.commit()
+            try:
+                await finalizer.record_history_entry(connection, result)
+                await connection.commit()
+            except Exception:
+                logger.exception("dictation history write failed")
+            return result
         finally:
             await connection.close()
 
@@ -204,6 +228,14 @@ async def dispatch_dictation_command(
             # mode_hint is advisory UI state only — the engine's mode split
             # on release is authoritative; the service ignores it (spec).
             await gateway.begin()
+        elif command.name == DICTATION_HISTORY_LIST_COMMAND_NAME:
+            await dispatch_dictation_history_command(
+                command,
+                db_path=gateway._db_path,
+                migrations_dir=gateway._migrations_dir,
+                send=send,
+            )
+            return
         else:
             # Deny by default: ONLY the literal True may route text toward a
             # paste; any other value (missing, "yes", 1) is False (spec).

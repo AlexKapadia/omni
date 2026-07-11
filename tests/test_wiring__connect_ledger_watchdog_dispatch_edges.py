@@ -288,7 +288,7 @@ async def test_default_spotter_factory_builds_a_spotter(
         async def emit(hit: object) -> None:
             return None
 
-        spotter = wiring._default_factory(connection, emit)
+        spotter = await wiring._build_default_spotter(connection, emit)
         assert hasattr(spotter, "on_final_segment") and hasattr(spotter, "flush")
     finally:
         await connection.close()

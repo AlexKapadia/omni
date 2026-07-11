@@ -166,6 +166,26 @@ export function createEngineApiKeyVault(persist = saveKey): ApiKeyVault {
 export const engineKeyValidator: KeyValidator = (provider) => validateKey(provider);
 
 /**
+ * Apply setup.status key PRESENCE flags into the store after restart.
+ * setup.status returns booleans only (never key material / last fours), so
+ * saved keys get a masked placeholder lastFour — enough for UI chrome
+ * (Naomi visibility, Settings "saved" badges) without inventing digits.
+ */
+export function hydrateApiKeysFromSetupStatus(
+  store: ApiKeysStore,
+  flags: Readonly<Record<KeyProvider, boolean>>,
+): void {
+  const keys = {} as Record<KeyProvider, ApiKeyRowState>;
+  for (const provider of KEY_PROVIDERS) {
+    const present = flags[provider] === true;
+    keys[provider] = present
+      ? { saved: true, lastFour: "••••" }
+      : { saved: false, lastFour: null };
+  }
+  store.setState({ keys });
+}
+
+/**
  * MOCK ApiKeyVault — in-memory sink for tests only. Same interface, and it
  * deliberately does NOT expose a read path, so nothing can echo a stored value.
  */

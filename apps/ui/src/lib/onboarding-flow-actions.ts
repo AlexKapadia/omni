@@ -38,6 +38,9 @@ import {
   type EngineSocketTransport,
 } from "./setup-settings-transport";
 import type { SetupStatus } from "./setup-settings-payloads";
+import { summaryProviderFromModelId } from "./summary-provider-from-model-id";
+import { DEFAULT_WHISPER_MODEL_ID } from "./whisper-model-catalog";
+import { hydrateApiKeysFromSetupStatus, apiKeysStore, type ApiKeysStore } from "./api-keys-store";
 
 function messageOf(err: unknown, fallback: string): string {
   return err instanceof Error ? err.message : fallback;
@@ -47,9 +50,11 @@ function messageOf(err: unknown, fallback: string): string {
 export async function initFromSetupStatus(
   store: OnboardingFlowStore,
   getStatus: () => Promise<SetupStatus> = getSetupStatus,
+  keysStore: ApiKeysStore = apiKeysStore,
 ): Promise<void> {
   try {
     const status = await getStatus();
+    hydrateApiKeysFromSetupStatus(keysStore, status.keys);
     if (status.vault.configured && status.vault.path !== null) {
       setVaultConfigured(store, status.vault.path);
     }
@@ -62,6 +67,27 @@ export async function initFromSetupStatus(
   } catch {
     // Fresh install / engine still starting: the wizard proceeds from blank.
   }
+}
+
+/**
+ * Persist the onboarding STT engine + summary model choice. Whisper gets the
+ * default catalog id; Parakeet keeps an empty model id. summaryProvider is
+ * derived from the model id so cloud routes are not left on ollama by accident.
+ */
+export async function saveEngineSelection(
+  engine: "parakeet" | "whisper",
+  summaryModelId: string,
+  update: typeof updateSettings = updateSettings,
+): Promise<void> {
+  await update(
+    {
+      stt_engine: engine,
+      stt_model_id: engine === "whisper" ? DEFAULT_WHISPER_MODEL_ID : "",
+      summary_model_id: summaryModelId,
+      summary_provider: summaryProviderFromModelId(summaryModelId),
+    },
+    null,
+  );
 }
 
 /** Open the Tauri folder picker; a chosen path becomes the pending vault. */
@@ -134,49 +160,8 @@ export async function beginModelDownload(
   try {
     await start();
   } catch (err) {
-    if (typeof (globalThis as any).process !== "undefined" && (globalThis as any).process.env.NODE_ENV === "test") {
-      applyModelFailed(store, "download", messageOf(err, "Could not start the download."));
-      markModelsCompleted(store, false);
-      return;
-    }
-    // Fallback: run simulated progress updates in development or mock/offline mode
-    let pct = 0;
-    const interval = setInterval(() => {
-      pct += Math.floor(Math.random() * 15) + 5;
-      if (pct >= 100) {
-        pct = 100;
-        clearInterval(interval);
-        
-        applyModelProgress(store, {
-          file: "silero_vad.onnx",
-          receivedBytes: 100,
-          totalBytes: 100,
-          sha256Verified: true,
-        });
-
-        applyModelProgress(store, {
-          file: "parakeet-tdt-0.6b-v2.nemo",
-          receivedBytes: 100,
-          totalBytes: 100,
-          sha256Verified: true,
-        });
-
-        markModelsCompleted(store, true);
-      } else {
-        applyModelProgress(store, {
-          file: "silero_vad.onnx",
-          receivedBytes: pct,
-          totalBytes: 100,
-          sha256Verified: null,
-        });
-        applyModelProgress(store, {
-          file: "parakeet-tdt-0.6b-v2.nemo",
-          receivedBytes: pct,
-          totalBytes: 100,
-          sha256Verified: null,
-        });
-      }
-    }, 200);
+    applyModelFailed(store, "download", messageOf(err, "Could not start the download."));
+    markModelsCompleted(store, false);
   }
 }
 

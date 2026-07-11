@@ -143,6 +143,39 @@ def _flatten_slot(slot: RouteSlot, keyed_providers: frozenset[str]) -> ProviderM
     return slot
 
 
+# User-facing summary model ids (Settings) → concrete provider+model slots.
+# Only injected when that provider is keyed; never invents an unkeyed call.
+SUMMARY_MODEL_PREFERENCES: dict[str, ProviderModelSlot] = {
+    "gemini-2.5-flash": _GEMINI_FLASH,
+    "gemini-2.5-pro": _GEMINI_PRO,
+    "claude-sonnet-4-5": ProviderModelSlot(Provider.ANTHROPIC, ANTHROPIC_MODEL),
+    "gpt-4o": ProviderModelSlot(Provider.OPENAI, "gpt-4o"),
+    "gpt-4o-mini": _OPENAI_MINI,
+    "llama3.2": _OLLAMA_DEFAULT,
+    "ollama/llama3.2": _OLLAMA_DEFAULT,
+    "gemma3:1b": ProviderModelSlot(Provider.OLLAMA, "gemma3:1b"),
+}
+
+# User-facing summary_provider setting ids (Settings) → concrete Provider.
+# "builtin-ai" is Meetily-style local-via-Ollama, not a second runtime.
+SUMMARY_PROVIDER_TO_PROVIDER: dict[str, Provider] = {
+    "ollama": Provider.OLLAMA,
+    "builtin-ai": Provider.OLLAMA,
+    "gemini": Provider.GEMINI,
+    "anthropic": Provider.ANTHROPIC,
+    "openai": Provider.OPENAI,
+}
+
+# The default model used when the preferred provider is set but no explicit
+# preferred_model accompanies it.
+SUMMARY_PROVIDER_DEFAULT_MODEL: dict[Provider, str] = {
+    Provider.OLLAMA: OLLAMA_DEFAULT_MODEL,
+    Provider.GEMINI: GEMINI_FLASH_MODEL,
+    Provider.ANTHROPIC: ANTHROPIC_MODEL,
+    Provider.OPENAI: "gpt-4o",
+}
+
+
 def resolve_route(task_type: str, keyed_providers: frozenset[str]) -> ResolvedRoute:
     """Resolve a task type into its ordered provider/model attempt chain.
 
@@ -172,4 +205,58 @@ def resolve_route(task_type: str, keyed_providers: frozenset[str]) -> ResolvedRo
         task_type=known_task,
         attempts=tuple(attempts),
         latency_budget_p95_ms=spec.latency_budget_p95_ms,
+    )
+
+
+def prefer_summary_model(
+    route: ResolvedRoute,
+    preferred_model: str | None,
+    keyed_providers: frozenset[str] | None = None,
+    preferred_provider: str | None = None,
+) -> ResolvedRoute:
+    """Put the user's summary provider/model first when it is keyed.
+
+    Used whenever Settings passes preferred_* (enhanced_notes, ask_synthesis,
+    live_extraction, selection translate, …) so the summary provider is not a
+    no-op. ``preferred_provider`` (the ``summary_provider`` setting) wins
+    when it maps to a keyed provider — it prepends that provider's slot,
+    using ``preferred_model`` when given or the provider's own default
+    model otherwise. Falls through to the existing model-id preference
+    logic when the provider is unmapped/unkeyed. Unknown or unkeyed
+    preferences leave the chain unchanged (never invent an unkeyed call).
+    """
+    keyed = keyed_providers if keyed_providers is not None else frozenset(
+        a.provider.value for a in route.attempts
+    )
+    if preferred_provider is not None and preferred_provider.strip():
+        mapped = SUMMARY_PROVIDER_TO_PROVIDER.get(preferred_provider.strip().lower())
+        if mapped is not None and mapped.value in keyed:
+            model = (
+                preferred_model.strip()
+                if preferred_model is not None and preferred_model.strip()
+                else SUMMARY_PROVIDER_DEFAULT_MODEL[mapped]
+            )
+            return _prepend_slot(route, ProviderModelSlot(mapped, model))
+    if preferred_model is None or not preferred_model.strip():
+        return route
+    key = preferred_model.strip()
+    slot = SUMMARY_MODEL_PREFERENCES.get(key)
+    if slot is not None:
+        if slot.provider.value not in keyed:
+            return route
+        preferred = slot
+    else:
+        matching = [a for a in route.attempts if a.model == key]
+        if not matching:
+            return route
+        preferred = matching[0]
+    return _prepend_slot(route, preferred)
+
+
+def _prepend_slot(route: ResolvedRoute, preferred: ProviderModelSlot) -> ResolvedRoute:
+    rest = [a for a in route.attempts if a != preferred]
+    return ResolvedRoute(
+        task_type=route.task_type,
+        attempts=(preferred, *rest),
+        latency_budget_p95_ms=route.latency_budget_p95_ms,
     )

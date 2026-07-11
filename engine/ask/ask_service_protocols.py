@@ -45,6 +45,8 @@ class CompletionRouterProtocol(Protocol):
         tools: tuple[ToolSpec, ...] = (),
         json_schema: dict[str, object] | None = None,
         max_tokens: int = 4096,
+        preferred_model: str | None = None,
+        preferred_provider: str | None = None,
     ) -> RoutedCompletion:
         """Execute one task through the provider chain (kill-switch gated)."""
         ...

@@ -285,6 +285,31 @@ async def test_meeting_with_zero_segments_removes_stale_transcript_note(
         await connection.close()
 
 
+async def test_index_meeting_transcript_skips_soft_deleted_meeting(
+    tmp_path: Path, tmp_db_path: Path, real_migrations_dir: Path
+) -> None:
+    """Reindex must not resurrect transcript:// chunks for soft-deleted meetings."""
+    connection = await _fresh_db(tmp_db_path, real_migrations_dir)
+    try:
+        await _seed_meeting(connection, "m-del")
+        service = VaultIndexerService(connection, tmp_path / "vault")
+        await service.index_meeting_transcript("m-del")
+        assert await _chunk_ids(connection, "transcript://m-del")
+        await connection.execute(
+            "UPDATE meetings SET deleted_at = '2026-07-10T12:00:00+00:00' WHERE id = 'm-del'"
+        )
+        await connection.commit()
+        assert await service.index_meeting_transcript("m-del") == 0
+        assert await _chunk_ids(connection, "transcript://m-del") == []
+        cursor = await connection.execute(
+            "SELECT COUNT(*) FROM notes_meta WHERE note_path = 'transcript://m-del'"
+        )
+        assert (await cursor.fetchone())[0] == 0
+        await cursor.close()
+    finally:
+        await connection.close()
+
+
 async def test_undecodable_bytes_are_replaced_never_fatal(
     tmp_path: Path, tmp_db_path: Path, real_migrations_dir: Path
 ) -> None:

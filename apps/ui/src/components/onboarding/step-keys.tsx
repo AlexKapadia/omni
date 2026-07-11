@@ -257,13 +257,14 @@ export function StepKeys({
           letterSpacing: "var(--text-title-ls)",
         }}
       >
-        Finish & Optional Setup
+        Finish setup
       </h2>
       <p
         className="mt-[var(--space-2)] mb-[var(--space-6)] text-[var(--grey-600)]"
         style={{ fontSize: "var(--text-body-size)" }}
       >
-        You are ready to use Omni Steroid. Optionally, configure API keys and integrations now, or skip and set them up later in Settings.
+        Capture and transcription work offline. Add Groq and Gemini keys now if you want enhanced notes and Ask
+        answers — or skip and add them later in Settings. Without keys, cloud AI features stay paused.
       </p>
 
       <div className="flex flex-col">

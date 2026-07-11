@@ -40,6 +40,7 @@ from engine.router import (
     insert_router_ledger_entry,
 )
 from engine.security import ProviderKeyStore
+from engine.storage.app_settings_repository import SETTING_MIC_DEVICE_ID, read_setting
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.stt.model_weights_downloader import (
@@ -132,6 +133,15 @@ class NaomiTurnGateway:
             speaker = NaomiTurnSpeaker(
                 self._hub, PersistentCartesiaConnection(), clock=time.monotonic
             )
+
+            async def start_capture_with_preferred_mic(
+                sink: Callable[[AudioFrame], Awaitable[None]],
+            ) -> Callable[[], Awaitable[None]]:
+                # Re-read on each listen so a Settings change takes effect next turn.
+                mic_raw = await read_setting(connection, SETTING_MIC_DEVICE_ID)
+                mic_key = mic_raw.strip() if isinstance(mic_raw, str) and mic_raw.strip() else None
+                return await start_naomi_mic_capture(sink, preferred_me_device_key=mic_key)
+
             orchestrator = NaomiTurnOrchestrator(
                 self._hub,
                 answer_service,
@@ -140,7 +150,7 @@ class NaomiTurnGateway:
                 vad_factory,
                 transcribe,
                 clock=time.monotonic,
-                start_capture=start_naomi_mic_capture,
+                start_capture=start_capture_with_preferred_mic,
             )
             speaker.set_finished_callback(orchestrator.on_speaker_finished)
             self._orchestrator = orchestrator

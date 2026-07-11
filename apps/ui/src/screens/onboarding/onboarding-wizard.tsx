@@ -31,12 +31,12 @@ import {
   configureVault,
   finishOnboarding,
   initFromSetupStatus,
+  saveEngineSelection,
   skipGoogleConnect,
   subscribeGoogleConnect,
   subscribeModelDownload,
 } from "../../lib/onboarding-flow-actions";
 import { enrollSpeaker } from "../../lib/speaker-enroll-repository";
-import { updateSettings } from "../../lib/setup-settings-repository";
 import type { SetupStatus } from "../../lib/setup-settings-payloads";
 
 /** Injectable action seam — real engine actions by default, fakes in tests. */
@@ -74,15 +74,7 @@ const LIVE_ACTIONS: OnboardingActions = {
   skipGoogleConnect: (store) => skipGoogleConnect(store),
   finishOnboarding: (store, onDone) => finishOnboarding(store, onDone),
   enrollSpeaker: (name) => enrollSpeaker(name).then(() => undefined),
-  saveEngineSelection: (engine, summaryModelId) =>
-    updateSettings(
-      {
-        sttEngine: engine,
-        sttModelId: engine === "whisper" ? "large-v3" : "",
-        summaryModelId,
-      },
-      null,
-    ),
+  saveEngineSelection: (engine, summaryModelId) => saveEngineSelection(engine, summaryModelId),
 };
 
 export function OnboardingWizard({
@@ -248,7 +240,18 @@ export function OnboardingWizard({
             {modelsReady && (
               <OmniButton
                 variant="primary"
-                onClick={() => advance(6)}
+                onClick={async () => {
+                  try {
+                    await actions.saveEngineSelection(selectedEngine, selectedSummaryModel);
+                    advance(6);
+                  } catch (err) {
+                    applyModelFailed(
+                      flowStore,
+                      "download",
+                      err instanceof Error ? err.message : "Failed to select model.",
+                    );
+                  }
+                }}
               >
                 Continue
               </OmniButton>

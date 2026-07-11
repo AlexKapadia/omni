@@ -27,8 +27,18 @@ const BASE: SettingsGetResult = {
     liveTranslationLang: "",
     summaryLanguage: "",
     summaryModelId: "gemini-2.5-flash",
+    ollamaBaseUrl: "http://127.0.0.1:11434",
     speakerIdentity: "Me",
     speakerVoiceEnrolled: false,
+    dictationCleanupStyle: "classic",
+    sttEngine: "parakeet",
+    sttModelId: "",
+    sttOpenaiBaseUrl: "",
+    selectionTranslationLang: "English",
+    summaryProvider: "ollama",
+    autoSummary: false,
+      cartesiaVoiceId: "",
+      micDeviceId: "",
   },
   killSwitchEngaged: false,
   routing: [],
@@ -53,6 +63,7 @@ const WIRE_GET = {
     live_translation_lang: "",
     summary_language: "",
     summary_model_id: "gemini-2.5-flash",
+    ollama_base_url: "http://127.0.0.1:11434",
     speaker_identity: "Me",
     speaker_voice_enrolled: false,
   },
@@ -119,5 +130,26 @@ describe("updateSetting optimistic + revert", () => {
     });
     expect(result.ok).toBe(true);
     expect(store.getState().killSwitchEngaged).toBe(true); // reflected from the engine
+  });
+
+  it("joins pushToTalkHotkey tokens with + for the wire (engine expects a string)", async () => {
+    const store = createSettingsStore();
+    applySettingsResult(store, BASE);
+    let wireValues: Record<string, unknown> | null = null;
+    const result = await updateSetting(
+      store,
+      { pushToTalkHotkey: ["Ctrl", "Shift", "F8"] },
+      async (name, args) => {
+        if (name === "settings.update") {
+          wireValues = (args as { values: Record<string, unknown> }).values;
+          return { applied: { push_to_talk_hotkey: "Ctrl+Shift+F8" } };
+        }
+        throw new Error(`unexpected ${name}`);
+      },
+    );
+    expect(result.ok).toBe(true);
+    expect(wireValues).toEqual({ push_to_talk_hotkey: "Ctrl+Shift+F8" });
+    // Store keeps the array shape for UI / pushDictationHotkey.
+    expect(store.getState().settings!.pushToTalkHotkey).toEqual(["Ctrl", "Shift", "F8"]);
   });
 });

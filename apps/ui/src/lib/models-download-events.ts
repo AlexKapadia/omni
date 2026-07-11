@@ -10,6 +10,7 @@ import {
   asFiniteNumberOrNull,
   asNonEmptyString,
   asString,
+  isPlainObject,
 } from "./untrusted-payload-guards";
 
 export interface ModelsDownloadProgress {
@@ -54,6 +55,13 @@ export function parseModelsFailed(payload: Record<string, unknown>): ModelsDownl
   return { file, message };
 }
 
+/** Filename from a string entry or an engine `{ file }` object; null if corrupt. */
+function completedFileName(item: unknown): string | null {
+  if (typeof item === "string") return item;
+  if (!isPlainObject(item)) return null;
+  return asNonEmptyString(item["file"]);
+}
+
 export function parseModelsCompleted(
   payload: Record<string, unknown>,
 ): ModelsDownloadCompleted | null {
@@ -62,8 +70,9 @@ export function parseModelsCompleted(
   if (ok === null || !Array.isArray(filesRaw)) return null;
   const files: string[] = [];
   for (const item of filesRaw) {
-    if (typeof item !== "string") return null; // fail closed
-    files.push(item);
+    const name = completedFileName(item);
+    if (name === null) return null; // fail closed
+    files.push(name);
   }
   return { ok, files };
 }

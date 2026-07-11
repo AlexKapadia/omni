@@ -30,6 +30,7 @@ import aiosqlite
 from engine.dictation.dictation_finalization import DictationFinalResult, DictationReleaseFinalizer
 from engine.dictation.dictation_protocol_names import (
     DICTATION_BEGIN_COMMAND_NAME,
+    DICTATION_CANCEL_COMMAND_NAME,
     DICTATION_END_COMMAND_NAME,
     DICTATION_HISTORY_LIST_COMMAND_NAME,
     DICTATION_ERROR_EVENT_NAME,
@@ -41,7 +42,14 @@ from engine.dictation.dictation_protocol_names import (
 )
 from engine.dictation.cleanup_styles import normalize_cleanup_style
 from engine.dictation.dictation_session_service import DictationSessionService
-from engine.storage.app_settings_repository import SETTING_DICTATION_CLEANUP_STYLE, read_setting
+from engine.storage.app_settings_repository import (
+    SETTING_DICTATION_CLEANUP_STYLE,
+    SETTING_MIC_DEVICE_ID,
+    SETTING_STT_ENGINE,
+    SETTING_STT_MODEL_ID,
+    SETTING_STT_OPENAI_BASE_URL,
+    read_setting,
+)
 from engine.index import VaultIndexerService
 from engine.protocol import PROTOCOL_VERSION, Envelope, EnvelopeKind, EventBroadcastHub
 from engine.router import (
@@ -66,6 +74,7 @@ DICTATION_COMMAND_NAMES = frozenset(
     {
         DICTATION_BEGIN_COMMAND_NAME,
         DICTATION_END_COMMAND_NAME,
+        DICTATION_CANCEL_COMMAND_NAME,
         DICTATION_HISTORY_LIST_COMMAND_NAME,
     }
 )
@@ -106,6 +115,7 @@ class DictationCommandGateway:
         self._db_path = db_path
         self._migrations_dir = migrations_dir
         # Live partials stream straight to every socket (the pill mirrors them).
+        self._session_injected = session_service is not None
         self._session = (
             session_service
             if session_service is not None
@@ -185,7 +195,37 @@ class DictationCommandGateway:
 
     async def begin(self) -> None:
         """Key down: open the mic session (raises loudly on failure)."""
+        # Injected test fakes own their STT config; production always loads settings.
+        if not self._session_injected:
+            await self._configure_session_stt_from_settings()
         await self._session.begin()
+
+    async def _configure_session_stt_from_settings(self) -> None:
+        """Apply persisted STT engine before models load (same source as retranscribe)."""
+        await apply_migrations(self._db_path, self._migrations_dir)
+        connection = await open_sqlite_connection(self._db_path)
+        try:
+            engine_raw = await read_setting(connection, SETTING_STT_ENGINE)
+            model_raw = await read_setting(connection, SETTING_STT_MODEL_ID)
+            url_raw = await read_setting(connection, SETTING_STT_OPENAI_BASE_URL)
+            mic_raw = await read_setting(connection, SETTING_MIC_DEVICE_ID)
+            stt_engine = engine_raw if isinstance(engine_raw, str) else "parakeet"
+            stt_model_id = model_raw if isinstance(model_raw, str) else ""
+            openai_base_url = url_raw.strip() if isinstance(url_raw, str) else ""
+            mic_key = mic_raw.strip() if isinstance(mic_raw, str) and mic_raw.strip() else None
+            openai_api_key = None
+            if stt_engine.strip() == "openai_compatible":
+                stored = ProviderKeyStore().get_key("openai")
+                openai_api_key = None if stored is None else stored.reveal
+            self._session.configure(
+                stt_engine,
+                stt_model_id,
+                openai_base_url=openai_base_url,
+                openai_api_key=openai_api_key,
+                preferred_me_device_key=mic_key,
+            )
+        finally:
+            await connection.close()
 
     async def end(self, inject_requested: bool) -> DictationFinalResult:
         """Key up: flush STT, finalize the release, broadcast the outcome."""
@@ -208,6 +248,10 @@ class DictationCommandGateway:
         )
         return result
 
+    async def cancel(self) -> None:
+        """Abort the live session without finalize / history / note write."""
+        await self._session.cancel()
+
     async def broadcast_error(self, reason: str) -> None:
         """``dictation.error`` — the pill shows the plain-voice reason."""
         await self._hub.broadcast_event(
@@ -228,6 +272,8 @@ async def dispatch_dictation_command(
             # mode_hint is advisory UI state only — the engine's mode split
             # on release is authoritative; the service ignores it (spec).
             await gateway.begin()
+        elif command.name == DICTATION_CANCEL_COMMAND_NAME:
+            await gateway.cancel()
         elif command.name == DICTATION_HISTORY_LIST_COMMAND_NAME:
             await dispatch_dictation_history_command(
                 command,

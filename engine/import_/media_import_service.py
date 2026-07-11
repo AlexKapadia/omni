@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import asyncio
+import logging
 import shutil
 import uuid
 from collections.abc import Awaitable, Callable
@@ -11,6 +12,7 @@ from pathlib import Path
 
 import aiosqlite
 
+from engine.index.vault_indexer_service import VaultIndexerService
 from engine.stt.file_diarization_service import assign_speakers_to_segments
 from engine.stt.offline_audio_transcriber import decode_media_to_mono_16k, new_segment_id
 from engine.stt.stt_backend_protocol import SttSegment
@@ -19,6 +21,9 @@ from engine.storage.meetings_repository import insert_meeting, mark_meeting_ende
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.storage.transcript_segments_repository import insert_transcript_segment
+from engine.vault import VaultWriteError, resolve_vault_root
+
+logger = logging.getLogger(__name__)
 
 ProgressFn = Callable[[str, float], Awaitable[None] | None]
 
@@ -104,6 +109,22 @@ async def import_media_file(
                     created_at_iso=created_at,
                 )
         await connection.commit()
+        # Fail-soft: imported meetings must be searchable; index errors must
+        # not roll back the saved transcript.
+        try:
+            vault_root = resolve_vault_root()
+            indexer = VaultIndexerService(connection, vault_root)
+            await indexer.index_meeting_transcript(meeting_id)
+        except VaultWriteError:
+            logger.info(
+                "media import skipped transcript index: vault not configured"
+            )
+        except Exception:
+            logger.warning(
+                "media import transcript index failed for meeting %s (segments kept)",
+                meeting_id,
+                exc_info=True,
+            )
     finally:
         await connection.close()
     await _emit_progress(on_progress, "done", 1.0)

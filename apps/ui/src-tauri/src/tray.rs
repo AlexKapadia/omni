@@ -47,7 +47,11 @@ pub fn build_tray(app: &AppHandle) -> tauri::Result<()> {
             }
         }
         MENU_ID_START_CAPTURE => {
+            // Same show/focus as Show, then emit so the UI can navigate Live + start.
             if let Some(window) = app.get_webview_window("main") {
+                let _ = window.show();
+                let _ = window.unminimize();
+                let _ = window.set_focus();
                 let _ = window.emit("tray-start-capture", ());
             }
         }

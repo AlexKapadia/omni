@@ -167,5 +167,16 @@ class VaultWatchdogServerWiring:
             with contextlib.suppress(asyncio.CancelledError):
                 await task
 
+    async def rebind(self, vault_root: Path | None) -> None:
+        """Stop the current watcher and start over the new vault root.
+
+        Called when settings.update changes ``vault_dir`` so the index tracks
+        the user's newly chosen vault without an engine restart.
+        """
+        await self.shutdown()
+        self._vault_root = vault_root
+        self._pending.clear()
+        self.start()
+
 
 __all__ = ["DEBOUNCE_SECONDS", "VaultChangeCallback", "VaultWatchdogServerWiring"]

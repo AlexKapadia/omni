@@ -47,6 +47,12 @@ from engine.storage.app_settings_repository import (
     SETTING_STT_MODEL_ID,
     SETTING_STT_OPENAI_BASE_URL,
     SETTING_SELECTION_TRANSLATION_LANG,
+    SETTING_OLLAMA_BASE_URL,
+    SETTING_SUMMARY_PROVIDER,
+    SETTING_AUTO_SUMMARY,
+    SETTING_CARTESIA_VOICE_ID,
+    SETTING_MIC_DEVICE_ID,
+    SUMMARY_PROVIDERS,
 )
 from engine.dictation.cleanup_styles import CLEANUP_STYLES
 from engine.stt.stt_backend_registry import STT_ENGINES
@@ -304,8 +310,9 @@ def _validate_stt_model_id(value: object) -> str:
     if not isinstance(value, str):
         raise SettingsValueError(key, "value must be a string")
     trimmed = value.strip()
-    if not trimmed or len(trimmed) > 128:
-        raise SettingsValueError(key, "model id must be 1-128 characters")
+    # Empty is valid for Parakeet (engine-owned weights); Whisper/cloud need an id.
+    if len(trimmed) > 128:
+        raise SettingsValueError(key, "model id must be at most 128 characters")
     return trimmed
 
 
@@ -319,8 +326,58 @@ def _validate_stt_openai_base_url(value: object) -> str:
     return trimmed
 
 
+def _validate_ollama_base_url(value: object) -> str:
+    key = SETTING_OLLAMA_BASE_URL
+    if not isinstance(value, str):
+        raise SettingsValueError(key, "value must be a URL string or empty")
+    trimmed = value.strip()
+    if len(trimmed) > 500:
+        raise SettingsValueError(key, "URL is too long")
+    if trimmed and not (
+        trimmed.startswith("http://") or trimmed.startswith("https://")
+    ):
+        raise SettingsValueError(key, "URL must start with http:// or https://")
+    return trimmed
+
+
 def _validate_selection_translation_lang(value: object) -> str:
     return _validate_optional_language_name(SETTING_SELECTION_TRANSLATION_LANG, value)
+
+
+def _validate_summary_provider(value: object) -> str:
+    key = SETTING_SUMMARY_PROVIDER
+    if not isinstance(value, str) or value not in SUMMARY_PROVIDERS:
+        raise SettingsValueError(key, f"value must be one of {sorted(SUMMARY_PROVIDERS)}")
+    return value
+
+
+def _validate_cartesia_voice_id(value: object) -> str:
+    key = SETTING_CARTESIA_VOICE_ID
+    if not isinstance(value, str):
+        raise SettingsValueError(key, "value must be a string")
+    trimmed = value.strip()
+    if len(trimmed) > 128:
+        raise SettingsValueError(key, "voice id is too long (max 128)")
+    return trimmed
+
+
+# PortAudio device key: "{index}:{name}" — same contract as capture.start.
+_MIC_DEVICE_ID_RE = re.compile(r"^\d+:.+$")
+
+
+def _validate_mic_device_id(value: object) -> str:
+    """Empty (default mic) or ``{index}:{name}`` — never a bare name."""
+    key = SETTING_MIC_DEVICE_ID
+    if not isinstance(value, str):
+        raise SettingsValueError(key, "value must be a string")
+    trimmed = value.strip()
+    if trimmed == "":
+        return ""
+    if len(trimmed) > 200:
+        raise SettingsValueError(key, "device id is too long (max 200)")
+    if _MIC_DEVICE_ID_RE.fullmatch(trimmed) is None:
+        raise SettingsValueError(key, "value must be empty or '{index}:{name}'")
+    return trimmed
 
 
 def _validate_autostop_silence_s(value: object) -> int:
@@ -359,6 +416,7 @@ def validate_settings_values(values: dict[str, object]) -> dict[str, object]:
             SETTING_ONBOARDING_COMPLETE,
             SETTING_LIVE_CAPTIONS_OVERLAY,
             SETTING_AEC_ENABLED,
+            SETTING_AUTO_SUMMARY,
         ):
             normalized[key] = _validate_bool(key, value)
         elif key == SETTING_INSTANT_EXECUTE_WHITELIST:
@@ -391,6 +449,14 @@ def validate_settings_values(values: dict[str, object]) -> dict[str, object]:
             normalized[key] = _validate_stt_openai_base_url(value)
         elif key == SETTING_SELECTION_TRANSLATION_LANG:
             normalized[key] = _validate_selection_translation_lang(value)
+        elif key == SETTING_OLLAMA_BASE_URL:
+            normalized[key] = _validate_ollama_base_url(value)
+        elif key == SETTING_SUMMARY_PROVIDER:
+            normalized[key] = _validate_summary_provider(value)
+        elif key == SETTING_CARTESIA_VOICE_ID:
+            normalized[key] = _validate_cartesia_voice_id(value)
+        elif key == SETTING_MIC_DEVICE_ID:
+            normalized[key] = _validate_mic_device_id(value)
     if not normalized:
         raise SettingsValueError("values", "no persistable settings in the update")
     return normalized

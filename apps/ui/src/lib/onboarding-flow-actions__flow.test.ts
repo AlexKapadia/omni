@@ -16,6 +16,7 @@ import {
   createOnboardingFlowStore,
   modelsPresent,
 } from "./onboarding-flow-store";
+import { createApiKeysStore } from "./api-keys-store";
 import type { EngineSocketTransport } from "./setup-settings-transport";
 import { PROTOCOL_VERSION } from "./protocol";
 import type { SetupStatus } from "./setup-settings-payloads";
@@ -101,10 +102,19 @@ describe("model download from real events", () => {
 });
 
 const STATUS: SetupStatus = {
-  keys: { groq: true, gemini: true, anthropic: false, cartesia: false },
+  keys: {
+    groq: true,
+    gemini: true,
+    anthropic: false,
+    openai: false,
+    openrouter: false,
+    azure_openai: false,
+    cartesia: true,
+  },
   vault: { configured: true, path: "C:/vault" },
   models: [{ file: "m", present: true, bytes: 1 }],
   googleConnected: true,
+  microsoftConnected: false,
   onboardingComplete: false,
   setupComplete: false,
 };
@@ -112,12 +122,16 @@ const STATUS: SetupStatus = {
 describe("initFromSetupStatus", () => {
   it("pre-fills configured vault, present models and google from real status", async () => {
     const store = createOnboardingFlowStore();
-    await initFromSetupStatus(store, async () => STATUS);
+    const keysStore = createApiKeysStore();
+    await initFromSetupStatus(store, async () => STATUS, keysStore);
     const state = store.getState();
     expect(state.vaultConfigured).toBe(true);
     expect(state.vaultPath).toBe("C:/vault");
     expect(modelsPresent(state)).toBe(true);
     expect(state.googleConnected).toBe(true);
+    expect(keysStore.getState().keys.groq.saved).toBe(true);
+    expect(keysStore.getState().keys.cartesia.saved).toBe(true);
+    expect(keysStore.getState().keys.cartesia.lastFour).toBe("••••");
   });
 
   it("proceeds from blank when status cannot be read (fresh install)", async () => {

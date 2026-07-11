@@ -39,10 +39,21 @@ vi.mock("../lib/meeting-chat-repository", () => ({
   }),
 }));
 
+vi.mock("../lib/meetings-live-repository", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("../lib/meetings-live-repository")>();
+  return {
+    ...actual,
+    retranscribeMeeting: vi.fn(),
+    deleteMeeting: vi.fn().mockResolvedValue(undefined),
+    updateTranscriptSegment: vi.fn().mockResolvedValue(undefined),
+  };
+});
+
 import { copyTextToClipboard } from "../lib/copy-to-clipboard";
 import { replaceMeetingText } from "../lib/meeting-text-replace-repository";
 import { askAboutMeeting } from "../lib/meeting-chat-repository";
 import { downloadMeetingExport } from "../lib/meeting-export";
+import { deleteMeeting, retranscribeMeeting } from "../lib/meetings-live-repository";
 
 beforeAll(installJsdomMatchMediaShim);
 
@@ -64,6 +75,7 @@ const DETAIL: MeetingDetail = {
   notesText: "notes",
   enhancedNotesMd: "## Summary\nRenewal agreed.",
   extraction: null,
+  hasKeptAudio: true,
   transcript: [
     { segmentId: "s1", stream: "them", speakerLabel: "Speaker 1", text: "hello", tStart: 0, tEnd: 1 },
   ],
@@ -146,5 +158,76 @@ describe("library detail Meetily parity tabs", () => {
       fireEvent.click(screen.getByRole("button", { name: "Download MD" }));
     });
     expect(downloadMeetingExport).toHaveBeenCalledWith("m-1", "md", "Vendor sync");
+  });
+
+  it("hides Retranscribe when the meeting has no kept audio", async () => {
+    const noAudio: MeetingDetail = { ...DETAIL, hasKeptAudio: false };
+    openMeetingDetail(meetingsDetailStore, "m-1");
+    await act(async () => {
+      render(
+        <LibraryMeetingDetailPane
+          meetingId="m-1"
+          loadDetail={() => Promise.resolve(noAudio)}
+          finalizeMeeting={() => Promise.resolve(OUTCOME)}
+          onFinalized={() => undefined}
+        />,
+      );
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Export" }));
+    });
+    expect(screen.queryByRole("button", { name: "Retranscribe" })).toBeNull();
+  });
+
+  it("surfaces download and retranscribe failures honestly", async () => {
+    vi.mocked(downloadMeetingExport).mockRejectedValueOnce(new Error("export offline"));
+    vi.mocked(retranscribeMeeting).mockRejectedValueOnce(new Error("no kept audio"));
+
+    await act(async () => {
+      renderReady();
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Export" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Download SRT" }));
+    });
+    expect(await screen.findByText("export offline")).toBeTruthy();
+
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Retranscribe" }));
+    });
+    expect(await screen.findByText("no kept audio")).toBeTruthy();
+  });
+
+  it("Delete meeting confirms then closes and notifies parent", async () => {
+    const onDeleted = vi.fn();
+    const confirmSpy = vi.spyOn(window, "confirm").mockReturnValue(true);
+    openMeetingDetail(meetingsDetailStore, "m-1");
+    await act(async () => {
+      render(
+        <LibraryMeetingDetailPane
+          meetingId="m-1"
+          loadDetail={() => Promise.resolve(DETAIL)}
+          finalizeMeeting={() => Promise.resolve(OUTCOME)}
+          onFinalized={() => undefined}
+          onDeleted={onDeleted}
+        />,
+      );
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Export" }));
+    });
+    await act(async () => {
+      fireEvent.click(screen.getByRole("button", { name: "Delete meeting" }));
+    });
+    expect(confirmSpy).toHaveBeenCalled();
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(deleteMeeting).toHaveBeenCalledWith("m-1");
+    expect(onDeleted).toHaveBeenCalled();
+    expect(meetingsDetailStore.getState().selectedId).toBeNull();
+    confirmSpy.mockRestore();
   });
 });

@@ -13,6 +13,7 @@
  */
 import {
   applyCardsListReply,
+  applyCardErrorReply,
   applyCardUpdated,
   approvalCardsStore,
   CARD_UPDATED_EVENT_NAME,
@@ -106,6 +107,10 @@ export function createIntelligenceFrameListener(
       const replyPayload = result.envelope.payload;
       if (result.envelope.name === "ok" && Array.isArray(replyPayload["cards"])) {
         applyCardsListReply(stores.approvalCards, replyPayload);
+      } else if (result.envelope.name === "error") {
+        // card.approve/dismiss/retry refusals never emit card.updated — clear
+        // stuck inFlight marks or Approve/Dismiss stay disabled forever.
+        applyCardErrorReply(stores.approvalCards, replyPayload);
       }
       return;
     }

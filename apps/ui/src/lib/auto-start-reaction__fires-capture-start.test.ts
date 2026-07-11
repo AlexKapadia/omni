@@ -22,7 +22,18 @@ describe("maybeAutoStartCaptureOnDetection", () => {
     const store = createTranscriptStore();
     const start = vi.fn(() => true);
     maybeAutoStartCaptureOnDetection(AUTO_START, store, start);
-    expect(start).toHaveBeenCalledExactlyOnceWith("zoom");
+    expect(start).toHaveBeenCalledExactlyOnceWith("Zoom meeting");
+  });
+
+  it("humanizes underscored source ids for the meeting title", () => {
+    const store = createTranscriptStore();
+    const start = vi.fn(() => true);
+    maybeAutoStartCaptureOnDetection(
+      { ...AUTO_START, source: "google_meet" },
+      store,
+      start,
+    );
+    expect(start).toHaveBeenCalledExactlyOnceWith("Google Meet meeting");
   });
 
   it("fires when capture previously stopped", () => {
@@ -47,6 +58,27 @@ describe("maybeAutoStartCaptureOnDetection", () => {
       store.setState({ captureStatus });
       maybeAutoStartCaptureOnDetection(AUTO_START, store, start);
     }
+    expect(start).not.toHaveBeenCalled();
+  });
+
+  it("navigates to Live before starting capture (same as tray)", () => {
+    const store = createTranscriptStore();
+    const start = vi.fn(() => true);
+    const onNavigateLive = vi.fn();
+    maybeAutoStartCaptureOnDetection(AUTO_START, store, start, onNavigateLive);
+    expect(onNavigateLive).toHaveBeenCalledTimes(1);
+    expect(start).toHaveBeenCalledTimes(1);
+    expect(onNavigateLive.mock.invocationCallOrder[0]).toBeLessThan(
+      start.mock.invocationCallOrder[0]!,
+    );
+  });
+
+  it("does not navigate when auto-start is skipped", () => {
+    const store = createTranscriptStore();
+    const start = vi.fn(() => true);
+    const onNavigateLive = vi.fn();
+    maybeAutoStartCaptureOnDetection(SUGGEST_ONLY, store, start, onNavigateLive);
+    expect(onNavigateLive).not.toHaveBeenCalled();
     expect(start).not.toHaveBeenCalled();
   });
 });

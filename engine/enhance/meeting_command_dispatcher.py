@@ -31,6 +31,7 @@ from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.protocol import (
     COMMAND_IMPORT_MEDIA,
+    COMMAND_MEETING_DELETE,
     COMMAND_MEETING_EXPORT,
     COMMAND_MEETING_FINALIZE,
     COMMAND_MEETING_GET,
@@ -42,6 +43,7 @@ from engine.protocol import (
     Envelope,
     EnvelopeKind,
     ImportMediaCommandPayload,
+    MeetingDeleteCommandPayload,
     MeetingRetranscribeCommandPayload,
     MeetingTextReplacePayload,
     MeetingExportCommandPayload,
@@ -64,6 +66,7 @@ MEETING_COMMAND_NAMES = frozenset(
         COMMAND_IMPORT_MEDIA,
         COMMAND_MEETING_RETRANSCRIBE,
         COMMAND_MEETING_TEXT_REPLACE,
+        COMMAND_MEETING_DELETE,
     }
 )
 
@@ -134,6 +137,9 @@ async def dispatch_meeting_command(
         return
     if command.name == COMMAND_MEETING_TEXT_REPLACE:
         await _handle_text_replace(command, service, send)
+        return
+    if command.name == COMMAND_MEETING_DELETE:
+        await _handle_delete(command, service, send)
         return
     # Unreachable while the handler routes by MEETING_COMMAND_NAMES; keep
     # the deny-by-default reply so a routing bug cannot go silent.
@@ -232,10 +238,18 @@ async def _handle_get(
             await connection.close()
     except Exception:
         pass
+    from engine.enhance.meeting_kept_audio import meeting_has_kept_audio
+
     await send(
         _ok_reply(
             command.id,
-            meeting_detail_payload(row, segments, extraction, speaker_identity=identity),
+            meeting_detail_payload(
+                row,
+                segments,
+                extraction,
+                speaker_identity=identity,
+                has_kept_audio=meeting_has_kept_audio(row.id),
+            ),
         )
     )
 
@@ -384,23 +398,26 @@ async def _handle_text_replace(
     await send(_ok_reply(command.id, result))
 
 
-async def _handle_text_replace(
+async def _handle_delete(
     command: Envelope, service: MeetingFinalizationService, send: SendFn
 ) -> None:
+    """meeting.delete → ok {deleted, vault_note_kept} or not_found.
+
+    Soft-deletes the Library row and wipes kept audio + transcript segments.
+    The vault note is left on purpose (privacy is about recordings).
+    """
     try:
-        payload = MeetingTextReplacePayload.model_validate(command.payload)
+        payload = MeetingDeleteCommandPayload.model_validate(command.payload)
     except ValidationError:
         await send(
             error_reply(
                 command.id,
                 ProtocolErrorCode.INVALID_PAYLOAD,
-                "meeting.text.replace payload failed validation",
+                "meeting.delete payload failed validation",
             )
         )
         return
-    result = await service.replace_meeting_text(
-        payload.meeting_id, payload.find, payload.replace, payload.target
-    )
+    result = await service.delete_meeting(payload.meeting_id)
     if result is None:
         await send(
             _typed_error_reply(

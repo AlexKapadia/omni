@@ -19,6 +19,9 @@ import {
   MODELS_DOWNLOAD_COMPLETED_EVENT,
   MODELS_DOWNLOAD_FAILED_EVENT,
   MODELS_DOWNLOAD_PROGRESS_EVENT,
+  OLLAMA_PULL_COMPLETED_EVENT,
+  OLLAMA_PULL_FAILED_EVENT,
+  OLLAMA_PULL_PROGRESS_EVENT,
 } from "./setup-settings-commands";
 import {
   parseGoogleCompleted,
@@ -30,6 +33,14 @@ import {
   type ModelsDownloadFailed,
   type ModelsDownloadProgress,
 } from "./models-download-events";
+import {
+  parseOllamaPullCompleted,
+  parseOllamaPullFailed,
+  parseOllamaPullProgress,
+  type OllamaPullCompleted,
+  type OllamaPullFailed,
+  type OllamaPullProgress,
+} from "./ollama-commands";
 
 /** Injectable seam so unit tests drive the correlation with fakes. */
 export interface EngineSocketTransport {
@@ -123,6 +134,35 @@ export function subscribeToModelsDownload(
       if (failed !== null) handlers.onFailed?.(failed);
     } else if (name === MODELS_DOWNLOAD_COMPLETED_EVENT) {
       const completed = parseModelsCompleted(payload);
+      if (completed !== null) handlers.onCompleted?.(completed);
+    }
+  });
+}
+
+/** Callbacks for the streaming Ollama pull flow (all optional). */
+export interface OllamaPullHandlers {
+  readonly onProgress?: (progress: OllamaPullProgress) => void;
+  readonly onFailed?: (failed: OllamaPullFailed) => void;
+  readonly onCompleted?: (completed: OllamaPullCompleted) => void;
+}
+
+/** Subscribe to the ollama.pull.* events by name; mirrors subscribeToModelsDownload. */
+export function subscribeToOllamaPull(
+  handlers: OllamaPullHandlers,
+  socket: EngineSocketTransport = liveSocket,
+): () => void {
+  return socket.subscribeFrames((data) => {
+    const parsed = parseInboundMessage(data);
+    if (!parsed.ok || parsed.envelope.kind !== "event") return;
+    const { name, payload } = parsed.envelope;
+    if (name === OLLAMA_PULL_PROGRESS_EVENT) {
+      const progress = parseOllamaPullProgress(payload);
+      if (progress !== null) handlers.onProgress?.(progress);
+    } else if (name === OLLAMA_PULL_FAILED_EVENT) {
+      const failed = parseOllamaPullFailed(payload);
+      if (failed !== null) handlers.onFailed?.(failed);
+    } else if (name === OLLAMA_PULL_COMPLETED_EVENT) {
+      const completed = parseOllamaPullCompleted(payload);
       if (completed !== null) handlers.onCompleted?.(completed);
     }
   });

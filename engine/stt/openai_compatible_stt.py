@@ -13,6 +13,7 @@ import numpy.typing as npt
 
 from engine.audio.audio_frame_types import PIPELINE_SAMPLE_RATE
 from engine.stt.stt_backend_protocol import SttSegment
+from engine.stt.word_token_types import WordToken
 
 
 class OpenAiCompatibleSttBackend:
@@ -26,6 +27,30 @@ class OpenAiCompatibleSttBackend:
         self._base_url = base_url.rstrip("/")
         self._api_key_provider = (lambda: api_key) if isinstance(api_key, str) else api_key
         self._model_id = model_id
+        self._loaded = False
+
+    @property
+    def is_loaded(self) -> bool:
+        return self._loaded
+
+    def load(self) -> None:
+        """No local weights — mark ready so live capture / dictation can start."""
+        self._loaded = True
+
+    def transcribe_window(self, samples: npt.NDArray[np.float32]) -> list[WordToken]:
+        """Live-capture seam: approximate word tokens from the cloud segment."""
+        segments = self.transcribe_samples(samples, stream="them")
+        words: list[WordToken] = []
+        for segment in segments:
+            pieces = segment.text.split()
+            if not pieces:
+                continue
+            span = max(segment.t_end - segment.t_start, 0.01)
+            step = span / len(pieces)
+            for i, piece in enumerate(pieces):
+                start = segment.t_start + i * step
+                words.append(WordToken(text=piece, t_start=start, t_end=start + step))
+        return words
 
     def transcribe_samples(
         self,

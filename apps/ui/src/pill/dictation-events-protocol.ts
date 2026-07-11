@@ -14,6 +14,7 @@
 // --- message names (pinned, dot-namespaced) ---
 export const DICTATION_BEGIN_COMMAND_NAME = "dictation.begin";
 export const DICTATION_END_COMMAND_NAME = "dictation.end";
+export const DICTATION_CANCEL_COMMAND_NAME = "dictation.cancel";
 export const DICTATION_PARTIAL_EVENT_NAME = "dictation.partial";
 export const DICTATION_FINAL_EVENT_NAME = "dictation.final";
 export const DICTATION_ERROR_EVENT_NAME = "dictation.error";

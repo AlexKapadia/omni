@@ -114,11 +114,9 @@ export function useApprovalCards<T>(selector: (state: ApprovalCardsState) => T):
 }
 
 /**
- * Instant-execute whitelist — settings-shape PLACEHOLDER (wired later).
- * DEFAULT IS EMPTY (binding): every intent needs an approval card until the
- * user explicitly whitelists a card type in Settings. Nothing in the UI or
- * engine consults this yet; it exists so the settings screen and the
- * (deferred) wiring share one pinned shape.
+ * Instant-execute whitelist — persisted in app settings and consulted by the
+ * engine for dictation intents (deny by default). The UI toggles write the
+ * real `instant_execute_whitelist` setting; empty means every action needs a card.
  */
 export interface InstantExecuteWhitelistSettings {
   readonly instantExecuteCardTypes: readonly ApprovalCardType[];
@@ -287,6 +285,47 @@ export function retryCard(
   send: CommandSender = sendEngineCommand,
 ): boolean {
   return sendDecision(CARD_RETRY_COMMAND_NAME, cardId, {}, store, send);
+}
+
+/**
+ * Clear one card's in-flight mark without changing status (optimistic-free).
+ * Used when a decision is abandoned locally before the engine speaks.
+ */
+export function clearInFlight(
+  store: ApprovalCardsStore,
+  cardId: number,
+): void {
+  store.setState((state) => ({
+    inFlightIds: state.inFlightIds.filter((id) => id !== cardId),
+  }));
+}
+
+/**
+ * A card.approve / dismiss / retry was refused: unstick the button and surface
+ * the engine's honest reason. Status stays whatever card.updated last said.
+ */
+export function applyCardCommandError(
+  store: ApprovalCardsStore,
+  cardId: number,
+  message: string,
+): void {
+  store.setState((state) => ({
+    inFlightIds: state.inFlightIds.filter((id) => id !== cardId),
+    errorMessage: message,
+  }));
+}
+
+/**
+ * Apply a card_error reply envelope payload. Clears every stuck in-flight mark
+ * (replies are not correlated by card id on this surface) and sets errorMessage.
+ */
+export function applyCardErrorReply(store: ApprovalCardsStore, payload: unknown): void {
+  if (!isPlainObject(payload) || payload["code"] !== "card_error") return;
+  const message =
+    typeof payload["message"] === "string" && payload["message"].length > 0
+      ? payload["message"]
+      : "Card action failed";
+  store.setState({ inFlightIds: [], errorMessage: message });
 }
 
 /** Wiring calls this when the engine connection drops (stale rack honesty). */

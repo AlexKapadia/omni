@@ -1,6 +1,5 @@
 import { useEffect, useState, useRef } from "react";
-import { useStore } from "zustand";
-import { Mic, Square, X, Plus, Search, AudioLines } from "lucide-react";
+import { Square, Plus, Search, AudioLines } from "lucide-react";
 import { requestSetupCommand } from "../lib/setup-settings-transport";
 import { OmniButton } from "../components/button";
 import { subscribeToEngineFrames, sendEngineCommand } from "../lib/live-engine-socket";
@@ -11,7 +10,6 @@ import {
   parseDictationErrorPayload,
 } from "../pill/dictation-events-protocol";
 import { formatMeetingClock } from "../lib/transcript-store";
-import { appSettingsStore } from "./settings-screen";
 
 export interface DictationHistoryEntry {
   readonly id: number;
@@ -62,16 +60,19 @@ export function DictationHistoryScreen() {
     void load("");
   }, []);
 
-  // Web Socket listeners for dictation events
-  useEffect(() => {
-    if (!isRecording) return undefined;
+  // Always listen for dictation.final (F9 / pill) so history stays fresh even
+  // when the inline recorder is idle. Partial/error stay recorder-scoped.
+  const isRecordingRef = useRef(isRecording);
+  isRecordingRef.current = isRecording;
 
+  useEffect(() => {
     const unsubscribe = subscribeToEngineFrames((data) => {
       const result = parseInboundMessage(data);
       if (!result.ok || result.envelope.kind !== "event") return;
       const { name, payload } = result.envelope;
 
       if (name === "dictation.partial") {
+        if (!isRecordingRef.current) return;
         const parsed = parseDictationPartialPayload(payload);
         if (parsed !== null) {
           setPartialText(parsed.text);
@@ -79,11 +80,15 @@ export function DictationHistoryScreen() {
       } else if (name === "dictation.final") {
         const parsed = parseDictationFinalPayload(payload);
         if (parsed !== null) {
-          // Success: stop recording and refresh history
-          stopRecordingState();
+          if (isRecordingRef.current) {
+            stopRecordingState();
+          }
           void load(query);
         }
+      } else if (name === "dictation.cancel") {
+        // Pill/F9 cancel — no list change; keep subscription alive.
       } else if (name === "dictation.error") {
+        if (!isRecordingRef.current) return;
         const parsed = parseDictationErrorPayload(payload);
         if (parsed !== null) {
           setRecordingError(parsed.reason);
@@ -95,7 +100,7 @@ export function DictationHistoryScreen() {
     return () => {
       unsubscribe();
     };
-  }, [isRecording, query]);
+  }, [query]);
 
   const startRecording = async () => {
     setRecordingError(null);
@@ -141,11 +146,9 @@ export function DictationHistoryScreen() {
       };
       updateWave();
     } catch {
-      // Fallback: static randomized updates if mic API fails
-      const fallbackTimer = setInterval(() => {
-        setWaveHeights(Array.from({ length: 8 }).map(() => Math.floor(Math.random() * 32) + 8));
-      }, 100);
-      return () => clearInterval(fallbackTimer);
+      // Honest idle waveform — never invent mic activity.
+      setWaveHeights([10, 10, 10, 10, 10, 10, 10, 10]);
+      setRecordingError((prev) => prev ?? "Microphone unavailable for the waveform preview.");
     }
   };
 
@@ -171,13 +174,21 @@ export function DictationHistoryScreen() {
   };
 
   const saveRecording = () => {
-    sendEngineCommand("dictation.end", { inject_requested: false });
+    const ok = sendEngineCommand("dictation.end", { inject_requested: false });
+    if (!ok) {
+      setRecordingError("Omni Steroid is offline — could not save the voice note.");
+      stopRecordingState();
+    }
+    // On success, wait for dictation.final / dictation.error to stop UI.
   };
 
   const cancelRecording = () => {
+    // Abort without finalize — Cancel must not write a note.
+    const ok = sendEngineCommand("dictation.cancel");
     stopRecordingState();
-    // Discarding note on backend - we don't save or inject it.
-    // In our engine code, dictation.end completes the process. We just dismiss it locally.
+    if (!ok) {
+      setRecordingError("Omni Steroid is offline — recording stopped locally.");
+    }
   };
 
   return (

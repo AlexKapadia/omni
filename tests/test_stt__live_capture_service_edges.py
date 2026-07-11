@@ -50,6 +50,9 @@ class _FakeBackend:
         name = "Loopback" if stream is StreamLabel.THEM else "Microphone"
         return CaptureDeviceSpec(f"{stream.value}:{name}", name, 16_000, 1)
 
+    def resolve_input_device(self, key: str) -> CaptureDeviceSpec:
+        return CaptureDeviceSpec(key, key.split(":", 1)[-1], 16_000, 1)
+
     def open_capture_stream(
         self, spec: CaptureDeviceSpec, on_chunk: Callable[[bytes, float], None]
     ) -> _FakeStreamHandle:

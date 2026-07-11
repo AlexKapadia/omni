@@ -9,7 +9,7 @@
  * honest about an offline engine), starting, live, stopped, and error — no
  * state is faked.
  */
-import { useEffect, useState, useRef, type ReactNode } from "react";
+import { useEffect, useState, type ReactNode } from "react";
 import { useStore } from "zustand";
 import { Mic } from "lucide-react";
 import { OmniButton } from "../components/button";
@@ -27,8 +27,9 @@ import { requestCaptureStart } from "../lib/capture-commands";
 import { useEngineStatus } from "../lib/engine-status-store";
 import { bindNotepadToMeeting, notepadStore } from "../lib/notepad-store";
 import { useTranscript } from "../lib/transcript-store";
-import { appSettingsStore } from "./settings-screen";
-import { setMicrophone } from "../lib/settings-store";
+import { appSettingsStore, setMicrophone } from "../lib/settings-store";
+import { updateSetting } from "../lib/settings-actions";
+import { useMicLevelPercent } from "../lib/use-mic-level-percent";
 
 /** Ticks once a second while live so the timer and bubbles share one clock. */
 function useElapsedSeconds(startedAtMs: number | null): number {
@@ -47,73 +48,7 @@ function MicCheckWidget() {
   const devicesSource = useStore(store, (s) => s.devicesSource);
   const microphone = useStore(store, (s) => s.microphone);
   const options = useStore(store, (s) => s.microphoneOptions);
-
-  const [micActive, setMicActive] = useState(false);
-  const [micLevel, setMicLevel] = useState(0);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-
-  useEffect(() => {
-    let active = true;
-    if (typeof navigator === "undefined" || !navigator.mediaDevices) {
-      setMicActive(false);
-      return;
-    }
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((stream) => {
-        if (!active) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
-        setMicActive(true);
-
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        const ctx = new AudioContextClass();
-        audioContextRef.current = ctx;
-
-        const source = ctx.createMediaStreamSource(stream);
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 256;
-        analyserRef.current = analyser;
-        source.connect(analyser);
-
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-
-        const updateLevel = () => {
-          if (!analyserRef.current) return;
-          analyserRef.current.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < bufferLength; i++) {
-            sum += dataArray[i];
-          }
-          const average = sum / bufferLength;
-          setMicLevel(Math.min(100, Math.round((average / 128) * 100)));
-          animationFrameRef.current = requestAnimationFrame(updateLevel);
-        };
-        updateLevel();
-      })
-      .catch(() => {
-        setMicActive(false);
-      });
-
-    return () => {
-      active = false;
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-        void audioContextRef.current.close();
-      }
-    };
-  }, [microphone]);
+  const { level: micLevel, micActive } = useMicLevelPercent(true, microphone);
 
   return (
     <div className="w-full p-4 border border-[var(--grey-200)] rounded-[var(--radius-card)] bg-[var(--grey-50)] flex flex-col gap-3 text-left">
@@ -126,13 +61,17 @@ function MicCheckWidget() {
         <select
           aria-label="Select Microphone"
           value={microphone}
-          onChange={(e) => setMicrophone(store, e.target.value)}
+          onChange={(e) => {
+            const id = e.target.value;
+            setMicrophone(store, id);
+            void updateSetting(store, { micDeviceId: id });
+          }}
           className="w-full omni-input"
           style={{ fontSize: 13, height: "var(--control-height-sm)", paddingLeft: 8, paddingRight: 8 }}
         >
           {options.map((option) => (
-            <option key={option} value={option}>
-              {option}
+            <option key={option.id} value={option.id}>
+              {option.name}
             </option>
           ))}
         </select>
@@ -211,7 +150,10 @@ function PreCaptureState({
         <OmniButton
           variant="primary"
           disabled={engineDown || starting}
-          onClick={() => requestCaptureStart()}
+          onClick={() => {
+            const mic = appSettingsStore.getState().microphone;
+            requestCaptureStart(undefined, mic ? { micDeviceId: mic } : undefined);
+          }}
           className="w-full justify-center"
         >
           {starting ? "Starting capture" : "Start capture"}

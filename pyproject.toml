@@ -42,7 +42,7 @@ stt = [
     "torch>=2.6",
 ]
 whisper = [
-    "faster-whisper>=1.0",
+    "pywhispercpp>=1.5",
 ]
 
 [dependency-groups]

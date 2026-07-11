@@ -7,12 +7,9 @@
  * turning inline [n] markers and **bold** runs in answer_md into structured
  * prose spans — never raw model text into the DOM.
  *
- * WIRING (DEFERRED — orchestrator connects at reconciliation): the WS layer
- * calls setAskQueryTransport() with a request/reply implementation that sends
- * a `ask.query` command envelope and resolves the correlated `ask.answer`
- * reply payload. Until wired, answer() rejects with the honest offline
- * message — the Ask screen's error state renders it (fail closed, no fake
- * answers, nothing static).
+ * Wired via setAskQueryTransport (live-intelligence-event-wiring): the WS layer
+ * sends `ask.query` and resolves the correlated `ask.answer` reply. Until the
+ * transport is set, answer() rejects with the honest offline message.
  *
  * Security invariants:
  * - Fail-closed parse: ANY deviation from the pinned payload shape rejects;

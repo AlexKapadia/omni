@@ -27,17 +27,22 @@ export function GoogleConnectPanel({
 }: GoogleConnectPanelProps) {
   const [clientId, setClientId] = useState("");
   const [clientSecret, setClientSecret] = useState("");
+  const [localError, setLocalError] = useState<string | null>(null);
 
   const handleConnect = (): void => {
     const trimmedId = clientId.trim();
     const trimmedSecret = clientSecret.trim();
     if ((trimmedId.length > 0) !== (trimmedSecret.length > 0)) {
+      setLocalError("Provide both Client ID and Client Secret, or leave both empty.");
       return;
     }
+    setLocalError(null);
     onConnect(
       trimmedId.length > 0 ? { clientId: trimmedId, clientSecret: trimmedSecret } : undefined,
     );
   };
+
+  const statusMessage = localError ?? message;
 
   if (connected) {
     return (
@@ -106,9 +111,9 @@ export function GoogleConnectPanel({
           </OmniButton>
         )}
       </div>
-      {message !== null && (
+      {statusMessage !== null && (
         <p role="status" className="m-0 text-[var(--grey-600)]" style={{ fontSize: 12 }}>
-          {message}
+          {statusMessage}
         </p>
       )}
     </div>

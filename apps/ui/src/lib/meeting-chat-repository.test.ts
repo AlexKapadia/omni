@@ -1,11 +1,6 @@
 import { describe, expect, it, vi } from "vitest";
 import { askAboutMeeting } from "./meeting-chat-repository";
-
-vi.mock("./meetings-live-repository", () => ({
-  requestEngineReply: vi.fn(),
-}));
-
-import { requestEngineReply } from "./meetings-live-repository";
+import type { AskQueryTransport } from "./engine-ask-answer-provider";
 
 const VALID_ASK_REPLY = {
   headline: "Answer",
@@ -16,20 +11,29 @@ const VALID_ASK_REPLY = {
 };
 
 describe("askAboutMeeting", () => {
-  it("sends meeting_id with ask.query", async () => {
-    vi.mocked(requestEngineReply).mockResolvedValue(VALID_ASK_REPLY);
-    const answer = await askAboutMeeting("m-42", "When is the deadline?");
-    expect(requestEngineReply).toHaveBeenCalledWith(
-      "ask.query",
-      { query: "When is the deadline?", meeting_id: "m-42" },
-      120_000,
-    );
+  it("sends meeting_id via ask transport (ask.answer path)", async () => {
+    const request = vi.fn().mockResolvedValue(VALID_ASK_REPLY);
+    const transport: AskQueryTransport = { request };
+    const answer = await askAboutMeeting("m-42", "When is the deadline?", transport);
+    expect(request).toHaveBeenCalledWith("ask.query", {
+      query: "When is the deadline?",
+      meeting_id: "m-42",
+    });
     expect(answer.headline).toBe("Answer");
     expect(answer.prose[0]?.text).toContain("Friday");
   });
 
   it("rejects malformed engine payloads", async () => {
-    vi.mocked(requestEngineReply).mockResolvedValue({ headline: 1 });
-    await expect(askAboutMeeting("m-1", "hi")).rejects.toThrow(/could not read/i);
+    const transport: AskQueryTransport = {
+      request: vi.fn().mockResolvedValue({ headline: 1 }),
+    };
+    await expect(askAboutMeeting("m-1", "hi", transport)).rejects.toThrow(/could not read/i);
+  });
+
+  it("surfaces transport errors (e.g. unexpected ok reply name)", async () => {
+    const transport: AskQueryTransport = {
+      request: vi.fn().mockRejectedValue(new Error("engine replied ok")),
+    };
+    await expect(askAboutMeeting("m-1", "hi", transport)).rejects.toThrow(/engine replied ok/i);
   });
 });

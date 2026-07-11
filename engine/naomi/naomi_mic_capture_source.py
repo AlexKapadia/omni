@@ -40,10 +40,16 @@ def _default_backend_factory() -> CaptureBackend:
 
 
 def _open_microphone_stream(
-    backend: CaptureBackend, ring_buffer: TimestampedAudioRingBuffer
+    backend: CaptureBackend,
+    ring_buffer: TimestampedAudioRingBuffer,
+    *,
+    preferred_me_device_key: str | None = None,
 ) -> CaptureStreamHandle:
-    """Probe + open the current default mic (blocking; runs in a thread)."""
-    spec = backend.probe_default_device(StreamLabel.ME)
+    """Open preferred mic when set; otherwise the current default (threaded)."""
+    if preferred_me_device_key:
+        spec = backend.resolve_input_device(preferred_me_device_key)
+    else:
+        spec = backend.probe_default_device(StreamLabel.ME)
     resampler = StreamingResamplerTo16kMono(spec.sample_rate, spec.channels)
 
     def on_chunk(raw: bytes, t_end_monotonic: float) -> None:
@@ -69,6 +75,7 @@ async def start_naomi_mic_capture(
     sink: FrameSink,
     *,
     backend_factory: Callable[[], CaptureBackend] = _default_backend_factory,
+    preferred_me_device_key: str | None = None,
 ) -> StopCapture:
     """Open the mic and stream frames to ``sink``; returns an idempotent stop.
 
@@ -77,7 +84,13 @@ async def start_naomi_mic_capture(
     """
     backend = backend_factory()
     ring_buffer = TimestampedAudioRingBuffer()
-    handle = await asyncio.to_thread(_open_microphone_stream, backend, ring_buffer)
+    mic_key = preferred_me_device_key.strip() if preferred_me_device_key else None
+    handle = await asyncio.to_thread(
+        _open_microphone_stream,
+        backend,
+        ring_buffer,
+        preferred_me_device_key=mic_key,
+    )
 
     async def drain() -> None:
         while True:

@@ -19,6 +19,9 @@ DEFERRED WIRING SPEC (orchestrator: implement exactly this):
   (payload built here); reply {} acknowledges. A non-bool
   ``inject_requested`` is treated as False (deny by default — a malformed
   hint must never route text into a paste).
+- command ``dictation.cancel`` {} -> ``DictationSessionService.cancel()``
+  only — tears down the mic session WITHOUT release finalize, history
+  write, or ``dictation.final`` (Cancel must not save a note).
 - event ``dictation.partial`` {text}: emitted live from the session's
   ``on_partial_text`` callback (wire it to the broadcast hub).
 - event ``dictation.error`` {reason}: emitted when begin/end/finalize
@@ -36,6 +39,7 @@ from engine.dictation.dictation_mode_splitter import DictationMode
 # --- message names (pinned, dot-namespaced like "capture.start") ---
 DICTATION_BEGIN_COMMAND_NAME = "dictation.begin"
 DICTATION_END_COMMAND_NAME = "dictation.end"
+DICTATION_CANCEL_COMMAND_NAME = "dictation.cancel"
 DICTATION_HISTORY_LIST_COMMAND_NAME = "dictation.history.list"
 DICTATION_PARTIAL_EVENT_NAME = "dictation.partial"
 DICTATION_FINAL_EVENT_NAME = "dictation.final"

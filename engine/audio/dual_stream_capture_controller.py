@@ -86,6 +86,10 @@ class CaptureBackend(Protocol):
         """Return the CURRENT default endpoint for the given stream."""
         ...
 
+    def resolve_input_device(self, key: str) -> CaptureDeviceSpec:
+        """Look up a capture input by ``"{index}:{name}"`` key (fail closed)."""
+        ...
+
     def open_capture_stream(
         self, spec: CaptureDeviceSpec, on_chunk: Callable[[bytes, float], None]
     ) -> CaptureStreamHandle:
@@ -112,15 +116,24 @@ class DualStreamCaptureController:
         on_device_changed: Callable[[StreamLabel, str, float], None] | None = None,
         poll_interval_s: float = DEFAULT_DEVICE_POLL_INTERVAL_S,
         echo_canceller: StreamEchoCanceller | None = None,
+        preferred_me_device_key: str | None = None,
     ) -> None:
         self._backend = backend
         self._ring_buffer = ring_buffer
         self._on_device_changed = on_device_changed
         self._poll_interval_s = poll_interval_s
         self._echo_canceller = echo_canceller
+        # When set, ME opens/re-probes this key — never silently fall back to default.
+        self._preferred_me_device_key = preferred_me_device_key
         self._streams: dict[StreamLabel, _StreamState] = {}
         self._monitor_task: asyncio.Task[None] | None = None
         self._running = False
+
+    def _probe_for_label(self, label: StreamLabel) -> CaptureDeviceSpec:
+        """Default endpoint, or the user-preferred ME mic when one is pinned."""
+        if label is StreamLabel.ME and self._preferred_me_device_key is not None:
+            return self._backend.resolve_input_device(self._preferred_me_device_key)
+        return self._backend.probe_default_device(label)
 
     async def start(self) -> None:
         """Open both streams and start the device watchdog.
@@ -157,8 +170,8 @@ class DualStreamCaptureController:
         return {label.value: state.spec.name for label, state in self._streams.items()}
 
     def _open_stream(self, label: StreamLabel) -> _StreamState:
-        """Probe the current default endpoint for ``label`` and open it."""
-        spec = self._backend.probe_default_device(label)
+        """Probe the endpoint for ``label`` (preferred ME mic when set) and open it."""
+        spec = self._probe_for_label(label)
         # Fresh resampler per (re)open: filter state must never bleed
         # across devices with different rates/channel counts.
         resampler = StreamingResamplerTo16kMono(spec.sample_rate, spec.channels)
@@ -216,7 +229,7 @@ class DualStreamCaptureController:
     async def _recover_stream_if_needed(self, label: StreamLabel) -> None:
         """One watchdog tick for one stream: detect, then recover."""
         state = self._streams[label]
-        current_spec = await asyncio.to_thread(self._backend.probe_default_device, label)
+        current_spec = await asyncio.to_thread(self._probe_for_label, label)
         if current_spec.key == state.spec.key and state.handle.is_alive:
             return  # Same default device and still flowing — nothing to do.
         recovery_started = time.perf_counter()

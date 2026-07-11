@@ -55,6 +55,7 @@ class FakeFinalizationService(MeetingFinalizationService):
     def __init__(self, hub: EventBroadcastHub) -> None:
         super().__init__(db_path=Path("unused.db"), migrations_dir=Path("unused"), hub=hub)
         self.finalize_calls: list[tuple[str, str, str | None]] = []
+        self.delete_calls: list[str] = []
 
     async def list_meetings(self) -> list[MeetingRow]:
         return [ROW]
@@ -63,6 +64,12 @@ class FakeFinalizationService(MeetingFinalizationService):
         self, meeting_id: str
     ) -> tuple[MeetingRow, list[TranscriptSegmentRow], str | None] | None:
         return (ROW, SEGMENTS, None) if meeting_id == ROW.id else None
+
+    async def delete_meeting(self, meeting_id: str) -> dict[str, object] | None:
+        self.delete_calls.append(meeting_id)
+        if meeting_id != ROW.id:
+            return None
+        return {"deleted": True, "vault_note_kept": True}
 
     async def finalize(
         self, meeting_id: str, notepad_text: str, template_id: str | None
@@ -264,6 +271,21 @@ def test_notepad_text_at_the_exact_bound_is_accepted() -> None:
         reply = collect_until_reply(ws)[-1]
     assert reply["name"] == "ok"
     assert services[0].finalize_calls[0][1] == "x" * 20_000  # carried verbatim
+
+
+def test_meeting_delete_replies_ok_and_not_found() -> None:
+    app, services = make_app()
+    with TestClient(app) as client, client.websocket_connect("/ws") as ws:
+        ws.send_text(command("meeting.delete", {"meeting_id": "m-1"}, "del-1"))
+        reply = collect_until_reply(ws)[-1]
+    assert reply["name"] == "ok" and reply["id"] == "del-1"
+    assert reply["payload"] == {"deleted": True, "vault_note_kept": True}
+    assert services[0].delete_calls == ["m-1"]
+
+    with TestClient(app) as client, client.websocket_connect("/ws") as ws:
+        ws.send_text(command("meeting.delete", {"meeting_id": "missing"}, "del-2"))
+        reply = collect_until_reply(ws)[-1]
+    assert reply["name"] == "error" and reply["payload"]["code"] == "not_found"
 
 
 # --------------------------------------------------------- unwired refusal

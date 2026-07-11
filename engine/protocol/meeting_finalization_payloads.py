@@ -31,6 +31,7 @@ COMMAND_TRANSCRIPT_SEGMENT_UPDATE = "transcript.segment.update"
 COMMAND_IMPORT_MEDIA = "import.media"
 COMMAND_MEETING_RETRANSCRIBE = "meeting.retranscribe"
 COMMAND_MEETING_TEXT_REPLACE = "meeting.text.replace"
+COMMAND_MEETING_DELETE = "meeting.delete"
 EVENT_ENHANCE_STARTED = "enhance.started"
 EVENT_ENHANCE_READY = "enhance.ready"
 EVENT_ENHANCE_FAILED = "enhance.failed"
@@ -98,6 +99,14 @@ EVENT_IMPORT_MEDIA_PROGRESS = "import.media.progress"
 
 
 class MeetingRetranscribeCommandPayload(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+
+    meeting_id: str = Field(min_length=1, max_length=128)
+
+
+class MeetingDeleteCommandPayload(BaseModel):
+    """Payload of ``meeting.delete`` — soft-delete Library row + wipe kept audio."""
+
     model_config = ConfigDict(extra="forbid")
 
     meeting_id: str = Field(min_length=1, max_length=128)

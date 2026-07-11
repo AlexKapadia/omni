@@ -3,8 +3,9 @@
 Purpose: the ONLY place Cartesia credentials are read. The API key resolves
 through ``engine.security.provider_key_store`` (M7: onboarding-entered keys
 are DPAPI-encrypted; the well-known env vars remain the dev fallback —
-engine code NEVER reads .env directly). CARTESIA_VOICE_ID stays env-only
-(an identifier, not a secret).
+engine code NEVER reads .env directly). CARTESIA_VOICE_ID is an identifier
+(not a secret): Settings ``cartesia_voice_id`` is mirrored into the env on
+update/boot (setting wins when non-empty); otherwise the process env is used.
 Pipeline position: consumed by ``tts_playback_streamer`` when it builds the
 default Cartesia client.
 

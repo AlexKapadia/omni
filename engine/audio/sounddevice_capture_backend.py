@@ -122,6 +122,27 @@ class SoundDeviceCaptureBackend:
             channels=max(1, min(int(info["max_input_channels"]), 2)),
         )
 
+    def resolve_input_device(self, key: str) -> CaptureDeviceSpec:
+        """Look up an input by ``"{index}:{name}"`` — fail closed on miss."""
+        import sounddevice as sd
+
+        try:
+            device_index = int(key.split(":", 1)[0])
+        except (ValueError, IndexError) as exc:
+            raise LookupError(f"invalid mic device key: {key!r}") from exc
+        try:
+            info = sd.query_devices(device_index)
+        except Exception as exc:
+            raise LookupError(f"could not resolve mic device {key!r}: {exc}") from exc
+        if int(info.get("max_input_channels", 0)) < 1:
+            raise LookupError(f"device {key!r} is not an input device")
+        return CaptureDeviceSpec(
+            key=f"{device_index}:{info['name']}",
+            name=str(info["name"]),
+            sample_rate=int(info["default_samplerate"]),
+            channels=max(1, min(int(info["max_input_channels"]), 2)),
+        )
+
     def open_capture_stream(
         self,
         spec: CaptureDeviceSpec,

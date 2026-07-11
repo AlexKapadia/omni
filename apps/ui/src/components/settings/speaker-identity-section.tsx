@@ -1,7 +1,7 @@
 /**
  * Settings — edit speaker identity and optionally re-enroll voice.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { OmniButton } from "../button";
 import { SettingsGroupCard, SettingsRow } from "./settings-group-card";
@@ -23,6 +23,12 @@ export function SpeakerIdentitySection({
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
   const [recordingSeconds, setRecordingSeconds] = useState(0);
+  const [focused, setFocused] = useState(false);
+
+  // Sync draft from store when settings reload — skip while the user is typing.
+  useEffect(() => {
+    if (!focused) setName(identity);
+  }, [identity, focused]);
 
   const save = async (withVoice: boolean): Promise<void> => {
     const trimmed = name.trim();
@@ -77,6 +83,8 @@ export function SpeakerIdentitySection({
             style={{ height: "var(--control-height-sm)", paddingLeft: 8, paddingRight: 8 }}
             value={name}
             onChange={(e) => setName(e.target.value)}
+            onFocus={() => setFocused(true)}
+            onBlur={() => setFocused(false)}
           />
           <OmniButton variant="secondary" small disabled={busy} onClick={() => void save(false)}>
             Save name

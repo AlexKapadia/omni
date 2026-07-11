@@ -102,14 +102,20 @@ class VaultIndexerService:
         One line per segment (``Me:``/``Them:`` prefix), ordered by start
         time — line numbers in citations are segment ordinals. A meeting
         with no segments removes any stale transcript note and writes 0.
+        Soft-deleted meetings are skipped (stale transcript:// rows purged).
         """
         cursor = await self._connection.execute(
-            "SELECT title, started_at FROM meetings WHERE id = ?", (meeting_id,)
+            "SELECT title, started_at, deleted_at FROM meetings WHERE id = ?",
+            (meeting_id,),
         )
         meeting = await cursor.fetchone()
         await cursor.close()
         if meeting is None:  # fail closed: an unknown meeting is a caller bug
             raise IndexLayerError(f"meeting {meeting_id!r} does not exist")
+        note_path = f"{TRANSCRIPT_NOTE_PATH_PREFIX}{meeting_id}"
+        if meeting[2] is not None:  # soft-deleted: never re-index
+            await self._remove_note(note_path)
+            return 0
         cursor = await self._connection.execute(
             "SELECT stream, text FROM transcript_segments"
             " WHERE meeting_id = ? ORDER BY t_start, id",
@@ -117,7 +123,6 @@ class VaultIndexerService:
         )
         segments = await cursor.fetchall()
         await cursor.close()
-        note_path = f"{TRANSCRIPT_NOTE_PATH_PREFIX}{meeting_id}"
         if not segments:
             await self._remove_note(note_path)
             return 0
@@ -289,6 +294,15 @@ class VaultIndexerService:
             raise
         if self._vector_store is not None:
             await self._vector_store.delete_chunk_embeddings(old_chunk_ids)
+        elif old_chunk_ids:
+            # Best-effort orphan cleanup when dense store wasn't wired.
+            for chunk_id in old_chunk_ids:
+                try:
+                    await self._connection.execute(
+                        "DELETE FROM chunks_vec WHERE chunk_id = ?", (chunk_id,)
+                    )
+                except Exception:
+                    break
         return 1
 
 

@@ -344,7 +344,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - Never weaken or disable a security/compliance control to make a test pass. Fix the test or the design.
 
 ### Project-specific security bindings (this repo — carried over verbatim as mandates)
-- **Local-only invariant:** transcripts, embeddings, notes, and keys never leave the machine except as the minimum excerpts inside explicit model calls; audio is never uploaded anywhere and is **discarded after transcription** unless the user enables the keep-audio toggle. **Zero telemetry. None.**
+- **Local-only invariant:** transcripts, embeddings, notes, and keys never leave the machine except as the minimum excerpts inside explicit model calls; audio is never uploaded anywhere and is **kept on-device as MP3** alongside the transcript by default (the user can opt out via the keep-audio toggle to discard after transcription). **Zero telemetry. None.**
 - **Approval-before-execute:** no agent tool (calendar event, contact upsert, vault write, Gmail draft) runs without an approved card or a user-whitelisted instant intent. **Gmail is draft-only — never send.**
 - **Immutable audit** covers every external model call and every executed action: what, when, which provider, what data left the machine.
 - **Vault write discipline:** Omni writes new files and appends; managed regions live strictly between `<!-- omni:managed -->` markers; user-authored text is never edited — the information boundary is enforced in the writer, not by convention.
@@ -386,7 +386,7 @@ Strong success criteria let you loop independently. Weak criteria ("make it work
 - **Every module starts with a docstring:** what it does, why it exists, where it sits in the pipeline, and any security/compliance invariant it upholds.
 - **Every public function/class has a docstring** covering purpose, inputs, outputs, and failure modes.
 - **Comment the WHY, not the WHAT:** explain intent, trade-offs, and non-obvious decisions. Do not narrate self-evident code.
-- **Every security- or compliance-relevant line carries an inline comment** naming the control it enforces (e.g. `# local-only invariant: audio discarded post-transcription`, `# fail-closed: no approved card, no execution`).
+- **Every security- or compliance-relevant line carries an inline comment** naming the control it enforces (e.g. `# local-only invariant: kept audio never leaves the machine`, `# fail-closed: no approved card, no execution`).
 - Clear names + comments are not a licence for more code. Simpler code with good names needs fewer comments.
 
 ---

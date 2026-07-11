@@ -1,10 +1,11 @@
-"""Kill-switch tests: engaged means ZERO egress, for every task, fail closed.
+"""Kill-switch tests: engaged means ZERO cloud egress; local AI still routes.
 
 Security invariant under test (claude.md §5.6 project binding): one flag
-halts all external calls. These tests prove the router refuses BEFORE any
-client or ledger is touched, that no task type — known, unknown, or
-malicious — bypasses the gate, that garbled flag values fail CLOSED, and
-that the runtime setter (the UI's instant stop) beats the environment.
+halts cloud/egress providers. Local providers (Ollama, LM Studio) remain
+callable so offline Ollama-first still works. These tests prove cloud
+clients are never touched while engaged, that garbled flag values fail
+CLOSED, and that the runtime setter (the UI's instant stop) beats the
+environment.
 """
 
 from collections.abc import Iterator
@@ -21,6 +22,7 @@ from engine.router.completion_contract import (
 from engine.router.fallback_executor import ProviderRouter
 from engine.router.router_errors import KillSwitchEngagedError, UnknownTaskTypeError
 from engine.router.router_ledger_repository import RouterLedgerEntry
+from engine.router.routing_table import OLLAMA_DEFAULT_MODEL
 from engine.security.kill_switch import (
     KILL_SWITCH_ENV_VAR,
     kill_switch_engaged,
@@ -38,7 +40,7 @@ def _clean_kill_switch_state(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
 
 
 class CountingClient(ProviderCompletionClient):
-    """Fails the suite loudly if the router reaches a provider at all."""
+    """Fails the suite loudly if a cloud provider is reached while engaged."""
 
     def __init__(self, provider: Provider) -> None:
         self.provider = provider
@@ -46,7 +48,27 @@ class CountingClient(ProviderCompletionClient):
 
     async def complete(self, request: CompletionRequest) -> ProviderCompletion:
         self.calls += 1
-        raise AssertionError("kill switch engaged but a provider client was invoked")
+        raise AssertionError(
+            f"kill switch engaged but cloud provider {self.provider.value} was invoked"
+        )
+
+
+class OkClient(ProviderCompletionClient):
+    """Returns a successful completion; records call count."""
+
+    def __init__(self, provider: Provider) -> None:
+        self.provider = provider
+        self.calls = 0
+
+    async def complete(self, request: CompletionRequest) -> ProviderCompletion:
+        self.calls += 1
+        return ProviderCompletion(
+            text="local ok",
+            provider=self.provider,
+            model=request.model,
+            prompt_tokens=1,
+            completion_tokens=1,
+        )
 
 
 def _router() -> tuple[ProviderRouter, CountingClient, CountingClient, list[RouterLedgerEntry]]:
@@ -59,6 +81,24 @@ def _router() -> tuple[ProviderRouter, CountingClient, CountingClient, list[Rout
 
     router = ProviderRouter({Provider.GROQ: groq, Provider.GEMINI: gemini}, record)
     return router, groq, gemini, entries
+
+
+def _router_with_ollama() -> tuple[
+    ProviderRouter, CountingClient, CountingClient, OkClient, list[RouterLedgerEntry]
+]:
+    groq = CountingClient(Provider.GROQ)
+    gemini = CountingClient(Provider.GEMINI)
+    ollama = OkClient(Provider.OLLAMA)
+    entries: list[RouterLedgerEntry] = []
+
+    async def record(entry: RouterLedgerEntry) -> None:
+        entries.append(entry)
+
+    router = ProviderRouter(
+        {Provider.GROQ: groq, Provider.GEMINI: gemini, Provider.OLLAMA: ollama},
+        record,
+    )
+    return router, groq, gemini, ollama, entries
 
 
 MESSAGES = (ChatMessage(role="user", content="data"),)
@@ -119,37 +159,37 @@ def test_runtime_override_beats_the_environment_both_ways(
 
 
 # ---------------------------------------------------------------------------
-# The router refuses — zero client calls, zero ledger rows, no bypass
+# The router refuses cloud — zero cloud client calls; local may still route
 # ---------------------------------------------------------------------------
 
 
 @pytest.mark.parametrize("task_type", ALL_TASK_TYPES)
-async def test_engaged_switch_refuses_every_known_task_type(
+async def test_engaged_switch_refuses_cloud_only_routes(
     monkeypatch: pytest.MonkeyPatch, task_type: str
 ) -> None:
+    """With only cloud providers keyed, every task refuses — zero egress."""
     monkeypatch.setenv(KILL_SWITCH_ENV_VAR, "1")
     router, groq, gemini, entries = _router()
     with pytest.raises(KillSwitchEngagedError):
         await router.route(task_type, "frame", MESSAGES)
-    assert groq.calls == 0 and gemini.calls == 0  # zero egress
+    assert groq.calls == 0 and gemini.calls == 0  # zero cloud egress
     assert entries == []  # nothing to log: no external call happened
 
 
 @pytest.mark.parametrize("task_type", ["", "unknown", "LIVE_EXTRACTION", "../../etc"])
-async def test_no_task_type_known_or_not_can_probe_past_the_switch(
+async def test_unknown_task_still_denied_while_kill_engaged(
     monkeypatch: pytest.MonkeyPatch, task_type: str
 ) -> None:
-    """The gate runs BEFORE task resolution: even an unknown task type gets
-    KillSwitchEngagedError, so a caller cannot use error shapes to probe
-    router state while egress is halted."""
+    """Kill switch does not invent routes: unknown tasks still deny-by-default
+    (and cloud clients are never touched)."""
     monkeypatch.setenv(KILL_SWITCH_ENV_VAR, "1")
     router, groq, gemini, _ = _router()
-    with pytest.raises(KillSwitchEngagedError):
+    with pytest.raises(UnknownTaskTypeError):
         await router.route(task_type, "frame", MESSAGES)
     assert groq.calls == 0 and gemini.calls == 0
 
 
-async def test_runtime_engage_refuses_without_restart() -> None:
+async def test_runtime_engage_refuses_cloud_without_restart() -> None:
     set_kill_switch_runtime_override(True)
     router, groq, _, _ = _router()
     with pytest.raises(KillSwitchEngagedError):
@@ -174,3 +214,41 @@ async def test_kill_switch_message_is_plain_voice_and_reassuring() -> None:
     assert "kill switch" in message.lower()
     # The UI surfaces this directly: it must say local features keep working.
     assert "locally" in message or "local" in message
+
+
+async def test_engaged_switch_still_routes_to_ollama_when_in_chain() -> None:
+    """Kill switch is egress-only: Ollama in the resolved chain still runs."""
+    set_kill_switch_runtime_override(True)
+    router, groq, gemini, ollama, _ = _router_with_ollama()
+    # ask_synthesis includes Ollama in fallbacks when keyed.
+    result = await router.route("ask_synthesis", "frame", MESSAGES)
+    assert result.provider is Provider.OLLAMA
+    assert result.model == OLLAMA_DEFAULT_MODEL
+    assert ollama.calls == 1
+    assert groq.calls == 0 and gemini.calls == 0  # cloud never touched
+
+
+async def test_engaged_switch_routes_ollama_first_via_preferred_provider() -> None:
+    """Ollama-first settings still work offline under the kill switch."""
+    set_kill_switch_runtime_override(True)
+    router, groq, gemini, ollama, _ = _router_with_ollama()
+    result = await router.route(
+        "live_extraction",
+        "frame",
+        MESSAGES,
+        preferred_provider="ollama",
+        preferred_model="llama3.2",
+    )
+    assert result.provider is Provider.OLLAMA
+    assert ollama.calls == 1
+    assert groq.calls == 0 and gemini.calls == 0
+
+
+async def test_engaged_switch_refuses_when_no_local_provider_remains() -> None:
+    """live_extraction without a local preference has only cloud slots → refuse."""
+    set_kill_switch_runtime_override(True)
+    router, groq, gemini, ollama, entries = _router_with_ollama()
+    with pytest.raises(KillSwitchEngagedError):
+        await router.route("live_extraction", "frame", MESSAGES)
+    assert groq.calls == 0 and gemini.calls == 0 and ollama.calls == 0
+    assert entries == []

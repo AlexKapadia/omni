@@ -64,6 +64,7 @@ const VALID_DETAIL = {
   notes_text: "raw notes\nwith a second line",
   enhanced_notes_md: "## Summary\nDone.",
   extraction: null,
+  has_kept_audio: true,
   transcript: [
     { segment_id: "s1", stream: "them", text: "hello", t_start: 0, t_end: 1 },
     { segment_id: "s2", stream: "me", text: "hi", t_start: 1, t_end: 2 },
@@ -176,10 +177,17 @@ describe("meeting.get mapping (fail closed)", () => {
     const detail = await getWith(VALID_DETAIL);
     expect(detail.notesText).toBe("raw notes\nwith a second line"); // verbatim
     expect(detail.finalized).toBe(true);
+    expect(detail.hasKeptAudio).toBe(true);
     expect(detail.transcript).toEqual([
       { segmentId: "s1", stream: "them", speakerLabel: "Them", text: "hello", tStart: 0, tEnd: 1 },
       { segmentId: "s2", stream: "me", speakerLabel: "Me", text: "hi", tStart: 1, tEnd: 2 },
     ]);
+  });
+
+  it("defaults hasKeptAudio to false when the engine omits the field", async () => {
+    const { has_kept_audio: _omit, ...without } = VALID_DETAIL;
+    const detail = await getWith(without);
+    expect(detail.hasKeptAudio).toBe(false);
   });
 
   it.each([

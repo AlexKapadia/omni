@@ -161,6 +161,83 @@ async def test_a_racing_manual_stop_is_swallowed_not_crashed() -> None:
     await asyncio.wait_for(monitor.run(), timeout=2.0)  # completes without raising
 
 
+async def test_monitor_re_reads_timeout_each_loop_so_mid_session_change_applies() -> None:
+    """settings.update that writes OMNI_AUTOSTOP_SILENCE_S must take effect live."""
+    clock, activity = FakeClock(0.0), FakeClock(0.0)
+    timeout_box = {"value": 10.0}
+    stopped = asyncio.Event()
+
+    async def request_stop() -> None:
+        stopped.set()
+
+    monitor = SilenceAutoStopMonitor(
+        lambda: timeout_box["value"],
+        activity.now,
+        request_stop,
+        now=clock.now,
+        poll_interval_s=0.001,
+    )
+    task = asyncio.create_task(monitor.run())
+    try:
+        clock.value = 9.5
+        await asyncio.sleep(0.03)
+        assert not stopped.is_set()
+        timeout_box["value"] = 5.0  # mid-session shorten
+        clock.value = 6.0  # 6s silence vs new 5s timeout → fire
+        await asyncio.wait_for(stopped.wait(), timeout=2.0)
+    finally:
+        task.cancel()
+
+
+async def test_monitor_disables_when_timeout_becomes_zero_mid_session() -> None:
+    clock, activity = FakeClock(0.0), FakeClock(0.0)
+    timeout_box = {"value": 5.0}
+    stopped = asyncio.Event()
+
+    async def request_stop() -> None:
+        stopped.set()
+
+    monitor = SilenceAutoStopMonitor(
+        lambda: timeout_box["value"],
+        activity.now,
+        request_stop,
+        now=clock.now,
+        poll_interval_s=0.001,
+    )
+    task = asyncio.create_task(monitor.run())
+    try:
+        clock.value = 3.0
+        await asyncio.sleep(0.02)
+        timeout_box["value"] = 0.0  # settings.update → disable
+        clock.value = 100.0  # would have fired under the old 5s timeout
+        await asyncio.sleep(0.05)
+        assert not stopped.is_set()
+    finally:
+        task.cancel()
+
+
+async def test_spawn_with_none_re_reads_env_so_disable_takes_effect(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv(AUTOSTOP_SILENCE_ENV_VAR, "9999")
+    stopped = asyncio.Event()
+
+    async def request_stop() -> None:
+        stopped.set()
+
+    # Fresh activity clock: silence is ~0 under the initial 9999s timeout.
+    activity_at = time.monotonic()
+    tasks = spawn_silence_auto_stop_tasks(None, lambda: activity_at, request_stop)
+    assert len(tasks) == 1
+    try:
+        monkeypatch.setenv(AUTOSTOP_SILENCE_ENV_VAR, "0")  # mid-session disable via settings
+        await asyncio.sleep(0.1)
+        assert not stopped.is_set()
+    finally:
+        for task in tasks:
+            task.cancel()
+
+
 # -------------------------------------------------- service-level teardown
 async def test_service_auto_stop_completes_full_teardown_with_reason_silence(
     tmp_db_path: Path, real_migrations_dir: Path

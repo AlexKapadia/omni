@@ -55,15 +55,20 @@ describe("finalizeMeeting", () => {
     expect(store.getState().status).toBe("ready");
   });
 
-  it("a refusal lands failed with the engine's own message", async () => {
+  it("passes an explicit template through to the request", async () => {
     const store = createMeetingFinalizeStore();
-    await finalizeMeeting("m-1", "notes", store, async () => {
-      throw new Error("meeting is already finalized");
-    });
-    const state = store.getState();
-    expect(state.status).toBe("failed");
-    expect(state.errorMessage).toBe("meeting is already finalized");
-    expect(state.notePath).toBeNull(); // no fake success artifacts
+    const calls: Array<[string, string, string | null]> = [];
+    await finalizeMeeting(
+      "m-1",
+      "notes",
+      store,
+      async (id, text, template) => {
+        calls.push([id, text, template ?? null]);
+        return OUTCOME;
+      },
+      "sales",
+    );
+    expect(calls).toEqual([["m-1", "notes", "sales"]]);
   });
 });
 

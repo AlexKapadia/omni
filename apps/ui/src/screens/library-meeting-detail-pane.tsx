@@ -20,7 +20,7 @@ import { SkeletonShimmer } from "../components/skeleton-shimmer";
 import { formatClockShort, formatDayLabel, formatDurationMin } from "../lib/format-quantities";
 import { copyTextToClipboard } from "../lib/copy-to-clipboard";
 import { downloadMeetingExport, triggerBrowserDownload } from "../lib/meeting-export";
-import { retranscribeMeeting } from "../lib/meetings-live-repository";
+import { deleteMeeting, retranscribeMeeting } from "../lib/meetings-live-repository";
 import type { FinalizeOutcome, MeetingDetail } from "../lib/meetings-live-repository";
 import { updateTranscriptSegment } from "../lib/meetings-live-repository";
 import { SafeMarkdown } from "../lib/meetings-safe-markdown";
@@ -92,12 +92,15 @@ export function LibraryMeetingDetailPane({
   loadDetail,
   finalizeMeeting,
   onFinalized,
+  onDeleted,
 }: {
   readonly meetingId: string;
   readonly loadDetail: DetailLoader;
   readonly finalizeMeeting: MeetingFinalizer;
   /** Called after a successful finalize so the list can refresh. */
   readonly onFinalized: () => void;
+  /** Called after a successful delete so the list can refresh. */
+  readonly onDeleted?: () => void;
 }) {
   const status = useMeetingsDetail((s) => s.status);
   const detail = useMeetingsDetail((s) => s.detail);
@@ -288,8 +291,15 @@ export function LibraryMeetingDetailPane({
                             void updateTranscriptSegment(meetingId, line.segmentId, editText).then(
                               () => {
                                 setEditingSegmentId(null);
+                                setCopyMessage(null);
                                 load();
                               },
+                              (err: unknown) =>
+                                setCopyMessage(
+                                  err instanceof Error
+                                    ? err.message
+                                    : "Could not save transcript segment.",
+                                ),
                             );
                           }}
                         >
@@ -364,11 +374,16 @@ export function LibraryMeetingDetailPane({
                     variant="secondary"
                     small
                     onClick={() =>
-                      void downloadMeetingExport(meetingId, "md", detail.title).then((result) =>
-                        void copyTextToClipboard(result.content).then(
-                          () => setCopyMessage("Full meeting markdown copied."),
-                          () => setCopyMessage("Could not copy."),
-                        ),
+                      void downloadMeetingExport(meetingId, "md", detail.title).then(
+                        (result) =>
+                          void copyTextToClipboard(result.content).then(
+                            () => setCopyMessage("Full meeting markdown copied."),
+                            () => setCopyMessage("Could not copy."),
+                          ),
+                        (err: unknown) =>
+                          setCopyMessage(
+                            err instanceof Error ? err.message : "Could not export markdown.",
+                          ),
                       )
                     }
                   >
@@ -387,26 +402,75 @@ export function LibraryMeetingDetailPane({
                       variant="secondary"
                       small
                       onClick={() =>
-                        void downloadMeetingExport(meetingId, format, detail.title).then((result) =>
-                          triggerBrowserDownload(result),
+                        void downloadMeetingExport(meetingId, format, detail.title).then(
+                          (result) => {
+                            triggerBrowserDownload(result);
+                            setCopyMessage(`Downloaded ${format.toUpperCase()}.`);
+                          },
+                          (err: unknown) =>
+                            setCopyMessage(
+                              err instanceof Error
+                                ? err.message
+                                : `Could not download ${format.toUpperCase()}.`,
+                            ),
                         )
                       }
                     >
                       Download {format.toUpperCase()}
                     </OmniButton>
                   ))}
-                  <OmniButton
-                    variant="secondary"
-                    small
-                    onClick={() =>
-                      void retranscribeMeeting(meetingId)
-                        .then(() => load())
-                        .catch(() => undefined)
-                    }
-                  >
-                    Retranscribe
-                  </OmniButton>
+                  {detail.hasKeptAudio ? (
+                    <OmniButton
+                      variant="secondary"
+                      small
+                      onClick={() =>
+                        void retranscribeMeeting(meetingId).then(
+                          () => {
+                            setCopyMessage("Retranscription finished.");
+                            load();
+                          },
+                          (err: unknown) =>
+                            setCopyMessage(
+                              err instanceof Error ? err.message : "Retranscribe failed.",
+                            ),
+                        )
+                      }
+                    >
+                      Retranscribe
+                    </OmniButton>
+                  ) : null}
                 </div>
+              </PaneSection>
+              <PaneSection label="Delete">
+                <p
+                  className="m-0 text-[var(--ink-secondary)]"
+                  style={{ fontSize: "var(--text-meta-size)", marginBottom: 8 }}
+                >
+                  Removes this meeting from Library and deletes kept audio. Your vault note
+                  is left in place.
+                </p>
+                <OmniButton
+                  variant="secondary"
+                  small
+                  onClick={() => {
+                    const ok = window.confirm(
+                      "Delete this meeting from Library and wipe kept audio? Your vault note will be kept.",
+                    );
+                    if (!ok) return;
+                    void deleteMeeting(meetingId).then(
+                      () => {
+                        closeMeetingDetail(meetingsDetailStore);
+                        onDeleted?.();
+                      },
+                      (err: unknown) =>
+                        setCopyMessage(
+                          err instanceof Error ? err.message : "Delete failed.",
+                        ),
+                    );
+                  }}
+                >
+                  Delete meeting
+                </OmniButton>
               </PaneSection>
             </>
           )}

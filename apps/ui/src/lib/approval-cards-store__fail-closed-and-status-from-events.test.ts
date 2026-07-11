@@ -10,9 +10,12 @@
  */
 import { describe, expect, it } from "vitest";
 import {
+  applyCardCommandError,
+  applyCardErrorReply,
   applyCardUpdated,
   applyCardsListReply,
   approveCard,
+  clearInFlight,
   createApprovalCardsStore,
   DEFAULT_INSTANT_EXECUTE_WHITELIST,
   dismissCard,
@@ -202,5 +205,48 @@ describe("approve with inline edit", () => {
 describe("instant-execute whitelist placeholder", () => {
   it("ships EMPTY: everything needs approval until the user opts in", () => {
     expect(DEFAULT_INSTANT_EXECUTE_WHITELIST.instantExecuteCardTypes).toEqual([]);
+  });
+});
+
+describe("card_error clears stuck in-flight (no card.updated arrives)", () => {
+  it("applyCardCommandError clears that card's in-flight mark and sets errorMessage", () => {
+    const store = createApprovalCardsStore();
+    applyCardsListReply(store, { cards: [validCard({ id: 7 }), validCard({ id: 8 })] });
+    approveCard(7, undefined, store, () => true);
+    approveCard(8, undefined, store, () => true);
+    applyCardCommandError(store, 7, "card 7 does not exist");
+    expect(store.getState().inFlightIds).toEqual([8]);
+    expect(store.getState().errorMessage).toBe("card 7 does not exist");
+    expect(store.getState().cards[0]?.status).toBe("pending"); // still optimistic-free
+  });
+
+  it("clearInFlight removes one id without touching errorMessage", () => {
+    const store = createApprovalCardsStore();
+    applyCardsListReply(store, { cards: [validCard({ id: 7 })] });
+    approveCard(7, undefined, store, () => true);
+    store.setState({ errorMessage: "prior" });
+    clearInFlight(store, 7);
+    expect(store.getState().inFlightIds).toEqual([]);
+    expect(store.getState().errorMessage).toBe("prior");
+  });
+
+  it("applyCardErrorReply on card_error clears ALL in-flight and surfaces the message", () => {
+    const store = createApprovalCardsStore();
+    applyCardsListReply(store, { cards: [validCard({ id: 7 }), validCard({ id: 8 })] });
+    approveCard(7, undefined, store, () => true);
+    dismissCard(8, store, () => true);
+    applyCardErrorReply(store, { code: "card_error", message: "approval cards are not available" });
+    expect(store.getState().inFlightIds).toEqual([]);
+    expect(store.getState().errorMessage).toBe("approval cards are not available");
+  });
+
+  it("applyCardErrorReply ignores non-card_error payloads", () => {
+    const store = createApprovalCardsStore();
+    applyCardsListReply(store, { cards: [validCard({ id: 7 })] });
+    approveCard(7, undefined, store, () => true);
+    applyCardErrorReply(store, { code: "invalid_payload", message: "nope" });
+    applyCardErrorReply(store, null);
+    expect(store.getState().inFlightIds).toEqual([7]);
+    expect(store.getState().errorMessage).toBeNull();
   });
 });

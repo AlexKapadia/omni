@@ -46,10 +46,13 @@ class FakeWatcherStarter:
         self.calls: list[Path] = []
         self.callback: Any = None
         self.observer = FakeObserver()
+        self.observers: list[FakeObserver] = []
 
     def __call__(self, vault_root: Path, on_change: Any) -> FakeObserver:
         self.calls.append(vault_root)
         self.callback = on_change
+        self.observer = FakeObserver()
+        self.observers.append(self.observer)
         return self.observer
 
 
@@ -173,4 +176,25 @@ async def test_missing_watchdog_dependency_fails_closed_with_error_log(
         wiring.start()
     assert not wiring.is_watching  # never pretend watching is active
     assert "watchdog" in caplog.text
+    await wiring.shutdown()
+
+
+async def test_rebind_stops_old_observer_and_starts_on_new_root(
+    tmp_db_path: Path, tmp_path: Path
+) -> None:
+    first = tmp_path / "vault-a"
+    second = tmp_path / "vault-b"
+    first.mkdir()
+    second.mkdir()
+    starter = FakeWatcherStarter()
+    wiring = make_wiring(tmp_db_path, first, starter)
+    wiring.start()
+    assert starter.calls == [first]
+    first_observer = starter.observer
+
+    await wiring.rebind(second)
+    assert first_observer.stopped
+    assert wiring.is_watching
+    assert starter.calls == [first, second]
+    assert starter.observer is not first_observer
     await wiring.shutdown()

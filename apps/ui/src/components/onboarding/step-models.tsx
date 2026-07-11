@@ -38,13 +38,15 @@ export function StepModels({
           letterSpacing: "var(--text-title-ls)",
         }}
       >
-        Choose your transcription engine
+        Download on-device models
       </h2>
       <p
         className="mt-[var(--space-2)] mb-0 text-[var(--grey-600)]"
         style={{ fontSize: "var(--text-body-size)" }}
       >
-        Pick how Omni Steroid processes your audio. You can change this later in Settings.
+        This step downloads the core models Omni needs for live capture (voice activity detection + Fast
+        transcription). To use Whisper Enhanced sizes, open Settings → Transcription after setup and
+        download the size you want.
       </p>
 
       {/* Two-tier selection cards */}
@@ -59,7 +61,7 @@ export function StepModels({
             backgroundColor: selectedEngine === "parakeet" ? "var(--accent-muted)" : "var(--canvas)",
             borderColor: selectedEngine === "parakeet" ? "var(--accent)" : "var(--grey-200)",
             borderWidth: selectedEngine === "parakeet" ? 2 : 1,
-            padding: selectedEngine === "parakeet" ? "15px 15px" : "16px 16px", // Account for border width offset
+            padding: selectedEngine === "parakeet" ? "15px 15px" : "16px 16px",
           }}
         >
           <div className="flex items-start gap-[var(--space-3)]">
@@ -70,7 +72,6 @@ export function StepModels({
                 color: selectedEngine === "parakeet" ? "var(--on-accent)" : "var(--grey-600)",
               }}
             >
-              {/* Lucide Zap Icon */}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="18"
@@ -88,14 +89,14 @@ export function StepModels({
             <div className="flex-1 flex flex-col">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-[var(--ink)]" style={{ fontSize: "var(--text-emphasis-size)" }}>
-                  Fast & Light (Recommended)
+                  Fast (recommended for live meetings)
                 </span>
                 <span className="font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]" style={{ fontSize: "var(--text-meta-size)" }}>
-                  ~2.5 GB download
+                  ~2.5 GB now
                 </span>
               </div>
               <span className="text-[var(--ink-secondary)] mt-0.5" style={{ fontSize: "var(--text-body-size)" }}>
-                Good accuracy, low resource usage
+                Downloads Silero VAD + Parakeet — what this step installs
               </span>
             </div>
             {selectedEngine === "parakeet" && (
@@ -115,7 +116,6 @@ export function StepModels({
               </svg>
             )}
           </div>
-          {/* Progress bar inside the active card */}
           {selectedEngine === "parakeet" && (started || files.length > 0) && (
             <div className="mt-[var(--space-4)] border-t border-[var(--grey-200)] pt-[var(--space-2)]">
               {files.map((file) => (
@@ -125,7 +125,7 @@ export function StepModels({
           )}
         </div>
 
-        {/* Tier 2 Card: Accurate & Powerful */}
+        {/* Tier 2: preference only — Whisper is not part of models.download */}
         <div
           onClick={() => select("whisper")}
           className={`flex flex-col border rounded-[var(--radius-card)] p-[var(--space-4)] transition-all duration-[var(--dur-micro)] ${
@@ -146,7 +146,6 @@ export function StepModels({
                 color: selectedEngine === "whisper" ? "var(--on-accent)" : "var(--grey-600)",
               }}
             >
-              {/* Lucide BrainCircuit Icon */}
               <svg
                 xmlns="http://www.w3.org/2000/svg"
                 width="18"
@@ -161,23 +160,19 @@ export function StepModels({
                 <path d="M12 5V3a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1Z" />
                 <path d="M18 19v-2a1 1 0 0 0-1-1h-2a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1Z" />
                 <path d="M12 13v-2a1 1 0 0 0-1-1H9a1 1 0 0 0-1 1v2a1 1 0 0 0 1 1h2a1 1 0 0 0 1-1Z" />
-                <path d="M14 6.5h1.5a2.5 2.5 0 0 1 2.5 2.5v2" />
-                <path d="M10 13H8a2 2 0 0 0-2 2v2" />
-                <path d="M10 6.5H8.5A2.5 2.5 0 0 0 6 9v2" />
-                <path d="M14 13h1.5a1.5 1.5 0 0 1 1.5 1.5v1.5" />
               </svg>
             </div>
             <div className="flex-1 flex flex-col">
               <div className="flex items-center justify-between">
                 <span className="font-semibold text-[var(--ink)]" style={{ fontSize: "var(--text-emphasis-size)" }}>
-                  Accurate & Powerful
+                  Prefer Enhanced later
                 </span>
                 <span className="font-[family-name:var(--font-mono)] text-[var(--ink-secondary)]" style={{ fontSize: "var(--text-meta-size)" }}>
-                  ~3.1 GB download
+                  Settings
                 </span>
               </div>
               <span className="text-[var(--ink-secondary)] mt-0.5" style={{ fontSize: "var(--text-body-size)" }}>
-                Best accuracy, uses more resources
+                Saves Whisper as your import/retranscribe preference. This step still downloads Fast models first so live capture works.
               </span>
             </div>
             {selectedEngine === "whisper" && (
@@ -197,9 +192,11 @@ export function StepModels({
               </svg>
             )}
           </div>
-          {/* Progress bar inside the active card */}
           {selectedEngine === "whisper" && (started || files.length > 0) && (
             <div className="mt-[var(--space-4)] border-t border-[var(--grey-200)] pt-[var(--space-2)]">
+              <p className="m-0 mb-2 text-[var(--ink-secondary)]" style={{ fontSize: 12 }}>
+                Installing core models (VAD + Fast). Whisper weights load when you use Enhanced in Settings.
+              </p>
               {files.map((file) => (
                 <OnboardingModelProgressRow key={file.file} file={file} />
               ))}
@@ -405,7 +402,7 @@ export function StepModels({
             <polyline points="20 6 9 17 4 12" />
           </svg>
           <span className="font-medium" style={{ fontSize: "var(--text-body-size)" }}>
-            Transcription engine ready
+            Transcription models ready for live capture
           </span>
         </div>
       )}

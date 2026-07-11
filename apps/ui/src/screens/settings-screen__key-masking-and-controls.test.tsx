@@ -43,6 +43,7 @@ const READY: SettingsGetResult = {
     liveTranslationLang: "",
     summaryLanguage: "",
     summaryModelId: "gemini-2.5-flash",
+    ollamaBaseUrl: "http://127.0.0.1:11434",
     speakerIdentity: "Me",
     speakerVoiceEnrolled: false,
     dictationCleanupStyle: "classic",
@@ -50,6 +51,10 @@ const READY: SettingsGetResult = {
     sttModelId: "",
     sttOpenaiBaseUrl: "",
     selectionTranslationLang: "English",
+    summaryProvider: "ollama",
+    autoSummary: false,
+      cartesiaVoiceId: "",
+      micDeviceId: "",
   },
   killSwitchEngaged: false,
   routing: [
@@ -185,9 +190,10 @@ describe("privacy controls wired to settings.update", () => {
     });
     expect(updates).toContainEqual({ killSwitch: true });
     await openAdvanced();
-    expect(screen.queryByText(/every external route above is refused/)).toBeNull();
+    expect(screen.queryByText(/Cloud AI is paused/)).toBeNull();
     act(() => setKillSwitchEngaged(settings, true));
-    expect(screen.getByText(/every external route above is refused/)).toBeTruthy();
+    expect(screen.getByText(/Cloud AI is paused/)).toBeTruthy();
+    expect(screen.getByText(/Local Ollama still works/)).toBeTruthy();
   });
 });
 

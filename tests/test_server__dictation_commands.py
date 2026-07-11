@@ -39,6 +39,7 @@ class FakeSessionService(DictationSessionService):
         super().__init__()
         self.begin_calls = 0
         self.end_calls = 0
+        self.cancel_calls = 0
         self.begin_raises: Exception | None = None
         self.transcript = "buy milk tomorrow"
         self.last_flush_ms = 87
@@ -51,6 +52,9 @@ class FakeSessionService(DictationSessionService):
     async def end(self) -> str:
         self.end_calls += 1
         return self.transcript
+
+    async def cancel(self) -> None:
+        self.cancel_calls += 1
 
 
 class RecordingReleaseFinalize:
@@ -210,3 +214,20 @@ async def test_dispatch_without_a_gateway_refuses_honestly() -> None:
     assert sent[0].name == "error"
     assert sent[0].payload["code"] == "dictation_error"
     assert "not available" in str(sent[0].payload["message"])
+
+
+def test_cancel_tears_down_without_finalizing_or_broadcasting_final() -> None:
+    """Cancel must abort the mic session without writing a note / history."""
+    app, session, finalize = make_app()
+    with TestClient(app) as client, client.websocket_connect("/ws") as ws:
+        ws.send_text(command("dictation.begin", {}, "b-c"))
+        assert collect_until_reply(ws)[-1]["name"] == "ok"
+        ws.send_text(command("dictation.cancel", {}, "c-1"))
+        frames = collect_until_reply(ws)
+    reply = frames[-1]
+    assert reply["name"] == "ok" and reply["id"] == "c-1"
+    assert session.cancel_calls == 1
+    assert session.end_calls == 0
+    assert finalize.calls == []
+    finals = [f for f in frames if f["kind"] == "event" and f["name"] == "dictation.final"]
+    assert finals == []

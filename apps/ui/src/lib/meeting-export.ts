@@ -21,6 +21,15 @@ const MIME_BY_FORMAT: Record<MeetingExportFormat, string> = {
   docx: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
 };
 
+/** Strip Windows-illegal / path-separator chars; fallback ``meeting``. */
+export function sanitizeExportFilenameStem(rawTitle: string): string {
+  const cleaned = rawTitle
+    .replace(/[<>:"/\\|?*\x00-\x1f\x7f]/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return cleaned.length > 0 ? cleaned : "meeting";
+}
+
 export async function downloadMeetingExport(
   meetingId: string,
   format: MeetingExportFormat,
@@ -36,15 +45,22 @@ export async function downloadMeetingExport(
     throw new Error("engine sent a malformed export");
   }
   const encoding = payload["encoding"] === "base64" ? "base64" : "text";
+  const stem = sanitizeExportFilenameStem(title);
   return {
     content,
     encoding,
     mime: MIME_BY_FORMAT[format],
-    filename: `${title}.${format}`,
+    filename: `${stem}.${format}`,
   };
 }
 
 export function triggerBrowserDownload(result: MeetingExportResult): void {
+  const safeName = sanitizeExportFilenameStem(
+    result.filename.replace(/\.[^.]+$/, ""),
+  );
+  const ext = result.filename.includes(".")
+    ? result.filename.slice(result.filename.lastIndexOf("."))
+    : "";
   const bytes =
     result.encoding === "base64"
       ? Uint8Array.from(atob(result.content), (ch) => ch.charCodeAt(0))
@@ -53,7 +69,7 @@ export function triggerBrowserDownload(result: MeetingExportResult): void {
   const url = URL.createObjectURL(blob);
   const anchor = document.createElement("a");
   anchor.href = url;
-  anchor.download = result.filename;
+  anchor.download = `${safeName}${ext}`;
   anchor.click();
   URL.revokeObjectURL(url);
 }

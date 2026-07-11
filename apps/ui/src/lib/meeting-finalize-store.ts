@@ -72,6 +72,7 @@ export async function finalizeMeeting(
   notepadText: string,
   store: MeetingFinalizeStore = meetingFinalizeStore,
   request: FinalizeRequestFn = requestMeetingFinalize,
+  template: string | null = null,
 ): Promise<void> {
   if (store.getState().status === "pending") return; // one flow at a time
   store.setState({
@@ -82,7 +83,7 @@ export async function finalizeMeeting(
     warnings: [],
   });
   try {
-    const outcome = await request(meetingId, notepadText);
+    const outcome = await request(meetingId, notepadText, template);
     store.setState((state) => {
       if (state.meetingId !== meetingId) return state; // a newer flow took over
       return {

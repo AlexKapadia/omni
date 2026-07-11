@@ -1,15 +1,16 @@
 import { useState, type FormEvent } from "react";
 import { OmniButton } from "../button";
+import { CitationChip } from "../citation-chip";
 import { SkeletonShimmer } from "../skeleton-shimmer";
 import { askAboutMeeting } from "../../lib/meeting-chat-repository";
-import type { AskProseSpan } from "../../lib/ask-store";
+import type { AskAnswer, AskProseSpan } from "../../lib/ask-store";
 
 export function MeetingChatPanel({ meetingId }: { readonly meetingId: string }) {
   const [draft, setDraft] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [headline, setHeadline] = useState<string | null>(null);
-  const [prose, setProse] = useState<readonly AskProseSpan[] | null>(null);
+  const [answer, setAnswer] = useState<AskAnswer | null>(null);
+  const [openMarker, setOpenMarker] = useState<number | null>(null);
 
   const submit = (event: FormEvent): void => {
     event.preventDefault();
@@ -17,12 +18,13 @@ export function MeetingChatPanel({ meetingId }: { readonly meetingId: string }) 
     if (query.length === 0 || busy) return;
     setBusy(true);
     setError(null);
+    setOpenMarker(null);
     void askAboutMeeting(meetingId, query)
       .then((result) => {
-        setHeadline(result.headline);
-        setProse(result.prose);
+        setAnswer(result);
       })
       .catch((err) => {
+        setAnswer(null);
         setError(err instanceof Error ? err.message : "Could not get an answer.");
       })
       .finally(() => setBusy(false));
@@ -52,18 +54,39 @@ export function MeetingChatPanel({ meetingId }: { readonly meetingId: string }) 
           {error}
         </p>
       )}
-      {headline !== null && prose !== null && !busy && (
-        <div>
+      {answer !== null && !busy && (
+        <div className="flex flex-col gap-[var(--space-3)]">
           <h3 className="m-0 font-semibold text-[var(--ink)]" style={{ fontSize: 15 }}>
-            {headline}
+            {answer.headline}
           </h3>
-          <p className="m-0 mt-[var(--space-2)] text-[var(--ink)]" style={{ fontSize: 14, lineHeight: 1.6 }}>
-            {prose.map((span, index) => (
+          <p className="m-0 text-[var(--ink)]" style={{ fontSize: 14, lineHeight: 1.6 }}>
+            {answer.prose.map((span: AskProseSpan, index: number) => (
               <span key={index} className={span.strong ? "font-semibold" : undefined}>
                 {span.text}
+                {span.citationMarker !== undefined && (
+                  <sup className="font-[family-name:var(--font-mono)] text-[var(--accent)]">
+                    [{span.citationMarker}]
+                  </sup>
+                )}
               </span>
             ))}
           </p>
+          {answer.citations.length > 0 && (
+            <div className="flex flex-col gap-[var(--space-2)] border-t border-[var(--grey-200)] pt-[var(--space-3)]">
+              {answer.citations.map((citation) => (
+                <CitationChip
+                  key={citation.marker}
+                  citation={citation}
+                  open={openMarker === citation.marker}
+                  onToggle={() =>
+                    setOpenMarker((current) =>
+                      current === citation.marker ? null : citation.marker,
+                    )
+                  }
+                />
+              ))}
+            </div>
+          )}
         </div>
       )}
     </div>

@@ -282,6 +282,50 @@ async def test_cancel_over_absent_live_and_dead_sockets() -> None:
     await live.close()
 
 
+async def test_voice_id_change_forces_reconnect_and_uses_new_voice() -> None:
+    """Clearing/changing CARTESIA_VOICE_ID must not keep speaking with a stale warm voice."""
+    sockets: list[FakeWs] = []
+    current = CartesiaCredentials(
+        api_key=SecretApiKey("sk-car-secret-KEYMATERIAL-9999"), voice_id="voice-old"
+    )
+
+    def loader() -> CartesiaCredentials:
+        return current
+
+    conn = PersistentCartesiaConnection(
+        credentials_loader=loader, connect_factory=_socket_factory(sockets)
+    )
+    await _drive_utterance(
+        conn, "ctx-1", [_chunk("ctx-1"), _done("ctx-1")], sockets
+    )
+    assert len(sockets) == 1
+    assert "voice-old" in sockets[0].sent[0]
+
+    current = CartesiaCredentials(
+        api_key=SecretApiKey("sk-car-secret-KEYMATERIAL-9999"), voice_id="voice-new"
+    )
+
+    messages: list[Any] = []
+    agen = conn.speak_utterance(["hi"], "ctx-2", None)
+
+    async def pusher() -> None:
+        for _ in range(100):
+            await asyncio.sleep(0)
+            if len(sockets) >= 2:
+                break
+        for frame in [_chunk("ctx-2"), _done("ctx-2")]:
+            sockets[-1].push(frame)
+
+    task = asyncio.create_task(pusher())
+    async for message in agen:
+        messages.append(message)
+    await task
+    assert len(sockets) == 2
+    assert "voice-new" in sockets[1].sent[0]
+    assert any(isinstance(m, CartesiaDone) for m in messages)
+    await conn.close()
+
+
 def _socket_factory(sockets: list[FakeWs]) -> Any:
     async def factory() -> FakeWs:
         ws = FakeWs()

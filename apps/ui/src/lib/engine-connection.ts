@@ -85,7 +85,9 @@ export class EngineConnection {
 
   private connect(): void {
     if (this.stopped) return;
-    this.store.setState({ status: "connecting" });
+    // Clear stale latency on every connect attempt so the footer hides ms
+    // until a fresh pong arrives after reconnect.
+    this.store.setState({ status: "connecting", lastLatencyMs: null });
     this.lastHeartbeatAt = null;
     let socket: WebSocketLike;
     try {
@@ -174,7 +176,8 @@ export class EngineConnection {
     this.clearTimers();
     this.teardownSocket();
     if (this.stopped) return;
-    this.store.setState({ status: "disconnected" });
+    // Stale RTT must not linger in the footer across a reconnect gap.
+    this.store.setState({ status: "disconnected", lastLatencyMs: null });
     this.reconnectTimer = setTimeout(() => this.connect(), this.backoffMs);
     this.backoffMs = Math.min(this.backoffMs * 2, RECONNECT_BACKOFF_MAX_MS);
   }

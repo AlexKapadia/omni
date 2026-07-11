@@ -61,6 +61,8 @@ class FakeMicBackend:
             key="mic-1", name="Test Mic", sample_rate=sample_rate, channels=channels
         )
         self.probed: list[StreamLabel] = []
+        self.resolved_keys: list[str] = []
+        self.opened_specs: list[CaptureDeviceSpec] = []
         self.on_chunk: Callable[[bytes, float], None] | None = None
         self.handle = FakeHandle()
 
@@ -68,9 +70,16 @@ class FakeMicBackend:
         self.probed.append(stream)
         return self._spec
 
+    def resolve_input_device(self, key: str) -> CaptureDeviceSpec:
+        self.resolved_keys.append(key)
+        return CaptureDeviceSpec(
+            key, key.split(":", 1)[-1], self._spec.sample_rate, self._spec.channels
+        )
+
     def open_capture_stream(
         self, spec: CaptureDeviceSpec, on_chunk: Callable[[bytes, float], None]
     ) -> FakeHandle:
+        self.opened_specs.append(spec)
         self.on_chunk = on_chunk
         return self.handle
 
@@ -108,6 +117,23 @@ async def test_mic_capture_pumps_labelled_resampled_frames_to_sink() -> None:
     assert frame.samples.dtype == np.float32
     assert float(frame.samples[0]) == pytest.approx(0.5)
     assert frame.t_start_monotonic == pytest.approx(1.0 - 160 / PIPELINE_SAMPLE_RATE)
+
+
+async def test_mic_capture_uses_preferred_device_key_when_set() -> None:
+    """Preferred mic key must resolve that device instead of probing default."""
+    frames: list[AudioFrame] = []
+    sink = await _collect_frames(frames)
+    backend = FakeMicBackend()
+
+    stop = await start_naomi_mic_capture(
+        sink,
+        backend_factory=lambda: backend,
+        preferred_me_device_key="9:USB Mic",
+    )
+    await stop()
+    assert backend.resolved_keys == ["9:USB Mic"]
+    assert backend.probed == []
+    assert backend.opened_specs[0].key == "9:USB Mic"
 
 
 async def test_mic_capture_drops_malformed_chunk_but_keeps_valid_ones() -> None:

@@ -58,7 +58,12 @@ describe("Talkis integration settings fields", () => {
       sttModelId: "",
       sttOpenaiBaseUrl: "",
       selectionTranslationLang: "English",
-      summaryModelId: "gemini-2.5-flash",
+      summaryModelId: "llama3.2",
+      ollamaBaseUrl: "http://127.0.0.1:11434",
+      summaryProvider: "ollama",
+      autoSummary: false,
+      cartesiaVoiceId: "",
+      micDeviceId: "",
     });
   });
 
@@ -78,5 +83,25 @@ describe("Talkis integration settings fields", () => {
 
   it("rejects invalid cleanup style", () => {
     expect(parseSettings({ ...BASE, dictation_cleanup_style: "casual" })).toBeNull();
+  });
+
+  it("accepts explicit summary provider and auto-summary values", () => {
+    const parsed = parseSettings({ ...BASE, summary_provider: "gemini", auto_summary: true });
+    expect(parsed?.summaryProvider).toBe("gemini");
+    expect(parsed?.autoSummary).toBe(true);
+  });
+
+  it("rejects an unrecognised summary provider (deny by default)", () => {
+    expect(parseSettings({ ...BASE, summary_provider: "unknown-provider" })).toBeNull();
+  });
+
+  it("defaults micDeviceId to empty when omitted", () => {
+    const parsed = parseSettings(BASE);
+    expect(parsed?.micDeviceId).toBe("");
+  });
+
+  it("accepts an explicit mic_device_id", () => {
+    const parsed = parseSettings({ ...BASE, mic_device_id: "3:Headset Microphone" });
+    expect(parsed?.micDeviceId).toBe("3:Headset Microphone");
   });
 });

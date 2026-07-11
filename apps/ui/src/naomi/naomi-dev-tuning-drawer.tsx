@@ -58,7 +58,7 @@ const monoValueStyle: React.CSSProperties = {
 };
 
 export function NaomiDevTuningDrawer(props: NaomiDevTuningDrawerProps) {
-  const [open, setOpen] = useState(true);
+  const [open, setOpen] = useState(false);
   const [sayText, setSayText] = useState("");
 
   const submitSay = () => {

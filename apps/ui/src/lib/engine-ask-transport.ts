@@ -26,8 +26,8 @@ const liveSocket: EngineSocketTransport = {
   subscribeFrames: subscribeToEngineFrames,
 };
 
-/** Retrieval is fast; synthesis runs a model call — generous but bounded. */
-export const ASK_REPLY_TIMEOUT_MS = 30_000;
+/** Retrieval is fast; synthesis runs a model call — match meeting chat (120s). */
+export const ASK_REPLY_TIMEOUT_MS = 120_000;
 
 /**
  * Build the transport the ask provider consumes. The reply must be named

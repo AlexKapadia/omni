@@ -206,6 +206,26 @@ describe("EngineConnection status transitions", () => {
     expect(store.getState().lastLatencyMs).toBe(37);
   });
 
+  it("clears lastLatencyMs on disconnect so the footer never shows stale latency", () => {
+    connection.start();
+    lastSocket().open();
+    const sentRaw = lastSocket().sent[0];
+    if (sentRaw === undefined) throw new Error("ping not sent");
+    const ping = JSON.parse(sentRaw) as { id: string };
+    vi.advanceTimersByTime(12);
+    lastSocket().receive({ v: 1, kind: "reply", name: "pong", id: ping.id, payload: {} });
+    expect(store.getState().lastLatencyMs).toBe(12);
+
+    lastSocket().drop();
+    expect(store.getState().status).toBe("disconnected");
+    expect(store.getState().lastLatencyMs).toBeNull();
+
+    // Reconnect start also keeps latency cleared until a fresh pong.
+    vi.advanceTimersByTime(1000);
+    expect(store.getState().status).toBe("connecting");
+    expect(store.getState().lastLatencyMs).toBeNull();
+  });
+
   it("keeps pinging on the 10s interval while connected", () => {
     connection.start();
     lastSocket().open();

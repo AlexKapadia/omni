@@ -127,6 +127,8 @@ async def run_enhanced_notes(
     user_notes: str,
     transcript_lines: list[str],
     summary_language: str = "",
+    preferred_model: str | None = None,
+    preferred_provider: str | None = None,
 ) -> EnhancedNotesResult:
     """Execute one enhancement call and return sanitised, footered markdown.
 
@@ -142,6 +144,8 @@ async def run_enhanced_notes(
         build_enhancement_system_frame(template, summary_language),
         (message,),
         max_tokens=8192,
+        preferred_model=preferred_model,
+        preferred_provider=preferred_provider,
     )
     markdown = sanitize_enhanced_markdown(routed.completion.text)
     return EnhancedNotesResult(

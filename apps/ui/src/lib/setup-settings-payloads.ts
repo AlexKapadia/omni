@@ -9,8 +9,10 @@
  */
 import {
   isInstantIntentType,
+  isSummaryProvider,
   type InstantIntentType,
   type KeyProvider,
+  type SummaryProvider,
 } from "./setup-settings-commands";
 import {
   asBoolean,
@@ -54,6 +56,16 @@ export interface EngineSettings {
   readonly sttOpenaiBaseUrl: string;
   readonly selectionTranslationLang: string;
   readonly summaryModelId: string;
+  /** Ollama OpenAI-compat base (Meetily-style); empty disables local Ollama. */
+  readonly ollamaBaseUrl: string;
+  /** Which provider runs meeting-summary generation (Meetily-style, Ollama-first). */
+  readonly summaryProvider: SummaryProvider;
+  /** Finalize meeting notes automatically once capture stops. */
+  readonly autoSummary: boolean;
+  /** Cartesia voice identifier for Naomi (mirrored to CARTESIA_VOICE_ID). */
+  readonly cartesiaVoiceId: string;
+  /** Preferred PortAudio mic key (`{index}:{name}`); empty = Windows default. */
+  readonly micDeviceId: string;
 }
 
 export interface RoutingAttempt {
@@ -165,7 +177,13 @@ function parseEngineSettings(value: unknown): EngineSettings | null {
   const sttModelId = asString(value["stt_model_id"]) ?? "";
   const sttOpenaiBaseUrl = asString(value["stt_openai_base_url"]) ?? "";
   const selectionTranslationLang = asString(value["selection_translation_lang"]) ?? "English";
-  const summaryModelId = asString(value["summary_model_id"]) ?? "gemini-2.5-flash";
+  const summaryModelId = asString(value["summary_model_id"]) ?? "llama3.2";
+  const ollamaBaseUrl = asString(value["ollama_base_url"]) ?? "http://127.0.0.1:11434";
+  const summaryProvider = asString(value["summary_provider"]) ?? "ollama";
+  const autoSummaryRaw = value["auto_summary"];
+  const autoSummary = autoSummaryRaw === undefined ? false : asBoolean(autoSummaryRaw);
+  const cartesiaVoiceId = asString(value["cartesia_voice_id"]) ?? "";
+  const micDeviceId = asString(value["mic_device_id"]) ?? "";
   if (hotkey === null || keepAudio === null || disclosureReminder === null) return null;
   if (killSwitch === null || whitelist === null || activeTemplate === null) return null;
   if (customTemplates === null || onboardingComplete === null) return null;
@@ -189,6 +207,11 @@ function parseEngineSettings(value: unknown): EngineSettings | null {
   if (sttModelId === null || sttOpenaiBaseUrl === null || selectionTranslationLang === null) {
     return null;
   }
+  if (ollamaBaseUrl === null) return null;
+  if (!isSummaryProvider(summaryProvider)) return null;
+  if (autoSummary === null) return null;
+  if (cartesiaVoiceId === null || cartesiaVoiceId.length > 128) return null;
+  if (micDeviceId === null || micDeviceId.length > 200) return null;
   return {
     vaultDir,
     pushToTalkHotkey: hotkey,
@@ -213,6 +236,11 @@ function parseEngineSettings(value: unknown): EngineSettings | null {
     sttOpenaiBaseUrl,
     selectionTranslationLang,
     summaryModelId,
+    ollamaBaseUrl,
+    summaryProvider,
+    autoSummary,
+    cartesiaVoiceId,
+    micDeviceId,
   };
 }
 

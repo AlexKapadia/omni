@@ -34,6 +34,7 @@ from engine.wiring.speaker_enroll_command_dispatcher import SpeakerEnrollCommand
 from engine.wiring.ledger_summary_command_dispatcher import LedgerSummaryCommandGateway
 from engine.wiring.live_answers_spotter_wiring import LiveAnswersSpotterWiring
 from engine.wiring.models_download_command_dispatcher import ModelsDownloadCommandGateway
+from engine.wiring.ollama_command_dispatcher import OllamaCommandGateway
 from engine.wiring.provider_keys_command_dispatcher import ProviderKeysCommandGateway
 from engine.wiring.vault_watchdog_server_wiring import VaultWatchdogServerWiring
 
@@ -111,6 +112,11 @@ def default_ledger_gateway_factory() -> LedgerSummaryCommandGateway:
 def default_models_gateway_factory(hub: EventBroadcastHub) -> ModelsDownloadCommandGateway:
     """Real model-download gateway (pinned HTTPS sources); construction inert."""
     return ModelsDownloadCommandGateway(hub=hub)
+
+
+def default_ollama_gateway_factory(hub: EventBroadcastHub) -> OllamaCommandGateway:
+    """Real Ollama gateway (local HTTP host); construction inert."""
+    return OllamaCommandGateway(hub)
 
 
 def default_google_gateway_factory(hub: EventBroadcastHub) -> GoogleConnectCommandGateway:

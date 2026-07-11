@@ -14,6 +14,12 @@ import {
   KEYS_VALIDATE_COMMAND,
   LEDGER_SUMMARY_COMMAND,
   MODELS_DOWNLOAD_COMMAND,
+  MODELS_CANCEL_COMMAND,
+  MODELS_DELETE_COMMAND,
+  MODELS_OPEN_FOLDER_COMMAND,
+  OLLAMA_MODELS_LIST_COMMAND,
+  OLLAMA_MODELS_PULL_COMMAND,
+  OLLAMA_PING_COMMAND,
   GOOGLE_CONNECT_COMMAND,
   MICROSOFT_CONNECT_COMMAND,
   SETTINGS_GET_COMMAND,
@@ -31,6 +37,13 @@ import {
   type SetupStatus,
 } from "./setup-settings-payloads";
 import { parseLedgerSummary, type LedgerSummary } from "./ledger-summary-payload";
+import {
+  parseOllamaModelsList,
+  parseOllamaPingResult,
+  type OllamaModel,
+  type OllamaPingResult,
+} from "./ollama-commands";
+import { asNonEmptyString } from "./untrusted-payload-guards";
 
 /** The command seam — real transport by default, a fake in tests. */
 export type SetupRequestFn = (
@@ -119,8 +132,76 @@ export async function getLedgerSummary(
 /** Kick off the model download; progress arrives as events (subscribe first). */
 export async function startModelsDownload(
   request: SetupRequestFn = requestSetupCommand,
+  options?: { readonly bundle?: "core" | "whisper"; readonly modelId?: string },
 ): Promise<void> {
-  await request(MODELS_DOWNLOAD_COMMAND, {}, READ_TIMEOUT_MS);
+  const payload =
+    options?.bundle === "whisper" && options.modelId
+      ? { bundle: "whisper", model_id: options.modelId }
+      : options?.bundle === "core"
+        ? { bundle: "core" }
+        : {};
+  await request(MODELS_DOWNLOAD_COMMAND, payload, READ_TIMEOUT_MS);
+}
+
+/**
+ * List locally-installed Ollama models; the pull progress arrives as events.
+ *
+ * Contract note: the `ollama.*` commands take NO base-url argument — the
+ * engine resolves its own host from `OMNI_OLLAMA_BASE_URL`, which the
+ * `ollama_base_url` settings.update call keeps in lockstep (see
+ * `app_settings_command_gateway`). Sending a `base_url` field here would be
+ * refused outright (the payload schema is `extra="forbid"`).
+ */
+export async function listOllamaModels(
+  request: SetupRequestFn = requestSetupCommand,
+): Promise<readonly OllamaModel[]> {
+  const reply = await request(OLLAMA_MODELS_LIST_COMMAND, {}, READ_TIMEOUT_MS);
+  const models = parseOllamaModelsList(reply);
+  if (models === null) throw new Error("the engine sent a malformed model list");
+  return models;
+}
+
+/** Kick off an Ollama model pull; progress arrives as ollama.pull.* events. */
+export async function pullOllamaModel(
+  model: string,
+  request: SetupRequestFn = requestSetupCommand,
+): Promise<void> {
+  await request(OLLAMA_MODELS_PULL_COMMAND, { model }, READ_TIMEOUT_MS);
+}
+
+/** Test connectivity to the Ollama endpoint; a real (bounded) round trip. */
+export async function pingOllama(
+  request: SetupRequestFn = requestSetupCommand,
+): Promise<OllamaPingResult> {
+  const reply = await request(OLLAMA_PING_COMMAND, {}, VALIDATE_TIMEOUT_MS);
+  const result = parseOllamaPingResult(reply);
+  if (result === null) throw new Error("the engine sent a malformed ping result");
+  return result;
+}
+
+/** Cancel whatever models download (Whisper/core/Ollama pull) is in flight. */
+export async function cancelModelsDownload(
+  request: SetupRequestFn = requestSetupCommand,
+): Promise<void> {
+  await request(MODELS_CANCEL_COMMAND, {}, READ_TIMEOUT_MS);
+}
+
+/** Delete one installed model file (e.g. a Whisper ggml). */
+export async function deleteModelFile(
+  file: string,
+  request: SetupRequestFn = requestSetupCommand,
+): Promise<void> {
+  await request(MODELS_DELETE_COMMAND, { file }, READ_TIMEOUT_MS);
+}
+
+/** Ask the engine for the real on-device models folder path. */
+export async function openModelsFolder(
+  request: SetupRequestFn = requestSetupCommand,
+): Promise<string> {
+  const reply = await request(MODELS_OPEN_FOLDER_COMMAND, {}, READ_TIMEOUT_MS);
+  const path = asNonEmptyString(reply["path"]);
+  if (path === null) throw new Error("the engine did not return the models folder path");
+  return path;
 }
 
 /** Begin the Google OAuth connect; completion arrives as an event. */

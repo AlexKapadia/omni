@@ -38,6 +38,8 @@ class CompletionRouterProtocol(Protocol):
         *,
         json_schema: dict[str, object] | None = None,
         max_tokens: int = 4096,
+        preferred_model: str | None = None,
+        preferred_provider: str | None = None,
     ): ...
 
 
@@ -51,11 +53,15 @@ class LiveSummaryService:
         *,
         cadence_seconds: float = DEFAULT_SUMMARY_CADENCE_SECONDS,
         clock: Callable[[], float] = time.monotonic,
+        preferred_model: str | None = None,
+        preferred_provider: str | None = None,
     ) -> None:
         self._router = router
         self._emit = emit
         self._cadence_seconds = cadence_seconds
         self._clock = clock
+        self._preferred_model = preferred_model
+        self._preferred_provider = preferred_provider
         self._window: list[str] = []
         self._last_summary_at = clock()
         self._latest_summary = ""
@@ -95,6 +101,8 @@ class LiveSummaryService:
                 LIVE_SUMMARY_SYSTEM_FRAME,
                 (ChatMessage(role="user", content=window_text),),
                 max_tokens=512,
+                preferred_model=self._preferred_model,
+                preferred_provider=self._preferred_provider,
             )
         except RouterError:
             return

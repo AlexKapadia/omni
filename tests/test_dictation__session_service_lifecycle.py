@@ -44,15 +44,22 @@ class FakeMicBackend:
 
     def __init__(self) -> None:
         self.probed_streams: list[StreamLabel] = []
+        self.resolved_keys: list[str] = []
+        self.opened_specs: list[CaptureDeviceSpec] = []
         self.handle: FakeMicHandle | None = None
 
     def probe_default_device(self, stream: StreamLabel) -> CaptureDeviceSpec:
         self.probed_streams.append(stream)
         return CaptureDeviceSpec(f"{stream.value}:Fake Mic", "Fake Mic", 16_000, 1)
 
+    def resolve_input_device(self, key: str) -> CaptureDeviceSpec:
+        self.resolved_keys.append(key)
+        return CaptureDeviceSpec(key, key.split(":", 1)[-1], 16_000, 1)
+
     def open_capture_stream(
         self, spec: CaptureDeviceSpec, on_chunk: Callable[[bytes, float], None]
     ) -> FakeMicHandle:
+        self.opened_specs.append(spec)
         self.handle = FakeMicHandle(on_chunk)
         return self.handle
 
@@ -139,6 +146,18 @@ async def test_mic_only_invariant_never_probes_loopback() -> None:
     await service.begin()
     await service.end()
     assert backend.probed_streams == [StreamLabel.ME]
+
+
+async def test_preferred_mic_key_uses_resolve_not_default_probe() -> None:
+    """When mic_device_id is configured, open that device — not the default."""
+    backend = FakeMicBackend()
+    service = _make_service(backend)
+    service.configure("parakeet", preferred_me_device_key="9:USB Mic")
+    await service.begin()
+    await service.end()
+    assert backend.resolved_keys == ["9:USB Mic"]
+    assert backend.probed_streams == []
+    assert backend.opened_specs[0].key == "9:USB Mic"
 
 
 async def test_release_before_speech_returns_empty_text() -> None:

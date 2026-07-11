@@ -61,6 +61,7 @@ control of the user's OS account (Omni's DPAPI keys are, by design, only as safe
 as the Windows user session); vulnerabilities in third-party AI providers you
 send data to by choice; and reports that amount to "the app makes network calls
 to the providers the user configured" — that's the documented, opt-in behavior.
+See also [docs/threat-model.md](docs/threat-model.md) for the STRIDE overview.
 
 ## The invariants we defend
 
@@ -70,8 +71,9 @@ breaks one of these is exactly what we want to hear about:
 
 - **Local-first.** Transcripts, embeddings, notes, and keys never leave the
   machine except as the minimum excerpt inside a model call the user configured.
-- **Audio is never uploaded**, and is discarded after transcription unless the
-  user opts in to keeping it.
+- **Audio is never uploaded.** Recordings are kept on-device as MP3 alongside
+  the transcript by default; the user can opt out (discard after transcription)
+  in Privacy settings. Kept or not, audio never leaves the machine.
 - **Zero telemetry.** No phone-home of any kind.
 - **Approval-before-execute.** No calendar event, contact upsert, vault write,
   or draft runs without an approved card. Cards are born `pending` and the legal

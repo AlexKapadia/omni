@@ -6,7 +6,7 @@
  * under Essentials); this section owns only the capture-automation controls.
  * Every control persists through the REAL settings.update command.
  */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { ToggleSwitch } from "../toggle-switch";
 import { SettingsGroupCard, SettingsRow } from "./settings-group-card";
@@ -25,11 +25,22 @@ export function DetectionAutomationSection({
   const autostopSilenceS = useStore(store, (s) => s.settings?.autostopSilenceS ?? 60);
 
   const liveTranslationLang = useStore(store, (s) => s.settings?.liveTranslationLang ?? "");
+  // Local draft so mid-keystroke values do not round-trip through settings.update.
+  const [langDraft, setLangDraft] = useState(liveTranslationLang);
   const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    setLangDraft(liveTranslationLang);
+  }, [liveTranslationLang]);
 
   const apply = async (partial: Parameters<SettingsUpdater>[0]): Promise<void> => {
     const result = await update(partial);
     setError(result.ok ? null : result.message);
+  };
+
+  const persistLang = (raw: string): void => {
+    if (raw === liveTranslationLang) return;
+    void apply({ liveTranslationLang: raw });
   };
 
   const toggleAutoStart = (sourceId: string, enabled: boolean): void => {
@@ -60,7 +71,7 @@ export function DetectionAutomationSection({
       ))}
       <SettingsRow
         title="Silence auto-stop"
-        subCaption="Stop capture after sustained silence on both audio streams."
+        subCaption="Stop after no new transcript for N seconds (STT activity). 0 = off."
       >
         <select
           aria-label="Silence auto-stop timeout"
@@ -86,8 +97,9 @@ export function DetectionAutomationSection({
           className="omni-input"
           style={{ fontSize: 13, height: "var(--control-height-sm)", paddingLeft: 8, paddingRight: 8, width: 160 }}
           placeholder="e.g. Spanish"
-          value={liveTranslationLang}
-          onChange={(e) => void apply({ liveTranslationLang: e.target.value })}
+          value={langDraft}
+          onChange={(e) => setLangDraft(e.target.value)}
+          onBlur={() => persistLang(langDraft)}
         />
       </SettingsRow>
       {error !== null && (

@@ -110,13 +110,13 @@ describe("first-run wizard drives every control", () => {
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" })));
 
     // Step 5 — models download, then Continue.
-    expect(screen.getByText("Choose your transcription engine")).toBeTruthy();
+    expect(screen.getByText("Download on-device models")).toBeTruthy();
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Download & continue" })));
-    await waitFor(() => expect(screen.getByText("Transcription engine ready")).toBeTruthy());
+    await waitFor(() => expect(screen.getByText("Transcription models ready for live capture")).toBeTruthy());
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "Continue" })));
 
-    // Step 6 — Finish & Optional Setup.
-    expect(screen.getByText("Finish & Optional Setup")).toBeTruthy();
+    // Step 6 — Finish setup.
+    expect(screen.getByText("Finish setup")).toBeTruthy();
     
     // Open API Keys collapsible
     await act(async () => fireEvent.click(screen.getByRole("button", { name: "API Keys (Optional)" })));

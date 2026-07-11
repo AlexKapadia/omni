@@ -17,12 +17,17 @@ import type { SettingsUpdater } from "../../lib/settings-actions";
 export function PrivacySection({
   store,
   update,
+  showKillSwitch = true,
 }: {
   readonly store: SettingsStore;
   readonly update: SettingsUpdater;
+  /** When false, omit kill switch (Recordings tab — lives on System/Pro). */
+  readonly showKillSwitch?: boolean;
 }) {
   const keepAudio = useStore(store, (s) => s.settings?.keepAudio ?? true);
   const disclosureReminder = useStore(store, (s) => s.settings?.disclosureReminder ?? false);
+  const aecEnabled = useStore(store, (s) => s.settings?.aecEnabled ?? false);
+  const liveCaptionsOverlay = useStore(store, (s) => s.settings?.liveCaptionsOverlay ?? true);
   const killSwitch = useStore(store, (s) => s.settings?.killSwitch ?? false);
   const killSwitchEngaged = useStore(store, (s) => s.killSwitchEngaged);
   const [error, setError] = useState<string | null>(null);
@@ -31,6 +36,8 @@ export function PrivacySection({
     const result = await update(partial);
     setError(result.ok ? null : result.message);
   };
+
+  const lastPrivacyRowIsCaptions = !showKillSwitch;
 
   return (
     <SettingsGroupCard label="Privacy">
@@ -59,20 +66,43 @@ export function PrivacySection({
         />
       </SettingsRow>
       <SettingsRow
-        title="Pause all cloud AI"
-        subCaption={
-          killSwitchEngaged
-            ? "paused: every cloud AI request is refused right now"
-            : "stops every cloud AI request — capture and notes keep working on this device"
-        }
-        last={error === null}
+        title="Echo cancellation"
+        subCaption="reduces system audio bleeding into your microphone stream"
       >
         <ToggleSwitch
-          checked={killSwitch}
-          onChange={(next) => void apply({ killSwitch: next })}
-          label="Pause all cloud AI"
+          checked={aecEnabled}
+          onChange={(next) => void apply({ aecEnabled: next })}
+          label="Echo cancellation"
         />
       </SettingsRow>
+      <SettingsRow
+        title="Live captions overlay"
+        subCaption="shows a floating captions window while capture is live"
+        last={lastPrivacyRowIsCaptions && error === null}
+      >
+        <ToggleSwitch
+          checked={liveCaptionsOverlay}
+          onChange={(next) => void apply({ liveCaptionsOverlay: next })}
+          label="Live captions overlay"
+        />
+      </SettingsRow>
+      {showKillSwitch && (
+        <SettingsRow
+          title="Pause all cloud AI"
+          subCaption={
+            killSwitchEngaged
+              ? "paused: cloud AI refused — local Ollama still works"
+              : "stops every cloud AI request — local Ollama, capture, and notes keep working"
+          }
+          last={error === null}
+        >
+          <ToggleSwitch
+            checked={killSwitch}
+            onChange={(next) => void apply({ killSwitch: next })}
+            label="Pause all cloud AI"
+          />
+        </SettingsRow>
+      )}
       {error !== null && (
         <p
           role="alert"

@@ -1,6 +1,6 @@
 # Contributing to Omni
 
-Thanks for being here. Omni is a local-first, bot-free meeting-intelligence engine for Windows, and it is genuinely fun to extend — most of all by teaching the voice agent (Naomi) and the approval system **new things they can do**. "Naomi, set a timer." "Remind me to call the dentist tomorrow." "What's the weather in Lisbon?" Every one of those is a small, well-scoped tool that plugs into an extension point that already exists. This guide shows you exactly where it plugs in.
+Thanks for being here. Omni is a local-first, bot-free meeting-intelligence engine (Windows first-class; macOS and Linux bundles supported), and it is genuinely fun to extend — most of all by teaching the voice agent (Naomi) and the approval system **new things they can do**. "Naomi, set a timer." "Remind me to call the dentist tomorrow." "What's the weather in Lisbon?" Every one of those is a small, well-scoped tool that plugs into an extension point that already exists. This guide shows you exactly where it plugs in.
 
 Before anything else, one promise you're agreeing to uphold: **Omni never betrays the user's trust.** It runs on their machine, joins nothing, uploads nothing they didn't ask it to, and never executes an action without their approval. That is the whole product. A contribution that weakens it — however clever — will be turned down, kindly but firmly (see [Non-negotiables](#non-negotiables)). Everything else, we'd love your help with.
 
@@ -18,7 +18,7 @@ Before anything else, one promise you're agreeing to uphold: **Omni never betray
 
 Omni is built to an institution-grade bar: production-grade, secure by default, and fully tested. These invariants are enforced in code (SQL triggers, pydantic models, source-scanning tests), not by convention — so if your change tries to break one, a test or the schema will stop you. That's the safety net working, not an obstacle.
 
-- **Local-first.** Transcripts, embeddings, notes, and keys never leave the machine — except the minimum excerpt inside a model call the user configured. Audio is discarded after transcription unless the user opts in.
+- **Local-first.** Transcripts, embeddings, notes, and keys never leave the machine — except the minimum excerpt inside a model call the user configured. Audio is kept on-device as MP3 alongside the transcript by default (the user can opt out to discard after transcription); either way it never leaves the machine.
 - **Zero telemetry.** No phone-home. Ever. Not for crash reports, not for "anonymous usage", not for anything.
 - **Approval-before-execute.** No calendar event, contact upsert, vault write, or draft happens without an approved card. Deny by default.
 - **Draft-only for anything outbound.** Gmail is the precedent: Omni drafts, it never sends. A new tool that dispatches on the user's behalf is not welcome — draft it, or propose it and let the user pull the trigger.
@@ -37,7 +37,7 @@ Omni is two processes: a **Tauri 2 shell + React front end** (`apps/ui/`) that o
 
 - **[uv](https://docs.astral.sh/uv/)** — the Python toolchain. It provisions Python 3.11 itself; you don't need a system Python.
 - **[pnpm](https://pnpm.io/)** — for the front end.
-- **Rust + MSVC toolchain** — what Tauri builds against. If you can't run the full Visual Studio installer, [portable MSVC](https://tauri.app/start/prerequisites/) works.
+- **Rust toolchain** — what Tauri builds against. Windows: MSVC ([portable MSVC](https://tauri.app/start/prerequisites/) works). macOS/Linux: see [Tauri prerequisites](https://tauri.app/start/prerequisites/).
 
 ```bash
 git clone https://github.com/AlexKapadia/omni
@@ -62,17 +62,20 @@ Prefer the pieces separately? `uv run python -m engine.server` starts just the e
 ```
 apps/ui/            # Tauri 2 shell + React front end — renders state, relays commands
 engine/
-  audio/            # WASAPI loopback + mic capture
-  stt/              # Silero VAD + Parakeet-TDT streaming
+  audio/            # WASAPI (Windows) + sounddevice cross-platform capture
+  stt/              # Silero VAD + Parakeet / Whisper / BYOK backends
   index/            # markdown chunker, bge-small embedder, sqlite-vec store
   router/           # provider clients, routing table, cost/latency ledger
   agents/           # ← the approval tools live here (this is where you'll work)
   naomi/            # the voice agent's turn loop
-  dictation/        # push-to-talk intent parsing
+  dictation/        # push-to-talk sessions, cleanup styles, history
+  enhance/          # enhanced notes, meeting finalization
+  export/           # PDF/DOCX and document export helpers
   vault/            # markdown writers, frontmatter, managed markers
   storage/          # SQLite connection + migrations runner
 migrations/         # numbered .sql schema migrations
 tests/              # pytest (engine) — one file per behaviour
+docs/               # architecture, features, plans — see docs/README.md
 ```
 
 ---

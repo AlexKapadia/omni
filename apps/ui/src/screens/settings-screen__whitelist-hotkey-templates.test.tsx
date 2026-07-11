@@ -42,6 +42,7 @@ const READY: SettingsGetResult = {
     liveTranslationLang: "",
     summaryLanguage: "",
     summaryModelId: "gemini-2.5-flash",
+    ollamaBaseUrl: "http://127.0.0.1:11434",
     speakerIdentity: "Me",
     speakerVoiceEnrolled: false,
     dictationCleanupStyle: "classic",
@@ -49,6 +50,10 @@ const READY: SettingsGetResult = {
     sttModelId: "",
     sttOpenaiBaseUrl: "",
     selectionTranslationLang: "English",
+    summaryProvider: "ollama",
+    autoSummary: false,
+      cartesiaVoiceId: "",
+      micDeviceId: "",
   },
   killSwitchEngaged: false,
   routing: [],
@@ -117,12 +122,15 @@ describe("auto-run safe actions whitelist (deny by default)", () => {
   it("enabling one persists exactly that intent type", async () => {
     renderScreen();
     await openAdvanced();
-    const toggle = screen.getByRole("switch", { name: "Auto-run Create calendar events" });
+    const toggle = screen.getByRole("switch", { name: "Auto-run Create Google Calendar events" });
     await act(async () => fireEvent.click(toggle));
     expect(updates).toContainEqual({ instantExecuteWhitelist: ["create_event"] });
     expect(toggle.getAttribute("aria-checked")).toBe("true");
-    // The security copy makes the still-audited effect explicit.
-    expect(screen.getByText(/no card — still audited/)).toBeTruthy();
+    // Honest: create_event only writes Google Calendar (not Outlook/"your calendar").
+    expect(toggle.getAttribute("aria-label")).toBe("Auto-run Create Google Calendar events");
+    expect(screen.getByText(/adds events to Google Calendar/)).toBeTruthy();
+    expect(screen.getByText(/meeting actions still need Approve/)).toBeTruthy();
+    expect(screen.getByText(/Whitelisted dictation commands skip the approval card/)).toBeTruthy();
   });
 });
 
@@ -150,14 +158,47 @@ describe("custom templates editor", () => {
     expect(updates).toContainEqual({ customTemplates: [] });
   });
 
-  it("switching the active template persists active_template", async () => {
+  it("switching the active template persists active_template as template_id", async () => {
     renderScreen();
-    const select = screen.getByLabelText("Note template") as HTMLSelectElement;
-    // Seed a custom option to switch to.
+    // Engine template_options already include customs with snake_case ids.
     await act(async () => {
+      settings.setState({
+        templateOptions: [
+          { templateId: "meeting", displayName: "Meeting notes", builtin: true },
+          { templateId: "deep_dive", displayName: "Deep dive", builtin: false },
+        ],
+      });
       patchSettings(settings, { customTemplates: ["Deep dive"] });
     });
-    fireEvent.change(select, { target: { value: "Deep dive" } });
-    expect(updates).toContainEqual({ activeTemplate: "Deep dive" });
+    const select = screen.getByLabelText("Note template") as HTMLSelectElement;
+    fireEvent.change(select, { target: { value: "deep_dive" } });
+    expect(updates).toContainEqual({ activeTemplate: "deep_dive" });
+    // Display names must not appear as option values (engine rejects them).
+    expect([...select.options].map((o) => o.value)).not.toContain("Deep dive");
+  });
+
+  it("renaming the active custom template persists the new template_id", async () => {
+    renderScreen();
+    await act(async () => {
+      settings.setState({
+        templateOptions: [
+          { templateId: "meeting", displayName: "Meeting notes", builtin: true },
+          { templateId: "deep_dive", displayName: "Deep dive", builtin: false },
+        ],
+      });
+      patchSettings(settings, {
+        customTemplates: ["Deep dive"],
+        activeTemplate: "deep_dive",
+      });
+    });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Rename" })));
+    fireEvent.change(screen.getByLabelText("Rename Deep dive"), {
+      target: { value: "Deep dive notes" },
+    });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Save" })));
+    expect(updates).toContainEqual({
+      customTemplates: ["Deep dive notes"],
+      activeTemplate: "deep_dive_notes",
+    });
   });
 });

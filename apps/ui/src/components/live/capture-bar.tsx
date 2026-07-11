@@ -7,10 +7,12 @@
  * Layout per components doc §04: height 64, top hairline, padding 0 32px,
  * gap 24; Stop is a secondary button pushed right.
  */
+import { useStore } from "zustand";
 import { OmniButton } from "../button";
 import { RecordingIndicator } from "./recording-indicator";
 import { formatMeetingClock, useTranscript } from "../../lib/transcript-store";
 import { requestCaptureStop } from "../../lib/capture-commands";
+import { appSettingsStore, type SettingsStore } from "../../lib/settings-store";
 
 function MonoMeta({ children, dim = false }: { readonly children: string; readonly dim?: boolean }) {
   return (
@@ -23,10 +25,17 @@ function MonoMeta({ children, dim = false }: { readonly children: string; readon
   );
 }
 
-export function CaptureBar({ elapsedSeconds }: { readonly elapsedSeconds: number }) {
+export function CaptureBar({
+  elapsedSeconds,
+  settingsStore = appSettingsStore,
+}: {
+  readonly elapsedSeconds: number;
+  readonly settingsStore?: SettingsStore;
+}) {
   const captureStatus = useTranscript((s) => s.captureStatus);
   const lastLagMs = useTranscript((s) => s.lastLagMs);
   const deviceNotice = useTranscript((s) => s.deviceNotice);
+  const disclosureReminder = useStore(settingsStore, (s) => s.settings?.disclosureReminder ?? true);
   const isLive = captureStatus === "live";
   const isStopping = captureStatus === "stopping";
 
@@ -51,7 +60,7 @@ export function CaptureBar({ elapsedSeconds }: { readonly elapsedSeconds: number
       >
         {formatMeetingClock(elapsedSeconds)}
       </span>
-      <MonoMeta dim>mic + system audio · on-device</MonoMeta>
+      {disclosureReminder && <MonoMeta dim>mic + system audio · on-device</MonoMeta>}
       <span
         className="font-[family-name:var(--font-mono)] text-[var(--grey-600)]"
         style={{ fontSize: 11 }}

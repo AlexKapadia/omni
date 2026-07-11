@@ -107,16 +107,38 @@ class PersistentCartesiaConnection:
         )
 
     async def _ensure_connected(self) -> WsConnectionLike:
-        """Return the live socket, (re)connecting with backoff if needed."""
+        """Return the live socket, (re)connecting with backoff if needed.
+
+        Re-reads credentials on every begin so a Settings voice_id change
+        (or clear) invalidates a warm socket that still holds the old voice.
+        """
         async with self._connect_lock:
+            fresh: CartesiaCredentials | None = None
             if self._ws is not None:
-                return self._ws
+                fresh = self._credentials_loader()
+                if (
+                    self._credentials is not None
+                    and self._credentials.voice_id == fresh.voice_id
+                ):
+                    self._credentials = fresh
+                    return self._ws
+                # Voice changed — drop the warm socket before reconnecting.
+                old = self._ws
+                self._ws = None
+                if self._reader_task is not None:
+                    self._reader_task.cancel()
+                    with contextlib.suppress(asyncio.CancelledError, Exception):
+                        await self._reader_task
+                    self._reader_task = None
+                with contextlib.suppress(Exception):
+                    await old.close()
             # Kill-switch gate at EVERY (re)connect: engaged means the socket
             # is never opened (fail closed on egress — §5.6 binding).
             if kill_switch_engaged():
                 raise VoiceEgressBlockedError()
-            if self._credentials is None:
-                self._credentials = self._credentials_loader()  # may raise NotConfigured
+            if fresh is None:
+                fresh = self._credentials_loader()  # may raise NotConfigured
+            self._credentials = fresh
             if self._consecutive_connect_failures > 0:
                 index = min(
                     self._consecutive_connect_failures - 1,

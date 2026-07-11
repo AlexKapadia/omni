@@ -1,7 +1,9 @@
-/** Record a short mono WAV sample for speaker enrollment (16 kHz PCM16). */
+/** Record a short mono WAV sample for speaker enrollment (PCM16). */
 export async function recordVoiceSampleWavBase64(durationSeconds = 4): Promise<string> {
   const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+  // Hint 16 kHz; browsers may ignore and keep 44.1/48 kHz — use the real rate.
   const context = new AudioContext({ sampleRate: 16_000 });
+  const sampleRate = context.sampleRate;
   const source = context.createMediaStreamSource(stream);
   const processor = context.createScriptProcessor(4096, 1, 1);
   const chunks: Float32Array[] = [];
@@ -26,10 +28,10 @@ export async function recordVoiceSampleWavBase64(durationSeconds = 4): Promise<s
     merged.set(chunk, offset);
     offset += chunk.length;
   }
-  return float32ToWavBase64(merged, 16_000);
+  return float32ToWavBase64(merged, sampleRate);
 }
 
-function float32ToWavBase64(samples: Float32Array, sampleRate: number): string {
+export function float32ToWavBase64(samples: Float32Array, sampleRate: number): string {
   const pcm = new Int16Array(samples.length);
   for (let i = 0; i < samples.length; i += 1) {
     const clamped = Math.max(-1, Math.min(1, samples[i] ?? 0));

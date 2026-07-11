@@ -16,7 +16,10 @@ import { ToggleSwitch } from "../components/toggle-switch";
 import { OmniMark } from "../components/omni-mark";
 import { SectionLabel } from "../components/section-label";
 import { SkeletonShimmer } from "../components/skeleton-shimmer";
-import { calendarUpcomingStore } from "../lib/calendar-upcoming-store";
+import {
+  calendarUpcomingStore,
+  getActiveCalendarUpcoming,
+} from "../lib/calendar-upcoming-store";
 import {
   formatClockShort,
   formatDayLabel,
@@ -51,6 +54,13 @@ import {
   type MeetingFinalizer,
 } from "./library-meeting-detail-pane";
 import { wireLibraryDragDrop } from "../lib/wire-library-drag-drop";
+import { subscribeToEngineFrames } from "../lib/live-engine-socket";
+import { parseInboundMessage } from "../lib/protocol";
+import { CAPTURE_STOPPED_EVENT_NAME } from "../lib/capture-protocol";
+import {
+  IMPORT_MEDIA_PROGRESS_EVENT,
+  parseImportMediaProgressPayload,
+} from "../lib/import-media-progress";
 
 /** LIVE engine repository (meetings.list over the WS protocol). */
 const defaultRepository: MeetingsRepository = createLiveMeetingsRepository();
@@ -130,16 +140,19 @@ export function LibraryScreen({
   const engineStatus = useEngineStatus((s) => s.status);
   const [importBusy, setImportBusy] = useState(false);
   const [importMessage, setImportMessage] = useState<string | null>(null);
+  const [importProgress, setImportProgress] = useState<{
+    stage: string;
+    percent: number;
+  } | null>(null);
   const [identifySpeakers, setIdentifySpeakers] = useState(false);
-  const upcomingCalendar = useStore(calendarUpcomingStore, (s) => s.latest);
+  const upcomingCalendar = useStore(calendarUpcomingStore, () =>
+    getActiveCalendarUpcoming(calendarUpcomingStore),
+  );
 
   useEffect(() => {
-    // Load once per app session (mount-only by design); the error state's
-    // retry button re-triggers the load explicitly.
-    const current = meetingsStore.getState();
-    if (current.status === "loading" && current.meetings.length === 0) {
-      void loadMeetings(meetingsStore, repository);
-    }
+    // Always reload on mount so a capture finished while away from Library
+    // still appears. Retry / error recovery remain explicit elsewhere.
+    void loadMeetings(meetingsStore, repository);
   }, [repository]);
 
   useEffect(() => {
@@ -155,10 +168,32 @@ export function LibraryScreen({
   }, [engineStatus, repository]);
 
   useEffect(() => {
-    return wireLibraryDragDrop(() => {
-      void loadMeetings(meetingsStore, repository);
+    // Refresh while Library is open when a capture ends (new meeting row).
+    return subscribeToEngineFrames((data) => {
+      const result = parseInboundMessage(data);
+      if (!result.ok || result.envelope.kind !== "event") return;
+      if (result.envelope.name === CAPTURE_STOPPED_EVENT_NAME) {
+        void loadMeetings(meetingsStore, repository);
+        return;
+      }
+      if (result.envelope.name !== IMPORT_MEDIA_PROGRESS_EVENT) return;
+      const progress = parseImportMediaProgressPayload(result.envelope.payload);
+      if (progress === null) return;
+      setImportProgress({ stage: progress.stage, percent: progress.percent });
     });
   }, [repository]);
+
+  useEffect(() => {
+    return wireLibraryDragDrop(
+      () => {
+        void loadMeetings(meetingsStore, repository);
+      },
+      {
+        identifySpeakers: () => identifySpeakers,
+        onError: (message) => setImportMessage(message),
+      },
+    );
+  }, [repository, identifySpeakers]);
 
   const visible = useMemo(() => filterMeetings(meetings, query), [meetings, query]);
   const groups = useMemo(() => {
@@ -178,6 +213,7 @@ export function LibraryScreen({
 
   const importMedia = async (): Promise<void> => {
     setImportMessage(null);
+    setImportProgress(null);
     const path = await pickMediaFile();
     if (path === null) return;
     setImportBusy(true);
@@ -191,6 +227,7 @@ export function LibraryScreen({
       setImportMessage(err instanceof Error ? err.message : "Import failed.");
     } finally {
       setImportBusy(false);
+      setImportProgress(null);
     }
   };
 
@@ -229,7 +266,11 @@ export function LibraryScreen({
           </div>
           <div className="flex gap-2">
           <OmniButton variant="secondary" disabled={importBusy} onClick={() => void importMedia()}>
-            {importBusy ? "Importing…" : "Import media"}
+            {importBusy
+              ? importProgress !== null
+                ? `Importing… ${importProgress.stage} ${importProgress.percent}%`
+                : "Importing…"
+              : "Import media"}
           </OmniButton>
           <OmniButton variant="primary" onClick={onStartCapture}>
             Record a meeting
@@ -346,6 +387,7 @@ export function LibraryScreen({
           loadDetail={detailLoader}
           finalizeMeeting={finalizer}
           onFinalized={() => void loadMeetings(meetingsStore, repository)}
+          onDeleted={() => void loadMeetings(meetingsStore, repository)}
         />
       )}
     </div>

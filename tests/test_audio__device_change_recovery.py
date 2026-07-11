@@ -46,15 +46,26 @@ class FakeBackend:
             StreamLabel.THEM: CaptureDeviceSpec("3:Speakers", "Speakers", 48_000, 2),
             StreamLabel.ME: CaptureDeviceSpec("1:Mic", "Mic", 44_100, 1),
         }
+        self.resolved: dict[str, CaptureDeviceSpec] = {}
         self.open_handles: list[FakeStreamHandle] = []
         self.fail_open_for: set[str] = set()  # Spec keys whose open must fail.
         self.probe_error_once: set[StreamLabel] = set()
+        self.resolve_calls: list[str] = []
 
     def probe_default_device(self, stream: StreamLabel) -> CaptureDeviceSpec:
         if stream in self.probe_error_once:
             self.probe_error_once.discard(stream)
             raise OSError("device list churning")
         return self.specs[stream]
+
+    def resolve_input_device(self, key: str) -> CaptureDeviceSpec:
+        self.resolve_calls.append(key)
+        if key in self.resolved:
+            return self.resolved[key]
+        for spec in self.specs.values():
+            if spec.key == key:
+                return spec
+        raise LookupError(f"unknown input device {key!r}")
 
     def open_capture_stream(
         self, spec: CaptureDeviceSpec, on_chunk: Callable[[bytes, float], None]
@@ -66,9 +77,12 @@ class FakeBackend:
         return handle
 
     def live_handle(self, label: StreamLabel) -> FakeStreamHandle:
-        matching = [
-            h for h in self.open_handles if h.spec == self.specs[label] and not h.closed
-        ]
+        them_key = self.specs[StreamLabel.THEM].key
+        live = [h for h in self.open_handles if not h.closed]
+        if label is StreamLabel.THEM:
+            matching = [h for h in live if h.spec.key == them_key]
+        else:
+            matching = [h for h in live if h.spec.key != them_key]
         assert matching, f"no live handle for {label}"
         return matching[-1]
 
@@ -210,3 +224,64 @@ async def test_stop_is_idempotent() -> None:
     await controller.start()
     await controller.stop()
     await controller.stop()  # Second stop must be a harmless no-op.
+
+
+async def test_preferred_me_device_opens_resolved_key_not_default() -> None:
+    """User-picked mic id must win over the Windows default input."""
+    backend = FakeBackend()
+    preferred = CaptureDeviceSpec("9:USB Mic", "USB Mic", 48_000, 1)
+    backend.resolved[preferred.key] = preferred
+    controller = DualStreamCaptureController(
+        backend,
+        TimestampedAudioRingBuffer(),
+        poll_interval_s=FAST_POLL_S,
+        preferred_me_device_key=preferred.key,
+    )
+    await controller.start()
+    try:
+        assert controller.device_names["me"] == "USB Mic"
+        assert backend.resolve_calls == [preferred.key]
+        # Default ME probe must not have been used for open.
+        me_handles = [h for h in backend.open_handles if h.spec.key == preferred.key]
+        assert len(me_handles) == 1
+    finally:
+        await controller.stop()
+
+
+async def test_preferred_me_watchdog_reprobes_preferred_not_default() -> None:
+    """While a preferred mic is set, default-input churn must not steal the stream."""
+    backend = FakeBackend()
+    preferred = CaptureDeviceSpec("9:USB Mic", "USB Mic", 48_000, 1)
+    backend.resolved[preferred.key] = preferred
+    changes: list[tuple[StreamLabel, str, float]] = []
+    controller = DualStreamCaptureController(
+        backend,
+        TimestampedAudioRingBuffer(),
+        on_device_changed=lambda label, name, ms: changes.append((label, name, ms)),
+        poll_interval_s=FAST_POLL_S,
+        preferred_me_device_key=preferred.key,
+    )
+    await controller.start()
+    try:
+        # Windows default mic changes — preferred path must ignore that.
+        backend.specs[StreamLabel.ME] = CaptureDeviceSpec("2:Other", "Other", 44_100, 1)
+        await asyncio.sleep(FAST_POLL_S * 3)
+        assert controller.device_names["me"] == "USB Mic"
+        assert all(label is not StreamLabel.ME for label, _, _ in changes)
+        assert preferred.key in backend.resolve_calls
+    finally:
+        await controller.stop()
+
+
+async def test_preferred_me_unknown_key_fails_closed_at_start() -> None:
+    backend = FakeBackend()
+    controller = DualStreamCaptureController(
+        backend,
+        TimestampedAudioRingBuffer(),
+        poll_interval_s=FAST_POLL_S,
+        preferred_me_device_key="99:Missing Mic",
+    )
+    with pytest.raises(LookupError, match="unknown input device"):
+        await controller.start()
+    assert all(handle.closed for handle in backend.open_handles)
+

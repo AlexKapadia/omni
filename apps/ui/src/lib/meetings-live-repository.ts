@@ -124,6 +124,8 @@ export interface MeetingDetail {
   readonly notesText: string;
   readonly enhancedNotesMd: string;
   readonly extraction: MeetingExtractionData | null;
+  /** True when me/them kept audio still exists for Retranscribe. */
+  readonly hasKeptAudio: boolean;
   readonly transcript: readonly MeetingTranscriptLine[];
 }
 
@@ -206,6 +208,8 @@ function mapDetail(payload: Record<string, unknown>): MeetingDetail | null {
     if (line === null) return null; // fail closed: one bad line rejects the frame
     transcript.push(line);
   }
+  // Fail closed: omit/non-bool → no Retranscribe offer without proof of audio.
+  const hasKeptAudio = payload["has_kept_audio"] === true;
   return {
     id,
     title,
@@ -217,6 +221,7 @@ function mapDetail(payload: Record<string, unknown>): MeetingDetail | null {
     notesText,
     enhancedNotesMd,
     extraction,
+    hasKeptAudio,
     transcript,
   };
 }
@@ -268,6 +273,21 @@ export async function retranscribeMeeting(
     300_000,
     transport,
   );
+}
+
+export async function deleteMeeting(
+  meetingId: string,
+  transport: EngineRequestTransport = liveTransport,
+): Promise<void> {
+  const payload = await requestEngineReply(
+    "meeting.delete",
+    { meeting_id: meetingId },
+    READ_TIMEOUT_MS,
+    transport,
+  );
+  if (payload["deleted"] !== true) {
+    throw new Error("engine sent a malformed delete reply");
+  }
 }
 
 // ------------------------------------------------------------- public API

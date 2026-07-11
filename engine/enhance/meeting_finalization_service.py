@@ -28,7 +28,11 @@ from pathlib import Path
 import aiosqlite
 
 from engine.enhance.meeting_extraction_pipeline import run_meeting_extraction
-from engine.storage.app_settings_repository import SETTING_SPEAKER_IDENTITY, read_setting
+from engine.storage.app_settings_repository import (
+    SETTING_ACTIVE_TEMPLATE,
+    SETTING_SPEAKER_IDENTITY,
+    read_setting,
+)
 from engine.stt.speaker_voice_profile import resolve_speaker_label
 from engine.enhance.meeting_finalization_result_types import (
     FinalizationResult,
@@ -85,7 +89,13 @@ from engine.export.transcript_export import (
     export_transcript_txt,
     export_transcript_vtt,
 )
-from engine.vault import VaultWriteError, create_meeting_note, resolve_vault_root
+from engine.vault import (
+    VaultWriteError,
+    create_meeting_note,
+    resolve_vault_root,
+    update_meeting_enhanced_notes as update_vault_enhanced_notes,
+    update_meeting_transcript as update_vault_transcript,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -153,9 +163,33 @@ class MeetingFinalizationService:
             changed = await update_transcript_segment_text(
                 connection, meeting_id, segment_id, text
             )
-            if changed:
-                await connection.commit()
-            return changed
+            if not changed:
+                return False
+            await connection.commit()
+            # Fail-soft vault sync + reindex (DB is source of truth for the UI).
+            if row.note_path:
+                await self._sync_replace_to_vault(
+                    connection,
+                    row.note_path,
+                    new_md=None,
+                    sync_transcript=True,
+                    meeting_id=meeting_id,
+                )
+            try:
+                vault_root = (
+                    self._vault_root_resolver()
+                    if row.note_path
+                    else Path(".")
+                )
+                indexer = VaultIndexerService(connection, vault_root)
+                await indexer.index_meeting_transcript(meeting_id)
+            except Exception:
+                logger.warning(
+                    "reindex after segment edit failed for meeting %s (DB update kept)",
+                    meeting_id,
+                    exc_info=True,
+                )
+            return True
         finally:
             await connection.close()
 
@@ -171,6 +205,7 @@ class MeetingFinalizationService:
                 return None
             transcript_hits = 0
             notes_hits = 0
+            new_md: str | None = None
             if target in ("transcript", "both"):
                 segments = await list_transcript_segment_rows(connection, meeting_id)
                 for segment in segments:
@@ -188,9 +223,51 @@ class MeetingFinalizationService:
                         notes_hits = 1
             if transcript_hits or notes_hits:
                 await connection.commit()
+                # Fail-soft vault sync: DB is source of truth for the UI; a
+                # vault write error must not roll back the DB update.
+                if row.note_path:
+                    await self._sync_replace_to_vault(
+                        connection,
+                        row.note_path,
+                        new_md=new_md if notes_hits else None,
+                        sync_transcript=transcript_hits > 0,
+                        meeting_id=meeting_id,
+                    )
             return {"transcript_segments": transcript_hits, "enhanced_notes": notes_hits}
         finally:
             await connection.close()
+
+    async def _sync_replace_to_vault(
+        self,
+        connection: aiosqlite.Connection,
+        note_rel: str,
+        *,
+        new_md: str | None,
+        sync_transcript: bool,
+        meeting_id: str,
+    ) -> None:
+        """Best-effort vault managed-region updates after a DB text replace."""
+        try:
+            vault_root = self._vault_root_resolver()
+            note_path = vault_root / note_rel
+            if new_md is not None:
+                update_vault_enhanced_notes(note_path, new_md)
+            if sync_transcript:
+                segments = await list_transcript_segment_rows(connection, meeting_id)
+                identity_raw = await read_setting(connection, SETTING_SPEAKER_IDENTITY)
+                identity = (
+                    identity_raw if isinstance(identity_raw, str) and identity_raw.strip() else "Me"
+                )
+                transcript_lines = [
+                    f"{resolve_speaker_label(s.speaker_id, identity)}: {s.text}" for s in segments
+                ]
+                update_vault_transcript(note_path, transcript_lines)
+        except Exception:
+            logger.warning(
+                "vault sync after text replace failed for meeting %s (DB update kept)",
+                meeting_id,
+                exc_info=True,
+            )
 
     async def export_transcript(self, meeting_id: str, fmt: str) -> dict[str, object] | None:
         """Export transcript; None when meeting unknown."""
@@ -254,6 +331,12 @@ class MeetingFinalizationService:
         from engine.enhance.meeting_retranscription_service import retranscribe_meeting
 
         await retranscribe_meeting(self.db_path, self.migrations_dir, meeting_id)
+
+    async def delete_meeting(self, meeting_id: str) -> dict[str, object] | None:
+        """Soft-delete from Library + wipe kept audio; leave vault note. None if missing."""
+        from engine.enhance.meeting_delete_service import delete_meeting as delete_meeting_impl
+
+        return await delete_meeting_impl(self.db_path, self.migrations_dir, meeting_id)
 
     # --------------------------------------------------------------- finalize
     async def finalize(
@@ -328,10 +411,20 @@ class MeetingFinalizationService:
             note_rel = note_path.relative_to(vault_root).as_posix()
 
             # STEP enhance + STEP actions region (both isolated).
-            from engine.storage.app_settings_repository import SETTING_SUMMARY_LANGUAGE
+            from engine.storage.app_settings_repository import (
+                SETTING_SUMMARY_LANGUAGE,
+                SETTING_SUMMARY_MODEL_ID,
+                SETTING_SUMMARY_PROVIDER,
+            )
 
             summary_language_raw = await read_setting(connection, SETTING_SUMMARY_LANGUAGE)
             summary_language = summary_language_raw if isinstance(summary_language_raw, str) else ""
+            summary_model_raw = await read_setting(connection, SETTING_SUMMARY_MODEL_ID)
+            preferred_model = summary_model_raw if isinstance(summary_model_raw, str) else None
+            summary_provider_raw = await read_setting(connection, SETTING_SUMMARY_PROVIDER)
+            preferred_provider = (
+                summary_provider_raw if isinstance(summary_provider_raw, str) else None
+            )
             enhance_ok, enhanced_md = await run_enhance_step(
                 router,
                 template,
@@ -340,6 +433,8 @@ class MeetingFinalizationService:
                 note_path,
                 warnings,
                 summary_language,
+                preferred_model=preferred_model,
+                preferred_provider=preferred_provider,
             )
             write_actions_region_step(note_path, outcome, warnings)
 
@@ -399,8 +494,15 @@ class MeetingFinalizationService:
         if row.finalized_at is not None:
             # fail-closed: a second run would fork the note silently.
             raise FinalizeRefusedError("meeting is already finalized")
+        # When the command omits template, honour Settings' active_template
+        # (including "auto") so the picker is not a dead control.
+        effective_template_id = template_id
+        if effective_template_id is None:
+            stored = await read_setting(connection, SETTING_ACTIVE_TEMPLATE)
+            if isinstance(stored, str) and stored.strip():
+                effective_template_id = stored.strip()
         try:
-            explicit_template = resolve_template(template_id)
+            explicit_template = resolve_template(effective_template_id)
         except ValueError as exc:
             raise FinalizeRefusedError(str(exc)) from exc
         try:

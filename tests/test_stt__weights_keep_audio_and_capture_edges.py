@@ -14,7 +14,7 @@ from typing import Any
 
 import pytest
 
-from engine.stt import capture_model_loading, keep_audio_recorder
+from engine.stt import keep_audio_recorder
 from engine.stt.capture_model_loading import CaptureModelLoader, CaptureServiceError
 from engine.stt.keep_audio_recorder import KeepAudioRecorder, keep_audio_directory
 from engine.stt.model_weights_downloader import (
@@ -215,8 +215,10 @@ async def test_loader_fails_closed_when_vad_missing(tmp_path: Path) -> None:
 async def test_loader_fails_closed_when_stt_deps_absent(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from engine.stt import live_transcriber_factory
+
     _vad_file(tmp_path)
-    monkeypatch.setattr(capture_model_loading, "stt_dependencies_available", lambda: False)
+    monkeypatch.setattr(live_transcriber_factory, "stt_dependencies_available", lambda: False)
     loader = CaptureModelLoader(models_dir=tmp_path)
     with pytest.raises(CaptureServiceError, match="dependencies not installed"):
         await loader.ensure_loaded()
@@ -228,10 +230,12 @@ async def test_loader_fails_closed_when_stt_deps_absent(
 async def test_loader_builds_parakeet_then_fails_closed_on_missing_checkpoint(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    from engine.stt import live_transcriber_factory
+
     _vad_file(tmp_path)
     # Deps "present" so the loader constructs the real transcriber and calls
     # load() off-thread; the checkpoint is absent so load() fails closed.
-    monkeypatch.setattr(capture_model_loading, "stt_dependencies_available", lambda: True)
+    monkeypatch.setattr(live_transcriber_factory, "stt_dependencies_available", lambda: True)
     # Neutralise torch import inside load() should it get that far (it must not:
     # the file check precedes any import), but keep the env hermetic regardless.
     monkeypatch.setitem(sys.modules, "torch", types.ModuleType("torch"))
@@ -265,3 +269,39 @@ async def test_loader_ready_and_idempotent_with_injected_fakes(tmp_path: Path) -
     assert transcriber.load_calls == 1
     await loader.ensure_loaded()  # already ready -> early return, no reload
     assert transcriber.load_calls == 1
+
+
+async def test_loader_builds_openai_compatible_and_reports_cloud_status(
+    tmp_path: Path,
+) -> None:
+    """Cloud STT must not fall through to Parakeet; status must report cloud."""
+    from engine.stt.openai_compatible_stt import OpenAiCompatibleSttBackend
+    from engine.stt.stt_runtime_status import get_stt_runtime_status, update_stt_runtime_status
+
+    _vad_file(tmp_path)
+    update_stt_runtime_status(engine="parakeet", model_id="", device="cpu")
+    loader = CaptureModelLoader(models_dir=tmp_path, vad_factory=lambda: (lambda chunk: 0.0))
+    loader.configure(
+        "openai_compatible",
+        "whisper-1",
+        openai_base_url="https://api.openai.com/v1",
+        openai_api_key="sk-test",
+    )
+    await loader.ensure_loaded()
+    assert loader.is_ready is True
+    assert isinstance(loader.transcriber, OpenAiCompatibleSttBackend)
+    status = get_stt_runtime_status()
+    assert status.engine == "openai_compatible"
+    assert status.model_id == "whisper-1"
+    assert status.device == "cloud"
+
+
+async def test_loader_openai_compatible_fails_closed_without_key_or_url(
+    tmp_path: Path,
+) -> None:
+    _vad_file(tmp_path)
+    loader = CaptureModelLoader(models_dir=tmp_path, vad_factory=lambda: (lambda chunk: 0.0))
+    loader.configure("openai_compatible", "whisper-1", openai_base_url="", openai_api_key=None)
+    with pytest.raises(CaptureServiceError, match="openai_compatible"):
+        await loader.ensure_loaded()
+    assert loader.is_ready is False

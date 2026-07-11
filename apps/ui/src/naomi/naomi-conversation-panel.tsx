@@ -1,7 +1,7 @@
 /**
  * Naomi conversation panel: the REAL turn-loop UI that sits beneath the pool
  * — push-to-talk + open-mic controls, the verbatim You/Naomi captions, the
- * citation chips, the live latency table, and honest error surfacing.
+ * citation chips, the optional debug latency table, and honest error surfacing.
  *
  * Purely presentational: it renders the reduced conversation state and calls
  * back into NaomiView (which owns the socket + reducer). Monochrome, fully
@@ -50,7 +50,20 @@ const LATENCY_ROWS: ReadonlyArray<{ key: keyof NaomiTurnLatencyEvent; label: str
   { key: "total_ms", label: "Total" },
 ];
 
+/**
+ * Per-turn latency table is a power-user diagnostic, HIDDEN by default.
+ * Opt in with localStorage `omni.naomi.debugLatency = "true"`.
+ */
+function latencyDebugEnabled(): boolean {
+  try {
+    return window.localStorage.getItem("omni.naomi.debugLatency") === "true";
+  } catch {
+    return false;
+  }
+}
+
 function LatencyTable({ latency }: { readonly latency: NaomiTurnLatencyEvent | null }) {
+  if (!latencyDebugEnabled()) return null;
   // Em-dash for every span until a real measurement lands (never a fake 0).
   return (
     <div data-testid="naomi-latency-table">

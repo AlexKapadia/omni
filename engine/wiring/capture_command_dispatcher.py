@@ -76,7 +76,9 @@ async def _handle_capture_start(
         )
         return
     try:
-        meeting_id = await capture_service.start(payload.title)
+        meeting_id = await capture_service.start(
+            payload.title, mic_device_id=payload.mic_device_id
+        )
     except CaptureServiceError as exc:
         # Fail closed with a correlatable, structured reason.
         await send(error_reply(command.id, ProtocolErrorCode.CAPTURE_ERROR, str(exc)))

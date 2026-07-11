@@ -48,11 +48,14 @@ describe("parseDevicesListPayload (fail closed)", () => {
 });
 
 describe("deriveDeviceSettings", () => {
-  it("derives options from capture devices and the loopback row from the default render", () => {
+  it("derives id-keyed options from capture devices and the loopback row from the default render", () => {
     const parsed = parseDevicesListPayload({ devices: WIRE_DEVICES })!;
     expect(deriveDeviceSettings(parsed)).toEqual({
-      microphone: "Headset Microphone", // the default capture device
-      microphoneOptions: ["Headset Microphone", "USB Mic"],
+      microphone: "3:Headset Microphone", // default capture device id
+      microphoneOptions: [
+        { id: "3:Headset Microphone", name: "Headset Microphone" },
+        { id: "9:USB Mic", name: "USB Mic" },
+      ],
       systemAudioDevice: "Speakers (WASAPI loopback)", // default render only
     });
   });
@@ -62,26 +65,29 @@ describe("deriveDeviceSettings", () => {
       devices: [{ id: "9:USB Mic", name: "USB Mic", kind: "capture", is_default: false }],
     })!;
     expect(deriveDeviceSettings(parsed)).toEqual({
-      microphone: "USB Mic", // first capture stands in when none is default
-      microphoneOptions: ["USB Mic"],
+      microphone: "9:USB Mic", // first capture stands in when none is default
+      microphoneOptions: [{ id: "9:USB Mic", name: "USB Mic" }],
       systemAudioDevice: "Default output (WASAPI loopback)",
     });
   });
 });
 
 describe("refreshDevicesIntoSettings", () => {
-  it("applies a real listing and keeps a still-valid user pick", async () => {
+  it("applies a real listing and keeps a still-valid user pick by id", async () => {
     const store = createSettingsStore({
       ...createInitialSettingsState(),
       devicesSource: "engine",
-      microphone: "USB Mic", // the user's previous choice
-      microphoneOptions: ["USB Mic"],
+      microphone: "9:USB Mic", // the user's previous choice (device id)
+      microphoneOptions: [{ id: "9:USB Mic", name: "USB Mic" }],
     });
     await refreshDevicesIntoSettings(store, async () => ({ devices: WIRE_DEVICES }));
     const state = store.getState();
     expect(state.devicesSource).toBe("engine");
-    expect(state.microphoneOptions).toEqual(["Headset Microphone", "USB Mic"]);
-    expect(state.microphone).toBe("USB Mic"); // still present -> preserved
+    expect(state.microphoneOptions).toEqual([
+      { id: "3:Headset Microphone", name: "Headset Microphone" },
+      { id: "9:USB Mic", name: "USB Mic" },
+    ]);
+    expect(state.microphone).toBe("9:USB Mic"); // still present -> preserved
     expect(state.systemAudioDevice).toBe("Speakers (WASAPI loopback)");
   });
 

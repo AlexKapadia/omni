@@ -1,21 +1,18 @@
 """Protocol v1 payloads for the M7 model-download command + progress events.
 
 Purpose: pinned names and shapes for ``models.download`` and the events the
-onboarding wizard renders real progress bars from:
-``models.download.progress`` {file, received_bytes, total_bytes,
-sha256_verified}, ``models.download.failed`` {file, message}, and
-``models.download.completed`` {ok, files}.
+onboarding wizard renders real progress bars from.
 Pipeline position: consumed by
-``engine.wiring.models_download_command_dispatcher`` (validation + emission)
-and the UI (shape contract).
+``engine.wiring.models_download_command_dispatcher`` and the UI.
 
-Security invariant: the command payload is untrusted input
-(``extra="forbid"``); download sources stay the PINNED first-party HTTPS
-URLs in ``engine.stt.model_weights_downloader`` — the client can never
-supply a URL.
+Security: client supplies only allowlisted bundle/model_id — never a URL.
 """
 
-from pydantic import BaseModel, ConfigDict
+from __future__ import annotations
+
+from pydantic import BaseModel, ConfigDict, field_validator, model_validator
+
+from engine.stt.whisper_model_catalog import WHISPER_MODEL_IDS
 
 COMMAND_MODELS_DOWNLOAD = "models.download"
 
@@ -23,13 +20,33 @@ EVENT_MODELS_DOWNLOAD_PROGRESS = "models.download.progress"
 EVENT_MODELS_DOWNLOAD_FAILED = "models.download.failed"
 EVENT_MODELS_DOWNLOAD_COMPLETED = "models.download.completed"
 
+_ALLOWED_BUNDLES = frozenset({"core", "whisper"})
+_WHISPER_IDS = frozenset(WHISPER_MODEL_IDS)
+
 
 class ModelsDownloadCommandPayload(BaseModel):
-    """``models.download`` takes no arguments (the model set is pinned);
-    present files are re-verified (hashed) rather than re-fetched, so the
-    same command is also the retry AND the integrity-check path."""
+    """``models.download`` — core (Silero+Parakeet) or a Whisper ggml size."""
 
     model_config = ConfigDict(extra="forbid")
+
+    bundle: str = "core"
+    model_id: str | None = None
+
+    @field_validator("bundle")
+    @classmethod
+    def _bundle_ok(cls, value: str) -> str:
+        if value not in _ALLOWED_BUNDLES:
+            raise ValueError("bundle must be 'core' or 'whisper'")
+        return value
+
+    @model_validator(mode="after")
+    def _whisper_needs_id(self) -> ModelsDownloadCommandPayload:
+        if self.bundle == "whisper":
+            if self.model_id is None or self.model_id not in _WHISPER_IDS:
+                raise ValueError(
+                    "whisper bundle requires model_id from the Meetily ggml catalog"
+                )
+        return self
 
 
 def build_models_download_progress_payload(
@@ -38,9 +55,7 @@ def build_models_download_progress_payload(
     total_bytes: int | None,
     sha256_verified: bool | None,
 ) -> dict[str, object]:
-    """One progress beat. ``total_bytes`` is None until the server says;
-    ``sha256_verified`` is None while downloading, then the honest verify
-    outcome (True only when the hash matches the pinned manifest)."""
+    """One progress beat during a download."""
     return {
         "file": file,
         "received_bytes": received_bytes,

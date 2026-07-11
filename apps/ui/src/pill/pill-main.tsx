@@ -2,17 +2,31 @@
  * Entry point for the pill window (separate Vite entry: /pill.html).
  * Mounts the pill view and starts the Tauri/engine bridge; nothing else.
  */
-import { StrictMode } from "react";
+import { StrictMode, useEffect, useState } from "react";
 import { createRoot } from "react-dom/client";
 
 import "../styles/tokens.css";
 import "../styles/fonts.css"; // self-hosted webfonts — this window has its own Vite entry, so it needs its own import
 import "./pill.css";
+import { getSettings } from "../lib/setup-settings-repository";
 import { startDictationPillBridge } from "./dictation-engine-bridge";
 import { dictationPillStore } from "./dictation-pill-store";
 import { DictationPillView } from "./dictation-pill-view";
+import { formatHoldLabel } from "./format-hold-label";
 
 startDictationPillBridge(dictationPillStore);
+
+function PillRoot() {
+  const [holdLabel, setHoldLabel] = useState("Hold F9");
+  useEffect(() => {
+    void getSettings()
+      .then((result) => setHoldLabel(formatHoldLabel(result.settings.pushToTalkHotkey)))
+      .catch(() => {
+        // Non-fatal: keep the default F9 hint until settings are reachable.
+      });
+  }, []);
+  return <DictationPillView holdLabel={holdLabel} />;
+}
 
 const rootElement = document.getElementById("pill-root");
 if (rootElement === null) {
@@ -22,6 +36,6 @@ if (rootElement === null) {
 
 createRoot(rootElement).render(
   <StrictMode>
-    <DictationPillView />
+    <PillRoot />
   </StrictMode>,
 );

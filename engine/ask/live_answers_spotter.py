@@ -106,6 +106,8 @@ class LiveAnswersSpotter:
         dedupe_capacity: int = DEFAULT_DEDUPE_CAPACITY,
         clock: Callable[[], float] = time.monotonic,
         today: Callable[[], date] = date.today,
+        preferred_model: str | None = None,
+        preferred_provider: str | None = None,
     ) -> None:
         self._connection = connection
         self._retriever = retriever
@@ -114,6 +116,8 @@ class LiveAnswersSpotter:
         self._cadence_seconds = cadence_seconds
         self._clock = clock
         self._today = today
+        self._preferred_model = preferred_model
+        self._preferred_provider = preferred_provider
         self._window: list[str] = []  # new final lines since the last spot
         self._last_spot_at = clock()
         self._seen_questions: deque[str] = deque(maxlen=dedupe_capacity)
@@ -147,6 +151,8 @@ class LiveAnswersSpotter:
                 QUESTION_SPOTTER_SYSTEM_FRAME,
                 (ChatMessage(role="user", content=window_text),),  # data channel
                 json_schema=QUESTIONS_JSON_SCHEMA,
+                preferred_model=self._preferred_model,
+                preferred_provider=self._preferred_provider,
             )
         except RouterError:
             return  # live path degrades to silence; capture is untouched

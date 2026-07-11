@@ -59,24 +59,30 @@ export function parseDevicesListPayload(payload: unknown): AudioDeviceEntry[] | 
   return parsed;
 }
 
+export interface MicrophoneOption {
+  readonly id: string;
+  readonly name: string;
+}
+
 export interface DerivedDeviceSettings {
   readonly microphone: string;
-  readonly microphoneOptions: readonly string[];
+  readonly microphoneOptions: readonly MicrophoneOption[];
   readonly systemAudioDevice: string;
 }
 
 /**
  * Settings view of the enumeration: capture devices become the microphone
- * options (default first selected); the default render endpoint names the
- * informational "system audio follows Windows" row.
+ * options (id for selection, name for display; default first selected); the
+ * default render endpoint names the informational "system audio follows
+ * Windows" row.
  */
 export function deriveDeviceSettings(devices: readonly AudioDeviceEntry[]): DerivedDeviceSettings {
   const microphones = devices.filter((d) => d.kind === "capture");
   const defaultMicrophone = microphones.find((d) => d.isDefault) ?? microphones[0];
   const defaultRender = devices.find((d) => d.kind === "render" && d.isDefault);
   return {
-    microphone: defaultMicrophone?.name ?? "",
-    microphoneOptions: microphones.map((d) => d.name),
+    microphone: defaultMicrophone?.id ?? "",
+    microphoneOptions: microphones.map((d) => ({ id: d.id, name: d.name })),
     systemAudioDevice:
       defaultRender !== undefined
         ? `${defaultRender.name} (WASAPI loopback)`

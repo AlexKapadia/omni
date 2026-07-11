@@ -224,6 +224,45 @@ def _inject_pyaudio(monkeypatch: pytest.MonkeyPatch, instance: _FakePyAudioInsta
     monkeypatch.setitem(__import__("sys").modules, "pyaudiowpatch", fake)
 
 
+def test_resolve_input_device_looks_up_by_portaudio_index(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instance = _FakePyAudioInstance(
+        input_info={"index": 9, "name": "USB Mic", "defaultSampleRate": 48_000.0,
+                    "maxInputChannels": 1},
+    )
+    # get_device_info_by_index is the resolve path (not default-input).
+    instance.get_device_info_by_index = (  # type: ignore[attr-defined]
+        lambda idx: {
+            "index": idx,
+            "name": "USB Mic",
+            "defaultSampleRate": 48_000.0,
+            "maxInputChannels": 1,
+        }
+    )
+    _inject_pyaudio(monkeypatch, instance)
+    spec = PyAudioWpatchCaptureBackend().resolve_input_device("9:USB Mic")
+    assert spec == CaptureDeviceSpec("9:USB Mic", "USB Mic", 48_000, 1)
+    assert instance.terminated is True
+
+
+def test_resolve_input_device_fails_closed_for_non_input(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    instance = _FakePyAudioInstance()
+    instance.get_device_info_by_index = (  # type: ignore[attr-defined]
+        lambda idx: {
+            "index": idx,
+            "name": "Speakers",
+            "defaultSampleRate": 48_000.0,
+            "maxInputChannels": 0,
+        }
+    )
+    _inject_pyaudio(monkeypatch, instance)
+    with pytest.raises(LookupError, match="not an input device"):
+        PyAudioWpatchCaptureBackend().resolve_input_device("3:Speakers")
+
+
 def test_probe_them_uses_loopback_and_terminates(monkeypatch: pytest.MonkeyPatch) -> None:
     instance = _FakePyAudioInstance(
         loopback={"index": 3, "name": "Speakers", "defaultSampleRate": 48_000.0,
@@ -501,6 +540,9 @@ class _CapturingBackend:
 
     def probe_default_device(self, stream: StreamLabel) -> CaptureDeviceSpec:
         return self._spec
+
+    def resolve_input_device(self, key: str) -> CaptureDeviceSpec:
+        return CaptureDeviceSpec(key, key.split(":", 1)[-1], self._spec.sample_rate, self._spec.channels)
 
     def open_capture_stream(self, spec: CaptureDeviceSpec, on_chunk: Any) -> Any:
         self.on_chunk = on_chunk

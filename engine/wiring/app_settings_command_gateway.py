@@ -53,6 +53,11 @@ from engine.storage.app_settings_repository import (
     SETTING_STT_MODEL_ID,
     SETTING_STT_OPENAI_BASE_URL,
     SETTING_SELECTION_TRANSLATION_LANG,
+    SETTING_OLLAMA_BASE_URL,
+    SETTING_SUMMARY_PROVIDER,
+    SETTING_AUTO_SUMMARY,
+    SETTING_CARTESIA_VOICE_ID,
+    SETTING_MIC_DEVICE_ID,
     read_all_settings,
     write_setting,
 )
@@ -86,7 +91,7 @@ SETTINGS_DEFAULTS: dict[str, object] = {
     SETTING_AEC_ENABLED: False,
     SETTING_LIVE_TRANSLATION_LANG: "",
     SETTING_SUMMARY_LANGUAGE: "",
-    SETTING_SUMMARY_MODEL_ID: "gemini-2.5-flash",
+    SETTING_SUMMARY_MODEL_ID: "llama3.2",
     SETTING_SPEAKER_IDENTITY: "Me",
     SETTING_SPEAKER_VOICE_EMBEDDING: "",
     SETTING_DICTATION_CLEANUP_STYLE: "classic",
@@ -94,6 +99,11 @@ SETTINGS_DEFAULTS: dict[str, object] = {
     SETTING_STT_MODEL_ID: "",
     SETTING_STT_OPENAI_BASE_URL: "",
     SETTING_SELECTION_TRANSLATION_LANG: "English",
+    SETTING_OLLAMA_BASE_URL: "http://127.0.0.1:11434",
+    SETTING_SUMMARY_PROVIDER: "ollama",
+    SETTING_AUTO_SUMMARY: False,
+    SETTING_CARTESIA_VOICE_ID: "",
+    SETTING_MIC_DEVICE_ID: "",
 }
 
 # On-device rows shown alongside the routed tasks: transcription and
@@ -147,12 +157,26 @@ class AppSettingsCommandGateway:
             microsoft_token_store if microsoft_token_store is not None else MicrosoftTokenStore()
         )
         self._on_detection_settings_applied: Callable[[dict[str, object]], None] | None = None
+        self._on_live_translation_settings_applied: Callable[[dict[str, object]], None] | None = (
+            None
+        )
+        self._on_vault_dir_applied: Callable[[str], None] | None = None
 
     def set_detection_settings_listener(
         self, listener: Callable[[dict[str, object]], None] | None
     ) -> None:
         """Optional hook: detection rules hot-reload when settings change."""
         self._on_detection_settings_applied = listener
+
+    def set_live_translation_settings_listener(
+        self, listener: Callable[[dict[str, object]], None] | None
+    ) -> None:
+        """Optional hook: live translation lang hot-reloads mid-session."""
+        self._on_live_translation_settings_applied = listener
+
+    def set_vault_dir_listener(self, listener: Callable[[str], None] | None) -> None:
+        """Optional hook: vault watcher rebinds when vault_dir changes."""
+        self._on_vault_dir_applied = listener
 
     # ------------------------------------------------------------- plumbing
     async def _read_effective_settings(self) -> dict[str, object]:
@@ -263,6 +287,7 @@ class AppSettingsCommandGateway:
             await connection.close()
         self._apply_side_effects(normalized)
         await self._notify_detection_settings_listener()
+        await self._notify_live_translation_settings_listener()
         return normalized
 
     async def _notify_detection_settings_listener(self) -> None:
@@ -271,6 +296,12 @@ class AppSettingsCommandGateway:
         effective = await self._read_effective_settings()
         self._on_detection_settings_applied(effective)
 
+    async def _notify_live_translation_settings_listener(self) -> None:
+        if self._on_live_translation_settings_applied is None:
+            return
+        effective = await self._read_effective_settings()
+        self._on_live_translation_settings_applied(effective)
+
     def _apply_side_effects(self, applied: dict[str, object]) -> None:
         """Runtime effects after a successful persist (order-independent)."""
         vault_dir = applied.get(SETTING_VAULT_DIR)
@@ -278,6 +309,8 @@ class AppSettingsCommandGateway:
             # Vault resolution reads this env var everywhere; the explicit
             # user choice takes effect immediately, no restart.
             os.environ[VAULT_DIR_ENV_VAR] = vault_dir
+            if self._on_vault_dir_applied is not None:
+                self._on_vault_dir_applied(vault_dir)
         kill = applied.get(SETTING_KILL_SWITCH)
         if isinstance(kill, bool):
             # Fail closed on egress instantly — the router consults this
@@ -286,18 +319,35 @@ class AppSettingsCommandGateway:
         silence_s = applied.get(SETTING_AUTOSTOP_SILENCE_S)
         if isinstance(silence_s, int):
             os.environ[AUTOSTOP_SILENCE_ENV_VAR] = str(silence_s)
+        ollama_url = applied.get(SETTING_OLLAMA_BASE_URL)
+        if isinstance(ollama_url, str) and ollama_url.strip():
+            # Meetily-style: Settings endpoint makes Ollama routable immediately.
+            from engine.router.provider_client_registry import OLLAMA_BASE_URL_ENV
+
+            os.environ[OLLAMA_BASE_URL_ENV] = ollama_url.strip()
+        voice_id = applied.get(SETTING_CARTESIA_VOICE_ID)
+        if isinstance(voice_id, str):
+            # Setting wins when non-empty; clearing the setting pops the env so
+            # a stale CARTESIA_VOICE_ID cannot keep driving Naomi's voice.
+            from engine.voice.cartesia_credentials import CARTESIA_VOICE_ID_ENV_VAR
+
+            stripped = voice_id.strip()
+            if stripped:
+                os.environ[CARTESIA_VOICE_ID_ENV_VAR] = stripped
+            else:
+                os.environ.pop(CARTESIA_VOICE_ID_ENV_VAR, None)
 
     async def apply_persisted_settings_at_boot(self) -> None:
         """Boot hook (production only): make persisted settings effective.
 
-        - vault_dir: mirrored into OMNI_VAULT_DIR only when the env does not
-          already carry one (an explicit env/dev value wins at boot).
+        - vault_dir: when the DB has a non-empty vault_dir, always mirror it
+          into OMNI_VAULT_DIR (user setting wins over a stale env value).
         - kill_switch: a stored True engages the runtime override (a stored
           False leaves the env flag in charge — never weakens the control).
         """
         effective = await self._read_effective_settings()
         stored_vault = effective.get(SETTING_VAULT_DIR)
-        if isinstance(stored_vault, str) and not os.environ.get(VAULT_DIR_ENV_VAR, "").strip():
+        if isinstance(stored_vault, str) and stored_vault.strip():
             os.environ[VAULT_DIR_ENV_VAR] = stored_vault
         if effective.get(SETTING_KILL_SWITCH) is True:
             # Fail closed: a user-engaged switch survives restarts.
@@ -307,6 +357,18 @@ class AppSettingsCommandGateway:
             os.environ[AUTOSTOP_SILENCE_ENV_VAR] = str(silence_s)
         if self._on_detection_settings_applied is not None:
             self._on_detection_settings_applied(effective)
+        if self._on_live_translation_settings_applied is not None:
+            self._on_live_translation_settings_applied(effective)
+        ollama_url = effective.get(SETTING_OLLAMA_BASE_URL)
+        if isinstance(ollama_url, str) and ollama_url.strip():
+            from engine.router.provider_client_registry import OLLAMA_BASE_URL_ENV
+
+            os.environ[OLLAMA_BASE_URL_ENV] = ollama_url.strip()
+        voice_id = effective.get(SETTING_CARTESIA_VOICE_ID)
+        if isinstance(voice_id, str) and voice_id.strip():
+            from engine.voice.cartesia_credentials import CARTESIA_VOICE_ID_ENV_VAR
+
+            os.environ[CARTESIA_VOICE_ID_ENV_VAR] = voice_id.strip()
 
     async def setup_status_payload(self) -> dict[str, object]:
         """setup.status -> the honest first-run state of THIS machine."""
@@ -326,7 +388,7 @@ class AppSettingsCommandGateway:
         vault_dir = effective.get(SETTING_VAULT_DIR)
         vault_configured = isinstance(vault_dir, str) and Path(vault_dir).is_dir()
         models_dir = self._models_dir if self._models_dir is not None else models_directory()
-        models = [
+        core_models = [
             {
                 "file": spec.filename,
                 "present": (models_dir / spec.filename).is_file(),
@@ -338,6 +400,10 @@ class AppSettingsCommandGateway:
             }
             for spec in MODEL_SPECS
         ]
+        from engine.stt.whisper_model_catalog import whisper_models_status
+
+        whisper_models = whisper_models_status(models_dir)
+        models = [*core_models, *whisper_models]
         try:
             google_connected = self._google_token_store.load_tokens() is not None
         except Exception:
@@ -349,11 +415,12 @@ class AppSettingsCommandGateway:
         onboarding_complete = effective.get(SETTING_ONBOARDING_COMPLETE) is True
         # The product's required pair is Groq + Gemini; Anthropic/Cartesia
         # are optional slots (session decision — never required to ship).
+        # Whisper sizes are optional Enhanced STT — not part of setup_complete.
         setup_complete = (
             keys["groq"]
             and keys["gemini"]
             and vault_configured
-            and all(bool(m["present"]) for m in models)
+            and all(bool(m["present"]) for m in core_models)
         )
         return {
             "keys": keys,

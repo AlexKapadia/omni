@@ -1,4 +1,4 @@
-"""Re-transcribe a meeting from kept WAV files (keep_audio opt-in)."""
+"""Re-transcribe a meeting from kept audio (MP3 preferred, WAV fallback)."""
 
 from __future__ import annotations
 
@@ -17,6 +17,7 @@ from engine.storage.transcript_segments_repository import (
 )
 from engine.stt.keep_audio_recorder import keep_audio_directory
 from engine.stt.offline_audio_transcriber import (
+    decode_media_to_mono_16k,
     decode_wav_to_mono_16k,
     new_segment_id,
     transcribe_samples_with_backend,
@@ -30,6 +31,24 @@ def _utc_now_iso() -> str:
     return datetime.now(tz=UTC).isoformat()
 
 
+def resolve_kept_audio_path(session_dir: Path, label: StreamLabel) -> Path | None:
+    """Prefer ``{label}.mp3`` (post keep-audio encode), else ``{label}.wav``."""
+    mp3_path = session_dir / f"{label.value}.mp3"
+    if mp3_path.is_file():
+        return mp3_path
+    wav_path = session_dir / f"{label.value}.wav"
+    if wav_path.is_file():
+        return wav_path
+    return None
+
+
+def decode_kept_audio(path: Path):
+    """Decode kept audio: WAV via wave module; anything else via ffmpeg."""
+    if path.suffix.lower() == ".wav":
+        return decode_wav_to_mono_16k(path)
+    return decode_media_to_mono_16k(path)
+
+
 async def retranscribe_meeting(
     db_path: Path,
     migrations_dir: Path,
@@ -37,7 +56,7 @@ async def retranscribe_meeting(
     *,
     models_dir: Path | None = None,
 ) -> None:
-    """Replace transcript segments using retained them/me WAV files."""
+    """Replace transcript segments using retained them/me MP3 or WAV files."""
     await apply_migrations(db_path, migrations_dir)
     connection = await open_sqlite_connection(db_path)
     try:
@@ -50,11 +69,16 @@ async def retranscribe_meeting(
         session_dir = keep_audio_directory() / meeting_id
         all_segments = []
         for label in (StreamLabel.THEM, StreamLabel.ME):
-            wav_path = session_dir / f"{label.value}.wav"
-            if not wav_path.is_file():
-                logger.warning("retranscribe: missing %s for %s", wav_path.name, meeting_id)
+            audio_path = resolve_kept_audio_path(session_dir, label)
+            if audio_path is None:
+                logger.warning(
+                    "retranscribe: missing %s.mp3/%s.wav for %s",
+                    label.value,
+                    label.value,
+                    meeting_id,
+                )
                 continue
-            samples = decode_wav_to_mono_16k(wav_path)
+            samples = decode_kept_audio(audio_path)
             all_segments.extend(
                 await asyncio.to_thread(
                     transcribe_samples_with_backend,

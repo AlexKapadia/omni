@@ -118,6 +118,7 @@ async def test_gateway_listen_start_delegates_through_injected_capture(
 
     async def fake_capture(
         _sink: Callable[[AudioFrame], Awaitable[None]],
+        **_kwargs: object,
     ) -> Callable[[], Awaitable[None]]:
         started.append("open")
 

@@ -7,7 +7,7 @@
  * row carries the breathing ring while capture is genuinely live. Motion is
  * suppressed for users with prefers-reduced-motion.
  */
-import { Fragment, useState, useEffect } from "react";
+import { Fragment } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { AudioLines, Home, Library, MessageSquareText, Mic, Settings, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
@@ -15,8 +15,7 @@ import { BreathingRing } from "./breathing-ring";
 import { OmniMark } from "./omni-mark";
 import { useTranscript } from "../lib/transcript-store";
 import { copy } from "../lib/copy";
-import { useStore } from "zustand";
-import { apiKeysStore } from "../lib/api-keys-store";
+import { useNaomiVisibility } from "../lib/use-naomi-visibility";
 import { tokenDurationSeconds } from "../lib/design-token-motion";
 
 export type SectionId = "home" | "library" | "live" | "ask" | "dictation" | "naomi" | "settings";
@@ -42,24 +41,7 @@ interface NavRailProps {
 export function NavRail({ active, onSelect }: NavRailProps) {
   const reducedMotion = useReducedMotion();
   const captureLive = useTranscript((s) => s.captureStatus === "live");
-
-  // State to track if Naomi is enabled in local storage
-  const [naomiEnabled, setNaomiEnabled] = useState(() => localStorage.getItem("omni_naomi_enabled") === "true");
-
-  useEffect(() => {
-    const handleStorage = () => {
-      setNaomiEnabled(localStorage.getItem("omni_naomi_enabled") === "true");
-    };
-    window.addEventListener("storage", handleStorage);
-    window.addEventListener("naomi-toggle", handleStorage);
-    return () => {
-      window.removeEventListener("storage", handleStorage);
-      window.removeEventListener("naomi-toggle", handleStorage);
-    };
-  }, []);
-
-  const isCartesiaSaved = useStore(apiKeysStore, (s) => s.keys.cartesia?.saved === true);
-  const showNaomi = naomiEnabled && isCartesiaSaved;
+  const { showNaomi } = useNaomiVisibility();
 
   const visibleSections = SECTIONS.filter((s) => s.id !== "naomi" || showNaomi);
 

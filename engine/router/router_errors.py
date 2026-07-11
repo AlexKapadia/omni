@@ -113,16 +113,18 @@ class RouterUnavailableError(RouterError):
 
 
 class KillSwitchEngagedError(RouterError):
-    """The global kill switch is on: ALL external calls are refused.
+    """The kill switch is on: cloud/egress AI calls are refused.
 
-    Fail closed (claude.md §5.6): raised BEFORE any provider client or task
-    resolution runs, so no task type can route around it.
+    Fail closed on egress (claude.md §5.6): raised when no local provider
+    (Ollama / LM Studio) remains in the resolved chain. Local AI may still
+    route; capture, transcription, and vault stay fully functional.
     """
 
     def __init__(self) -> None:
         super().__init__(
-            "The kill switch is engaged: all external AI calls are halted. "
-            "Capture, transcription, and vault features keep working locally."
+            "The kill switch is engaged: all cloud AI calls are halted. "
+            "Local AI (Ollama), capture, transcription, and vault features "
+            "keep working locally."
         )
 
 

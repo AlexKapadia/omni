@@ -28,7 +28,13 @@ function DeviceStateNote({ children }: { readonly children: string }) {
   );
 }
 
-export function DevicesSection({ store }: { readonly store: SettingsStore }) {
+export function DevicesSection({
+  store,
+  updateSetting,
+}: {
+  readonly store: SettingsStore;
+  readonly updateSetting?: SettingsUpdater;
+}) {
   const devicesSource = useStore(store, (s) => s.devicesSource);
   const microphone = useStore(store, (s) => s.microphone);
   const options = useStore(store, (s) => s.microphoneOptions);
@@ -40,13 +46,17 @@ export function DevicesSection({ store }: { readonly store: SettingsStore }) {
           <select
             aria-label="Microphone"
             value={microphone}
-            onChange={(e) => setMicrophone(store, e.target.value)}
+            onChange={(e) => {
+              const id = e.target.value;
+              setMicrophone(store, id);
+              if (updateSetting) void updateSetting({ micDeviceId: id });
+            }}
             className={SELECT_CLASS}
             style={{ fontSize: "var(--text-meta-size)" }}
           >
             {options.map((option) => (
-              <option key={option} value={option}>
-                {option}
+              <option key={option.id} value={option.id}>
+                {option.name}
               </option>
             ))}
           </select>

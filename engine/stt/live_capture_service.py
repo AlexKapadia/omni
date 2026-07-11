@@ -46,10 +46,14 @@ from engine.protocol.capture_event_payloads import (
     build_capture_stopped_payload,
 )
 from engine.protocol.event_broadcast_hub import EventBroadcastHub
+from engine.security.provider_key_store import ProviderKeyStore
 from engine.storage.app_settings_repository import (
     SETTING_AEC_ENABLED,
     SETTING_SPEAKER_IDENTITY,
     SETTING_SPEAKER_VOICE_EMBEDDING,
+    SETTING_STT_ENGINE,
+    SETTING_STT_MODEL_ID,
+    SETTING_STT_OPENAI_BASE_URL,
     read_setting,
     read_setting_bool,
 )
@@ -60,6 +64,7 @@ from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.stt.capture_model_loading import (
     CaptureModelLoader,
     CaptureServiceError,
+    LiveTranscriber,
     VadFactory,
 )
 from engine.stt.keep_audio_recorder import (
@@ -67,7 +72,6 @@ from engine.stt.keep_audio_recorder import (
     create_keep_audio_recorder_if_enabled,
 )
 from engine.stt.loopback_vad_probability_tap import LoopbackVadTap, wrap_vad_with_loopback_tap
-from engine.stt.parakeet_nemo_transcriber import ParakeetNemoTranscriber
 from engine.stt.per_stream_transcription_pipeline import PerStreamTranscriptionPipeline
 from engine.stt.silence_auto_stop_monitor import spawn_silence_auto_stop_tasks
 from engine.stt.transcript_event_emitter import TranscriptEventEmitter
@@ -107,7 +111,7 @@ class LiveCaptureService:
         hub: EventBroadcastHub,
         backend_factory: Callable[[], CaptureBackend] = _default_backend_factory,
         models_dir: Path | None = None,
-        transcriber: ParakeetNemoTranscriber | None = None,
+        transcriber: LiveTranscriber | None = None,
         vad_factory: VadFactory | None = None,
         silence_timeout_s: float | None = None,
     ) -> None:
@@ -153,15 +157,31 @@ class LiveCaptureService:
         except Exception:
             logger.exception("STT model preload failed; stt_ready stays false")
 
-    async def start(self, title: str | None) -> str:
+    async def start(self, title: str | None, mic_device_id: str | None = None) -> str:
         """Begin a capture session; returns the new meeting id."""
         if self._meeting_id is not None:
             raise CaptureServiceError("capture is already running")
+        await apply_migrations(self._db_path, self._migrations_dir)
+        connection = await open_sqlite_connection(self._db_path)
+        engine_raw = await read_setting(connection, SETTING_STT_ENGINE)
+        model_raw = await read_setting(connection, SETTING_STT_MODEL_ID)
+        url_raw = await read_setting(connection, SETTING_STT_OPENAI_BASE_URL)
+        stt_engine = engine_raw if isinstance(engine_raw, str) else "parakeet"
+        stt_model_id = model_raw if isinstance(model_raw, str) else ""
+        openai_base_url = url_raw.strip() if isinstance(url_raw, str) else ""
+        openai_api_key: str | Callable[[], str] | None = None
+        if stt_engine.strip() == "openai_compatible":
+            stored = ProviderKeyStore().get_key("openai")
+            openai_api_key = None if stored is None else stored.reveal
+        self._models.configure(
+            stt_engine,
+            stt_model_id,
+            openai_base_url=openai_base_url,
+            openai_api_key=openai_api_key,
+        )
         await self._models.ensure_loaded()  # Raises with a clear reason.
 
         meeting_id = str(uuid.uuid4())
-        await apply_migrations(self._db_path, self._migrations_dir)
-        connection = await open_sqlite_connection(self._db_path)
         identity_raw = await read_setting(connection, SETTING_SPEAKER_IDENTITY)
         embedding_raw = await read_setting(connection, SETTING_SPEAKER_VOICE_EMBEDDING)
         identity = identity_raw if isinstance(identity_raw, str) and identity_raw.strip() else "Me"
@@ -178,6 +198,7 @@ class LiveCaptureService:
                 ring_buffer=ring_buffer,
                 on_device_changed=self._on_device_changed,
                 echo_canceller=echo_canceller,
+                preferred_me_device_key=mic_device_id,
             )
             await controller.start()  # Fail closed: both streams or nothing.
         except Exception as exc:

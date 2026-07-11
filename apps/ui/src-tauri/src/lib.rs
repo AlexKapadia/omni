@@ -33,6 +33,21 @@ mod updater_launch_check;
 
 use tauri::{AppHandle, Manager, RunEvent};
 
+/// Reveal a filesystem path in the OS file explorer. Best-effort UI
+/// convenience only — never touches audio, transcripts, or keys. On failure
+/// the caller falls back to copying the path to the clipboard.
+#[tauri::command]
+fn reveal_path_in_explorer(path: String) -> Result<(), String> {
+    #[cfg(target_os = "windows")]
+    let result = std::process::Command::new("explorer").arg(&path).spawn();
+    #[cfg(target_os = "macos")]
+    let result = std::process::Command::new("open").arg(&path).spawn();
+    #[cfg(all(unix, not(target_os = "macos")))]
+    let result = std::process::Command::new("xdg-open").arg(&path).spawn();
+
+    result.map(|_| ()).map_err(|e| e.to_string())
+}
+
 /// Bring the main window to the foreground (used by the tray and by a second
 /// app launch via the single-instance plugin).
 fn focus_main_window(app: &AppHandle) {
@@ -72,7 +87,8 @@ pub fn run() {
             dictation_pill_window::set_dictation_hotkey,
             captions_overlay_window::set_captions_overlay_visible,
             updater_launch_check::updater_download_and_install,
-            updater_launch_check::updater_restart_app
+            updater_launch_check::updater_restart_app,
+            reveal_path_in_explorer
         ])
         // STARTUP-RESILIENCE CONTRACT (verify manually per the module comment
         // below): EVERY subsystem started here is NON-FATAL. A failure in any

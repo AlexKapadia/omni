@@ -30,7 +30,11 @@ def create_stt_backend(
 ) -> SttBackend:
     selected = normalize_stt_engine(engine)
     if selected == "whisper":
-        return WhisperSttBackend(models_dir=models_dir, model_id=model_id or "tiny")
+        from engine.stt.whisper_model_catalog import DEFAULT_WHISPER_MODEL_ID
+
+        return WhisperSttBackend(
+            models_dir=models_dir, model_id=model_id or DEFAULT_WHISPER_MODEL_ID
+        )
     if selected == "openai_compatible":
         if not openai_base_url or openai_api_key is None:
             raise ValueError("openai_compatible STT requires endpoint and API key")

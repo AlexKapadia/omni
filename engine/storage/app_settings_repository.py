@@ -47,6 +47,11 @@ SETTING_STT_ENGINE = "stt_engine"
 SETTING_STT_MODEL_ID = "stt_model_id"
 SETTING_STT_OPENAI_BASE_URL = "stt_openai_base_url"
 SETTING_SELECTION_TRANSLATION_LANG = "selection_translation_lang"
+SETTING_OLLAMA_BASE_URL = "ollama_base_url"
+SETTING_SUMMARY_PROVIDER = "summary_provider"
+SETTING_AUTO_SUMMARY = "auto_summary"
+SETTING_CARTESIA_VOICE_ID = "cartesia_voice_id"
+SETTING_MIC_DEVICE_ID = "mic_device_id"
 
 KNOWN_SETTINGS_KEYS: frozenset[str] = frozenset(
     {
@@ -73,7 +78,17 @@ KNOWN_SETTINGS_KEYS: frozenset[str] = frozenset(
         SETTING_STT_MODEL_ID,
         SETTING_STT_OPENAI_BASE_URL,
         SETTING_SELECTION_TRANSLATION_LANG,
+        SETTING_OLLAMA_BASE_URL,
+        SETTING_SUMMARY_PROVIDER,
+        SETTING_AUTO_SUMMARY,
+        SETTING_CARTESIA_VOICE_ID,
+        SETTING_MIC_DEVICE_ID,
     }
+)
+
+# Meetily-style summary providers (builtin-ai = local via Ollama recommended models).
+SUMMARY_PROVIDERS: frozenset[str] = frozenset(
+    {"ollama", "gemini", "anthropic", "openai", "builtin-ai"}
 )
 
 

@@ -4,7 +4,7 @@ Covers the uncovered error/side-effect branches with real behaviour
 assertions: the routing-rows success path (attempts + budget), the
 all-or-nothing rollback (nothing persists when a write fails mid-batch),
 the kill-switch runtime side effect, the boot hook's env/kill-switch
-application (and its "explicit env wins" guard), a corrupt Google token
+application (DB vault_dir wins over a stale env when present), a corrupt Google token
 blob reading as not-connected, the dispatcher's invalid-payload and
 generic-failure replies, the M7 router's per-family dispatch, and the
 repository's unknown-key refusal. All state is synthetic (``tmp_path``).
@@ -144,6 +144,20 @@ async def test_update_kill_switch_engages_runtime_override(
         set_kill_switch_runtime_override(None)  # neutralise global for other tests
 
 
+async def test_vault_dir_update_notifies_registered_listener(
+    tmp_path: Path, real_migrations_dir: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    gateway = _gateway(tmp_path, real_migrations_dir)
+    vault = tmp_path / "new-vault"
+    vault.mkdir()
+    seen: list[str] = []
+    gateway.set_vault_dir_listener(lambda path: seen.append(path))
+    monkeypatch.delenv(VAULT_DIR_ENV_VAR, raising=False)
+    await gateway.update_settings({SETTING_VAULT_DIR: str(vault)})
+    assert seen == [str(vault)]
+    assert os.environ[VAULT_DIR_ENV_VAR] == str(vault)
+
+
 # ----------------------------------------------------------- boot hook effects
 async def test_boot_hook_applies_stored_vault_and_kill_switch(
     tmp_path: Path, real_migrations_dir: Path, monkeypatch: pytest.MonkeyPatch
@@ -171,9 +185,10 @@ async def test_boot_hook_applies_stored_vault_and_kill_switch(
         set_kill_switch_runtime_override(None)
 
 
-async def test_boot_hook_does_not_override_explicit_env_vault(
+async def test_boot_hook_db_vault_wins_over_stale_env(
     tmp_path: Path, real_migrations_dir: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Persisted vault_dir always wins at boot when non-empty (user setting)."""
     gateway = _gateway(tmp_path, real_migrations_dir)
     stored = tmp_path / "stored-vault"
     stored.mkdir()
@@ -189,8 +204,7 @@ async def test_boot_hook_does_not_override_explicit_env_vault(
     set_kill_switch_runtime_override(None)
     try:
         await gateway.apply_persisted_settings_at_boot()
-        # Explicit env value wins at boot — the stored value must NOT clobber it.
-        assert os.environ[VAULT_DIR_ENV_VAR] == "C:/explicit/env/vault"
+        assert os.environ[VAULT_DIR_ENV_VAR] == str(stored)
     finally:
         set_kill_switch_runtime_override(None)
 
@@ -280,6 +294,7 @@ async def test_m7_dispatch_routes_settings_get_to_settings_gateway() -> None:
         google_gateway=other,
         microsoft_gateway=other,
         speaker_gateway=other,
+        ollama_gateway=other,
     )
     send = _Collector()
     await dispatch_m7_command(_command("settings.get", {}), surface, send)
@@ -305,6 +320,7 @@ async def test_surface_boot_hook_invokes_settings_gateway() -> None:
         google_gateway=other,
         microsoft_gateway=other,
         speaker_gateway=other,
+        ollama_gateway=other,
     )
     await surface.apply_persisted_settings_at_boot()
     assert calls == ["boot"]  # the boot hook actually delegated
@@ -325,6 +341,7 @@ async def test_surface_boot_hook_suppresses_gateway_exception() -> None:
         google_gateway=other,
         microsoft_gateway=other,
         speaker_gateway=other,
+        ollama_gateway=other,
     )
     # Fail-soft: a boot-hook failure must NOT propagate (never crashes engine boot).
     await surface.apply_persisted_settings_at_boot()

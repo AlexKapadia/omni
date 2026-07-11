@@ -74,10 +74,21 @@ def test_capture_lifecycle_payloads_have_the_exact_pinned_keys() -> None:
 def test_capture_start_command_payload_validates_strictly() -> None:
     assert CaptureStartCommandPayload.model_validate({}).title is None
     assert CaptureStartCommandPayload.model_validate({"title": "Standup"}).title == "Standup"
+    assert CaptureStartCommandPayload.model_validate({}).mic_device_id is None
+    assert (
+        CaptureStartCommandPayload.model_validate({"mic_device_id": "9:USB Mic"}).mic_device_id
+        == "9:USB Mic"
+    )
     with pytest.raises(ValidationError):  # Unknown fields: deny by default.
         CaptureStartCommandPayload.model_validate({"title": "x", "evil": True})
     with pytest.raises(ValidationError):  # Type confusion.
         CaptureStartCommandPayload.model_validate({"title": 123})
+    with pytest.raises(ValidationError):  # mic id must be digits:nonempty
+        CaptureStartCommandPayload.model_validate({"mic_device_id": "USB Mic"})
+    with pytest.raises(ValidationError):
+        CaptureStartCommandPayload.model_validate({"mic_device_id": "9:"})
+    with pytest.raises(ValidationError):
+        CaptureStartCommandPayload.model_validate({"mic_device_id": "x" * 201})
 
 
 def test_capture_start_title_length_bound_is_exact() -> None:

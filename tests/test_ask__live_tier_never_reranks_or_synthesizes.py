@@ -51,6 +51,8 @@ class FakeRouter:
         tools: tuple[ToolSpec, ...] = (),
         json_schema: dict[str, object] | None = None,
         max_tokens: int = 4096,
+        preferred_model: str | None = None,
+        preferred_provider: str | None = None,
     ) -> RoutedCompletion:
         self.task_types.append(task_type)
         completion = ProviderCompletion(

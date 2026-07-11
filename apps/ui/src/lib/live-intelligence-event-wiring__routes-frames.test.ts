@@ -6,11 +6,17 @@
  * pending finalize, and malformed/unknown/command frames change NOTHING.
  */
 import { describe, expect, it } from "vitest";
-import { createApprovalCardsStore } from "./approval-cards-store";
+import {
+  applyCardsListReply,
+  approveCard,
+  createApprovalCardsStore,
+} from "./approval-cards-store";
+import { createStore } from "zustand";
 import { createIntelligenceFrameListener } from "./live-intelligence-event-wiring";
 import { createLiveAnswersStore } from "./live-answers-store";
 import { createLiveSummaryStore } from "./live-summary-store";
 import { createLiveTranslationStore } from "./live-translation-store";
+import type { CalendarUpcomingState } from "./calendar-upcoming-store";
 import { createVaultSuggestionsStore } from "./vault-suggestions-store";
 import { createMeetingDetectionStore } from "./meeting-detection-store";
 import { createMeetingFinalizeStore } from "./meeting-finalize-store";
@@ -19,6 +25,7 @@ function makeAll() {
   const liveAnswers = createLiveAnswersStore();
   const liveSummary = createLiveSummaryStore();
   const liveTranslation = createLiveTranslationStore();
+  const calendarUpcoming = createStore<CalendarUpcomingState>(() => ({ latest: null }));
   const vaultSuggestions = createVaultSuggestionsStore();
   const detection = createMeetingDetectionStore();
   const finalize = createMeetingFinalizeStore();
@@ -27,12 +34,23 @@ function makeAll() {
     liveAnswers,
     liveSummary,
     liveTranslation,
+    calendarUpcoming,
     vaultSuggestions,
     detection,
     finalize,
     approvalCards,
   });
-  return { liveAnswers, liveSummary, liveTranslation, vaultSuggestions, detection, finalize, approvalCards, listener };
+  return {
+    liveAnswers,
+    liveSummary,
+    liveTranslation,
+    calendarUpcoming,
+    vaultSuggestions,
+    detection,
+    finalize,
+    approvalCards,
+    listener,
+  };
 }
 
 function frame(name: string, payload: Record<string, unknown>, kind = "event"): string {
@@ -132,6 +150,35 @@ describe("createIntelligenceFrameListener", () => {
     // Other ok replies (no cards array) change nothing.
     listener(frame("ok", { meetings: [] }, "reply"));
     expect(approvalCards.getState().cards).toHaveLength(1);
+  });
+
+  it("card_error reply clears stuck in-flight and sets errorMessage", () => {
+    const { approvalCards, listener } = makeAll();
+    applyCardsListReply(approvalCards, {
+      cards: [
+        {
+          id: 7,
+          meeting_id: "m-1",
+          source: "extraction",
+          card_type: "create_event",
+          status: "pending",
+          payload: { title: "Sync" },
+          preview_lines: ["Event: Sync"],
+          created_at: "2026-07-06T12:00:00+00:00",
+          decided_at: null,
+          executed_at: null,
+          error: null,
+          result_summary: null,
+        },
+      ],
+    });
+    approveCard(7, undefined, approvalCards, () => true);
+    expect(approvalCards.getState().inFlightIds).toEqual([7]);
+    listener(
+      frame("error", { code: "card_error", message: "card 7 does not exist" }, "reply"),
+    );
+    expect(approvalCards.getState().inFlightIds).toEqual([]);
+    expect(approvalCards.getState().errorMessage).toBe("card 7 does not exist");
   });
 
   it("malformed frames, commands, and unknown events change NOTHING", () => {

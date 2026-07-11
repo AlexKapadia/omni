@@ -11,8 +11,19 @@ import {
   INITIAL_MEETINGS_STATE,
   meetingsStore,
   type MeetingSummaryRow,
+  type MeetingsRepository,
 } from "../lib/meetings-store";
 import { installJsdomMatchMediaShim } from "../test-support/install-jsdom-match-media-shim";
+
+vi.mock("../lib/live-engine-socket", () => ({
+  subscribeToEngineFrames: vi.fn(() => () => undefined),
+  sendEngineCommand: vi.fn(() => true),
+  sendEngineEnvelope: vi.fn(() => true),
+}));
+
+vi.mock("../lib/wire-library-drag-drop", () => ({
+  wireLibraryDragDrop: vi.fn(() => () => undefined),
+}));
 
 beforeAll(installJsdomMatchMediaShim);
 
@@ -33,30 +44,47 @@ function rows(): readonly MeetingSummaryRow[] {
   ];
 }
 
+/** Mount always triggers loadMeetings — flush that before asserting ready UI. */
+async function renderReady(repository: MeetingsRepository): Promise<void> {
+  render(<LibraryScreen repository={repository} onStartCapture={onStartCapture} />);
+  await act(async () => {
+    await Promise.resolve();
+  });
+}
+
 describe("LibraryScreen states", () => {
   it("LOADING: shows the shimmer skeleton, never rows", () => {
     // Repository that never resolves — the screen must hold the loading state.
-    render(<LibraryScreen repository={{ listMeetings: () => new Promise(() => undefined) }} onStartCapture={onStartCapture} />);
+    render(
+      <LibraryScreen
+        repository={{ listMeetings: () => new Promise(() => undefined) }}
+        onStartCapture={onStartCapture}
+      />,
+    );
     expect(screen.getByRole("status", { name: "Loading" })).toBeTruthy();
     expect(screen.queryByText("Vendor call — Northwind")).toBeNull();
   });
 
   it("ERROR: shows the message and the retry button actually reloads", async () => {
-    meetingsStore.setState({ status: "error", errorMessage: "db locked" });
-    const repository = { listMeetings: vi.fn().mockResolvedValue(rows()) };
-    render(<LibraryScreen repository={repository} onStartCapture={onStartCapture} />);
+    const repository = {
+      listMeetings: vi
+        .fn()
+        .mockRejectedValueOnce(new Error("db locked"))
+        .mockResolvedValueOnce(rows()),
+    };
+    await renderReady(repository);
     expect(screen.getByText("Could not load your meetings.")).toBeTruthy();
     expect(screen.getByText("db locked")).toBeTruthy();
     await act(async () => {
       fireEvent.click(screen.getByRole("button", { name: "Retry loading" }));
     });
-    expect(repository.listMeetings).toHaveBeenCalledTimes(1);
+    expect(repository.listMeetings).toHaveBeenCalledTimes(2);
     expect(screen.getByText("Vendor call — Northwind")).toBeTruthy();
   });
 
-  it("EMPTY: says what will happen and offers capture", () => {
-    meetingsStore.setState({ status: "ready", meetings: [] });
-    render(<LibraryScreen onStartCapture={onStartCapture} />);
+  it("EMPTY: says what will happen and offers capture", async () => {
+    const repository = { listMeetings: vi.fn().mockResolvedValue([]) };
+    await renderReady(repository);
     expect(screen.getByText("No meetings yet")).toBeTruthy();
     expect(screen.getByText(/two labelled transcript streams/)).toBeTruthy();
     // Header + empty-state both speak the "Record" vocabulary; the empty-state
@@ -67,10 +95,10 @@ describe("LibraryScreen states", () => {
     expect(onStartCapture).toHaveBeenCalled();
   });
 
-  it("POPULATED: renders every row, day groups, and the computed meta line", () => {
+  it("POPULATED: renders every row, day groups, and the computed meta line", async () => {
     vi.setSystemTime(new Date("2026-07-07T15:00:00"));
-    meetingsStore.setState({ status: "ready", meetings: rows() });
-    render(<LibraryScreen onStartCapture={onStartCapture} />);
+    const repository = { listMeetings: vi.fn().mockResolvedValue(rows()) };
+    await renderReady(repository);
     expect(screen.getByText("Vendor call — Northwind")).toBeTruthy();
     expect(screen.getByText("Design review")).toBeTruthy();
     expect(screen.getByText("1:1 — Elena")).toBeTruthy();
@@ -80,12 +108,19 @@ describe("LibraryScreen states", () => {
     expect(screen.getByText(/3 meetings · 1 h 45 min captured/)).toBeTruthy();
     vi.useRealTimers();
   });
+
+  it("always reloads meetings on mount even when the store is already ready", async () => {
+    meetingsStore.setState({ status: "ready", meetings: rows() });
+    const repository = { listMeetings: vi.fn().mockResolvedValue(rows()) };
+    await renderReady(repository);
+    expect(repository.listMeetings).toHaveBeenCalled();
+  });
 });
 
 describe("LibraryScreen search", () => {
-  it("typing filters the visible rows immediately", () => {
-    meetingsStore.setState({ status: "ready", meetings: rows() });
-    render(<LibraryScreen onStartCapture={onStartCapture} />);
+  it("typing filters the visible rows immediately", async () => {
+    const repository = { listMeetings: vi.fn().mockResolvedValue(rows()) };
+    await renderReady(repository);
     fireEvent.change(screen.getByRole("searchbox", { name: "Search meetings" }), {
       target: { value: "northwind" },
     });
@@ -94,9 +129,9 @@ describe("LibraryScreen search", () => {
     expect(screen.queryByText("1:1 — Elena")).toBeNull();
   });
 
-  it("a no-match query shows the honest no-matches state, then recovers", () => {
-    meetingsStore.setState({ status: "ready", meetings: rows() });
-    render(<LibraryScreen onStartCapture={onStartCapture} />);
+  it("a no-match query shows the honest no-matches state, then recovers", async () => {
+    const repository = { listMeetings: vi.fn().mockResolvedValue(rows()) };
+    await renderReady(repository);
     const input = screen.getByRole("searchbox", { name: "Search meetings" });
     fireEvent.change(input, { target: { value: "zzz" } });
     expect(screen.getByText("No meetings match “zzz”.")).toBeTruthy();

@@ -36,6 +36,7 @@ describe("SpeakerIdentitySection", () => {
         liveTranslationLang: "",
         summaryLanguage: "",
         summaryModelId: "gemini-2.5-flash",
+    ollamaBaseUrl: "http://127.0.0.1:11434",
         speakerIdentity: "Me",
         speakerVoiceEnrolled: false,
         dictationCleanupStyle: "classic",
@@ -43,6 +44,10 @@ describe("SpeakerIdentitySection", () => {
         sttModelId: "",
         sttOpenaiBaseUrl: "",
         selectionTranslationLang: "English",
+        summaryProvider: "ollama",
+        autoSummary: false,
+      cartesiaVoiceId: "",
+      micDeviceId: "",
       },
       settingsPhase: "ready",
       killSwitchEngaged: false,
@@ -66,5 +71,63 @@ describe("SpeakerIdentitySection", () => {
     });
     expect(enrollSpeaker).toHaveBeenCalledWith("Alex", undefined);
     expect(update).toHaveBeenCalledWith({ speakerIdentity: "Alex" });
+  });
+
+  it("syncs the input when speakerIdentity in the store changes", () => {
+    const store = createSettingsStore();
+    store.setState({
+      settings: {
+        vaultDir: null,
+        pushToTalkHotkey: ["F9"],
+        keepAudio: false,
+        disclosureReminder: true,
+        killSwitch: false,
+        instantExecuteWhitelist: [],
+        activeTemplate: "meeting",
+        customTemplates: [],
+        onboardingComplete: true,
+        detectionAutoStartSources: [],
+        autostopSilenceS: 60,
+        liveCaptionsOverlay: true,
+        aecEnabled: false,
+        liveTranslationLang: "",
+        summaryLanguage: "",
+        summaryModelId: "gemini-2.5-flash",
+        ollamaBaseUrl: "http://127.0.0.1:11434",
+        speakerIdentity: "Me",
+        speakerVoiceEnrolled: false,
+        dictationCleanupStyle: "classic",
+        sttEngine: "parakeet",
+        sttModelId: "",
+        sttOpenaiBaseUrl: "",
+        selectionTranslationLang: "English",
+        summaryProvider: "ollama",
+        autoSummary: false,
+        cartesiaVoiceId: "",
+      micDeviceId: "",
+      },
+      settingsPhase: "ready",
+      killSwitchEngaged: false,
+      routing: [],
+      templateOptions: [],
+      ledgerPhase: "loading",
+      ledger: null,
+      ledgerError: null,
+      settingsError: null,
+    });
+
+    render(<SpeakerIdentitySection store={store} update={vi.fn()} />);
+    const input = screen.getByLabelText("Speaker display name") as HTMLInputElement;
+    expect(input.value).toBe("Me");
+
+    act(() => {
+      store.setState({
+        settings: {
+          ...store.getState().settings!,
+          speakerIdentity: "Jordan",
+        },
+      });
+    });
+    expect(input.value).toBe("Jordan");
   });
 });

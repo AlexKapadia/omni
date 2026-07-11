@@ -182,13 +182,15 @@ export function TemplatesSection({
   const rename = (from: string, to: string): Promise<string | null> =>
     persistCustom(
       custom.map((c) => (c === from ? to : c)),
-      active === from ? to : undefined,
+      // activeTemplate is a template_id; map display names through the slugger.
+      active === nameToTemplateId(from) ? nameToTemplateId(to) : undefined,
     );
 
   const remove = (name: string): Promise<string | null> => {
     const next = custom.filter((c) => c !== name);
     // A removed active custom template falls back to the first built-in.
-    const nextActive = active === name ? firstBuiltin?.templateId ?? "" : undefined;
+    const nextActive =
+      active === nameToTemplateId(name) ? firstBuiltin?.templateId ?? "" : undefined;
     return persistCustom(next, nextActive);
   };
 
@@ -205,11 +207,6 @@ export function TemplatesSection({
           {options.map((option) => (
             <option key={option.templateId} value={option.templateId}>
               {option.displayName}
-            </option>
-          ))}
-          {custom.map((name) => (
-            <option key={`custom:${name}`} value={name}>
-              {name} (custom)
             </option>
           ))}
         </select>

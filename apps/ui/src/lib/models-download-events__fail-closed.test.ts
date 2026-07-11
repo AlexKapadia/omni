@@ -41,12 +41,43 @@ describe("parseModelsFailed / parseModelsCompleted", () => {
     });
   });
 
-  it("parses a completion with a files list", () => {
+  it("parses a completion with a string files list (legacy)", () => {
     expect(parseModelsCompleted({ ok: true, files: ["a", "b"] })).toEqual({ ok: true, files: ["a", "b"] });
   });
 
-  it("rejects a completion whose files contains a non-string (fail closed)", () => {
+  it("parses the engine object-shaped files list to filenames", () => {
+    expect(
+      parseModelsCompleted({
+        ok: true,
+        files: [
+          {
+            file: "ggml-large-v3-turbo.bin",
+            bytes: 1623828593,
+            sha256: "abc",
+            sha256_verified: true,
+          },
+          { file: "silero_vad.onnx", bytes: 100, sha256: null, sha256_verified: null },
+        ],
+      }),
+    ).toEqual({
+      ok: true,
+      files: ["ggml-large-v3-turbo.bin", "silero_vad.onnx"],
+    });
+  });
+
+  it("accepts a mixed string/object files list", () => {
+    expect(
+      parseModelsCompleted({ ok: true, files: ["parakeet.bin", { file: "silero_vad.onnx" }] }),
+    ).toEqual({ ok: true, files: ["parakeet.bin", "silero_vad.onnx"] });
+  });
+
+  it("rejects a completion whose files contains a bare number (fail closed)", () => {
     expect(parseModelsCompleted({ ok: true, files: ["a", 2] })).toBeNull();
+  });
+
+  it("rejects an object file entry missing a non-empty file field", () => {
+    expect(parseModelsCompleted({ ok: true, files: [{ bytes: 1 }] })).toBeNull();
+    expect(parseModelsCompleted({ ok: true, files: [{ file: "" }] })).toBeNull();
   });
 
   it("rejects a completion with a non-boolean ok", () => {

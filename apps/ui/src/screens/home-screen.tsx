@@ -1,8 +1,8 @@
-import { useEffect, useState, useRef } from "react";
+import { useEffect, useState } from "react";
 import { useStore } from "zustand";
 import { Mic, AudioLines, MessageSquareText, FileAudio, HelpCircle, ArrowRight } from "lucide-react";
 import { OmniButton } from "../components/button";
-import { appSettingsStore } from "./settings-screen";
+import { appSettingsStore } from "../lib/settings-store";
 import { meetingsStore, loadMeetings, filterMeetings } from "../lib/meetings-store";
 import { createLiveMeetingsRepository } from "../lib/meetings-live-repository";
 import { pickMediaFile } from "../lib/pick-media-file";
@@ -10,6 +10,8 @@ import { importMediaFile } from "../lib/meetings-live-repository";
 import { openMeetingDetail, meetingsDetailStore } from "../lib/meetings-detail-store";
 import { requestSetupCommand } from "../lib/setup-settings-transport";
 import { formatDayLabel, formatDurationMin } from "../lib/format-quantities";
+import { useMicLevelPercent } from "../lib/use-mic-level-percent";
+import { localPrivacyCopy } from "./home-privacy-copy";
 
 interface HomeScreenProps {
   readonly onNavigate: (sectionId: "library" | "live" | "ask" | "dictation" | "settings") => void;
@@ -28,21 +30,16 @@ interface DictationHistoryEntry {
 export function HomeScreen({ onNavigate, onStartCapture }: HomeScreenProps) {
   const settings = useStore(appSettingsStore, (s) => s.settings);
   const meetings = useStore(meetingsStore, (s) => s.meetings);
-  
+
   const [dictations, setDictations] = useState<readonly DictationHistoryEntry[]>([]);
+  const [dictationError, setDictationError] = useState<string | null>(null);
   const [importBusy, setImportBusy] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const microphone = useStore(appSettingsStore, (s) => s.microphone);
+  const { level: micLevel, micActive } = useMicLevelPercent(true, microphone);
 
-  // Microcheck analyzer state
-  const [micActive, setMicActive] = useState(false);
-  const [micLevel, setMicLevel] = useState(0);
-  const audioContextRef = useRef<AudioContext | null>(null);
-  const analyserRef = useRef<AnalyserNode | null>(null);
-  const streamRef = useRef<MediaStream | null>(null);
-  const animationFrameRef = useRef<number | null>(null);
-
-  // Speaker name
-  const userName = settings?.speakerIdentity || "Bhaskar";
+  const identity = settings?.speakerIdentity?.trim();
+  const userName = identity && identity.length > 0 ? identity : "there";
 
   // Load meetings & dictation history
   useEffect(() => {
@@ -54,71 +51,12 @@ export function HomeScreen({ onNavigate, onStartCapture }: HomeScreenProps) {
         const list = payload["entries"];
         if (Array.isArray(list)) {
           setDictations(list as DictationHistoryEntry[]);
+          setDictationError(null);
         }
-      })
-      .catch(() => {});
-  }, []);
-
-  // Mic level monitor on Home screen (useful indicator to show user audio is up)
-  useEffect(() => {
-    let active = true;
-    if (typeof navigator === "undefined" || !navigator.mediaDevices) {
-      setMicActive(false);
-      return;
-    }
-    navigator.mediaDevices
-      .getUserMedia({ audio: true })
-      .then((stream) => {
-        if (!active) {
-          stream.getTracks().forEach((t) => t.stop());
-          return;
-        }
-        streamRef.current = stream;
-        setMicActive(true);
-
-        const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
-        const ctx = new AudioContextClass();
-        audioContextRef.current = ctx;
-
-        const source = ctx.createMediaStreamSource(stream);
-        const analyser = ctx.createAnalyser();
-        analyser.fftSize = 256;
-        analyserRef.current = analyser;
-        source.connect(analyser);
-
-        const bufferLength = analyser.frequencyBinCount;
-        const dataArray = new Uint8Array(bufferLength);
-
-        const updateLevel = () => {
-          if (!analyserRef.current) return;
-          analyserRef.current.getByteFrequencyData(dataArray);
-          let sum = 0;
-          for (let i = 0; i < bufferLength; i++) {
-            sum += dataArray[i];
-          }
-          const average = sum / bufferLength;
-          // Normalize average (0-255) to 0-100
-          setMicLevel(Math.min(100, Math.round((average / 128) * 100)));
-          animationFrameRef.current = requestAnimationFrame(updateLevel);
-        };
-        updateLevel();
       })
       .catch(() => {
-        setMicActive(false);
+        setDictationError("Could not load recent voice notes.");
       });
-
-    return () => {
-      active = false;
-      if (animationFrameRef.current !== null) {
-        cancelAnimationFrame(animationFrameRef.current);
-      }
-      if (streamRef.current) {
-        streamRef.current.getTracks().forEach((track) => track.stop());
-      }
-      if (audioContextRef.current && audioContextRef.current.state !== "closed") {
-        void audioContextRef.current.close();
-      }
-    };
   }, []);
 
   const triggerImport = async () => {
@@ -154,7 +92,7 @@ export function HomeScreen({ onNavigate, onStartCapture }: HomeScreenProps) {
           Welcome back, {userName}
         </h1>
         <p className="m-0 text-[var(--ink-secondary)]" style={{ fontSize: "var(--text-body-size)" }}>
-          Everything is captured, transcribed, and secured entirely on this device.
+          {localPrivacyCopy(settings).body}
         </p>
       </header>
 
@@ -226,7 +164,7 @@ export function HomeScreen({ onNavigate, onStartCapture }: HomeScreenProps) {
             <OmniButton variant="secondary" className="flex-1" onClick={() => onNavigate("dictation")}>
               View Notes
             </OmniButton>
-            <OmniButton variant="primary" className="flex-1" onClick={() => onNavigate("dictation")}>
+            <OmniButton variant="primary" className="flex-1" onClick={onStartCapture}>
               Record Inline
             </OmniButton>
           </div>
@@ -315,6 +253,11 @@ export function HomeScreen({ onNavigate, onStartCapture }: HomeScreenProps) {
               </button>
             ))}
 
+            {dictationError && (
+              <p role="alert" className="m-0 text-[var(--error-text)]" style={{ fontSize: 12 }}>
+                {dictationError}
+              </p>
+            )}
             {dictations.slice(0, 2).map((d) => (
               <button
                 key={d.id}
@@ -364,9 +307,11 @@ export function HomeScreen({ onNavigate, onStartCapture }: HomeScreenProps) {
             <div className="flex items-start gap-2.5">
               <span className="text-sm">🔒</span>
               <div className="flex flex-col gap-0.5">
-                <span className="text-xs font-semibold text-[var(--ink)]">100% Local Privacy</span>
+                <span className="text-xs font-semibold text-[var(--ink)]">
+                  {localPrivacyCopy(settings).title}
+                </span>
                 <span className="text-xs text-[var(--ink-secondary)] leading-relaxed">
-                  All transcriptions and summaries are run completely offline. No third parties can access your data.
+                  {localPrivacyCopy(settings).body}
                 </span>
               </div>
             </div>

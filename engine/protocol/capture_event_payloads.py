@@ -14,9 +14,10 @@ the network (local-only invariant). Command payloads are validated
 strictly (unknown fields rejected — deny by default).
 """
 
+import re
 from typing import Any
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 
 # --- message names (TS-mirror-compatible, dot-namespaced like `engine.heartbeat`).
 COMMAND_CAPTURE_START = "capture.start"
@@ -26,6 +27,9 @@ EVENT_CAPTURE_STOPPED = "capture.stopped"
 EVENT_CAPTURE_DEVICE_CHANGED = "capture.device_changed"
 EVENT_TRANSCRIPT_PARTIAL = "transcript.partial"
 EVENT_TRANSCRIPT_FINAL = "transcript.final"
+
+# PortAudio device key: "{index}:{name}" — digits, colon, nonempty name.
+_MIC_DEVICE_ID_RE = re.compile(r"^\d+:.+$")
 
 
 class CaptureStartCommandPayload(BaseModel):
@@ -40,6 +44,17 @@ class CaptureStartCommandPayload(BaseModel):
     # Optional human title for the meeting row; bounded so a hostile client
     # cannot stuff megabytes into the DB through one field.
     title: str | None = Field(default=None, max_length=512)
+    # Optional preferred ME mic key ("{index}:{name}"); None = Windows default.
+    mic_device_id: str | None = Field(default=None, max_length=200)
+
+    @field_validator("mic_device_id")
+    @classmethod
+    def _mic_device_id_format(cls, value: str | None) -> str | None:
+        if value is None:
+            return None
+        if _MIC_DEVICE_ID_RE.fullmatch(value) is None:
+            raise ValueError("mic_device_id must match '{index}:{name}'")
+        return value
 
 
 class CaptureStopCommandPayload(BaseModel):

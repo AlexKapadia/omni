@@ -93,11 +93,13 @@ def meeting_detail_payload(
     extraction_json: str | None = None,
     *,
     speaker_identity: str = "Me",
+    has_kept_audio: bool = False,
 ) -> dict[str, object]:
     """The ``meeting.get`` payload — field names pinned by the TS mirror.
 
     ``notes_text`` is the user's verbatim notes (fidelity mandate);
     ``transcript`` is the persisted verbatim segments in spoken order.
+    ``has_kept_audio`` is True when me/them mp3|wav still exists on disk.
     """
     extraction: object | None = None
     if extraction_json:
@@ -116,6 +118,7 @@ def meeting_detail_payload(
         "notes_text": row.notes_text or "",
         "enhanced_notes_md": row.enhanced_notes_md or "",
         "extraction": extraction,
+        "has_kept_audio": has_kept_audio,
         "transcript": [
             {
                 "segment_id": s.segment_id,

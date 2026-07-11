@@ -1,7 +1,8 @@
 /**
  * App boot-gate tests: setup.status decides first-run onboarding vs the main
  * shell. A returning user (complete) sees the shell; an incomplete setup sees
- * the wizard; a transient status error does not trap the user in onboarding.
+ * the wizard; a persistent status error shows an offline retry screen — never
+ * skips first-run by inventing a completed setup.
  */
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
@@ -28,10 +29,19 @@ beforeAll(() => {
 afterEach(cleanup);
 
 const complete: SetupStatus = {
-  keys: { groq: true, gemini: true, anthropic: true, cartesia: true },
+  keys: {
+    groq: true,
+    gemini: true,
+    anthropic: true,
+    openai: false,
+    openrouter: false,
+    azure_openai: false,
+    cartesia: true,
+  },
   vault: { configured: true, path: "C:/vault" },
   models: [{ file: "m", present: true, bytes: 1 }],
   googleConnected: true,
+  microsoftConnected: false,
   onboardingComplete: true,
   setupComplete: true,
 };
@@ -52,16 +62,16 @@ describe("App setup gate", () => {
     expect(screen.getByRole("navigation")).toBeTruthy();
   });
 
-  it("does not trap the user in onboarding on a transient status error", async () => {
-    // Zero retry budget: the first rejection is past the deadline, so the app
-    // gives up and shows the shell immediately (production default is 10 s).
+  it("shows an offline retry screen when the engine never answers (does not skip onboarding)", async () => {
     render(
       <App
         checkStatus={() => Promise.reject(new Error("engine starting"))}
         bootRetryBudgetMs={0}
       />,
     );
-    await waitFor(() => expect(screen.getByRole("navigation")).toBeTruthy());
+    await waitFor(() => expect(screen.getByLabelText("Engine offline")).toBeTruthy());
+    expect(screen.getByRole("button", { name: "Retry connection" })).toBeTruthy();
+    expect(screen.queryByRole("navigation")).toBeNull();
     expect(screen.queryByLabelText("Onboarding step 1 of 6")).toBeNull();
   });
 });

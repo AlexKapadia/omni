@@ -22,9 +22,12 @@ const META_TEXT: React.CSSProperties = {
 
 export function ApprovalRack({
   meetingId,
+  includeGlobal = false,
 }: {
   /** When set, only this meeting's cards show (the Library detail mount). */
-  readonly meetingId?: string;
+  readonly meetingId?: string | null;
+  /** Also show dictation cards with meetingId=null (Home / global rack). */
+  readonly includeGlobal?: boolean;
 } = {}) {
   const cards = useApprovalCards((state) => state.cards);
   const loaded = useApprovalCards((state) => state.loaded);
@@ -35,11 +38,18 @@ export function ApprovalRack({
     requestCardsList();
   }, []);
 
-  const visible = cards.filter(
-    (card) =>
-      card.status !== "dismissed" &&
-      (meetingId === undefined || card.meetingId === meetingId),
-  );
+  const visible = cards.filter((card) => {
+    if (card.status === "dismissed") return false;
+    if (meetingId === undefined && !includeGlobal) return true;
+    const matchesMeeting = meetingId != null && card.meetingId === meetingId;
+    const matchesGlobal = includeGlobal && card.meetingId === null;
+    return matchesMeeting || matchesGlobal;
+  });
+
+  // Global mount stays quiet until there is something to approve (or an error).
+  if (includeGlobal && errorMessage === null && visible.length === 0) {
+    return null;
+  }
 
   return (
     <section aria-label="Approval cards" style={{ display: "flex", flexDirection: "column", gap: 12 }}>

@@ -2,7 +2,7 @@
 
 Purpose: owns one push-to-talk session at a time — opens the default
 MICROPHONE only (never loopback; dictation is the user speaking), pumps
-frames through its OWN VAD + Parakeet pipeline instances (composes
+frames through its OWN VAD + selected STT pipeline instances (composes
 ``engine.stt`` building blocks, modifies none of them), streams partial
 text upward, and on release returns the verbatim transcript for
 ``dictation_finalization``.
@@ -38,15 +38,8 @@ from engine.audio.audio_frame_types import PIPELINE_SAMPLE_RATE, AudioFrame, Str
 from engine.audio.dual_stream_capture_controller import CaptureBackend, CaptureStreamHandle
 from engine.audio.resample_to_16k_mono import StreamingResamplerTo16kMono
 from engine.audio.timestamped_audio_ring_buffer import TimestampedAudioRingBuffer
-from engine.stt.model_weights_downloader import (
-    PARAKEET_FILENAME,
-    SILERO_VAD_FILENAME,
-    models_directory,
-)
-from engine.stt.parakeet_nemo_transcriber import (
-    ParakeetNemoTranscriber,
-    stt_dependencies_available,
-)
+from engine.stt.live_transcriber_factory import LiveTranscriber, build_live_transcriber
+from engine.stt.model_weights_downloader import SILERO_VAD_FILENAME, models_directory
 from engine.stt.per_stream_transcription_pipeline import PerStreamTranscriptionPipeline
 from engine.stt.silero_onnx_voice_activity_detector import SileroOnnxVoiceActivityDetector
 from engine.stt.word_token_types import WordToken
@@ -88,40 +81,72 @@ class DictationSessionService:
         *,
         backend_factory: Callable[[], CaptureBackend] = _default_backend_factory,
         models_dir: Path | None = None,
-        transcriber: ParakeetNemoTranscriber | None = None,
+        transcriber: LiveTranscriber | None = None,
         vad_factory: VadFactory | None = None,
         on_partial_text: PartialTextCallback | None = None,
+        stt_engine: str = "parakeet",
+        stt_model_id: str = "",
+        openai_base_url: str = "",
+        openai_api_key: str | Callable[[], str] | None = None,
     ) -> None:
         self._backend_factory = backend_factory
         self._models_dir = models_dir if models_dir is not None else models_directory()
         self._transcriber = transcriber
         self._vad_factory = vad_factory
         self._on_partial_text = on_partial_text
+        self._stt_engine = stt_engine.strip() or "parakeet"
+        self._stt_model_id = stt_model_id.strip()
+        self._openai_base_url = openai_base_url.strip()
+        self._openai_api_key = openai_api_key
+        self._preferred_me_device_key: str | None = None
+        self._injected_transcriber = transcriber is not None
         self._models_ready = False
         self._load_lock = asyncio.Lock()
-        # Per-session state (None/empty while idle).
         self._handle: CaptureStreamHandle | None = None
         self._pipeline: PerStreamTranscriptionPipeline | None = None
         self._drain_task: asyncio.Task[None] | None = None
         self._ring_buffer: TimestampedAudioRingBuffer | None = None
-        # Final segments accumulate as (t_open, words) so ordering is by time.
         self._final_segments: list[tuple[float, list[WordToken]]] = []
         self._latest_partial: list[WordToken] = []
-        # Speed-showcase mandate: wall-clock ms end() spent flushing STT on
-        # the LAST session (release -> verbatim text). Read by the wiring to
-        # stamp dictation.final's flush_ms; None until a session has ended.
         self.last_flush_ms: int | None = None
+
+    def configure(
+        self,
+        stt_engine: str,
+        stt_model_id: str = "",
+        *,
+        openai_base_url: str = "",
+        openai_api_key: str | Callable[[], str] | None = None,
+        preferred_me_device_key: str | None = None,
+    ) -> None:
+        """Select STT engine before begin; invalidates readiness on change."""
+        engine = stt_engine.strip() or "parakeet"
+        model_id = stt_model_id.strip()
+        url = openai_base_url.strip()
+        mic_key = preferred_me_device_key.strip() if preferred_me_device_key else None
+        if (
+            engine == self._stt_engine
+            and model_id == self._stt_model_id
+            and url == self._openai_base_url
+            and mic_key == self._preferred_me_device_key
+            and self._models_ready
+        ):
+            return
+        self._stt_engine = engine
+        self._stt_model_id = model_id
+        self._openai_base_url = url
+        self._openai_api_key = openai_api_key
+        self._preferred_me_device_key = mic_key
+        if not self._injected_transcriber:
+            self._transcriber = None
+            self._models_ready = False
 
     @property
     def is_active(self) -> bool:
         return self._handle is not None
 
     async def begin(self) -> None:
-        """Key down: open the default mic and start transcribing.
-
-        Raises :class:`DictationSessionError` when already running, when
-        models are missing, or when the mic cannot open (fail closed).
-        """
+        """Key down: open the default mic and start transcribing."""
         if self._handle is not None:
             raise DictationSessionError("dictation is already running")
         await self._ensure_models_loaded()
@@ -133,7 +158,6 @@ class DictationSessionService:
         self._ring_buffer = ring_buffer
         backend = self._backend_factory()
         try:
-            # Mic ONLY — dictation never touches loopback (least capture).
             self._handle = await asyncio.to_thread(
                 self._open_microphone_stream, backend, ring_buffer
             )
@@ -179,7 +203,7 @@ class DictationSessionService:
             await self.end()  # Reuse the teardown; the text is discarded.
 
     async def _ensure_models_loaded(self) -> None:
-        """Own VAD + Parakeet instances; never shared with the meeting STT."""
+        """Own VAD + selected STT instances; never shared with the meeting STT."""
         async with self._load_lock:
             if self._models_ready:
                 return
@@ -189,13 +213,16 @@ class DictationSessionService:
                     raise DictationSessionError(f"VAD model missing: {vad_model}")
                 self._vad_factory = lambda: SileroOnnxVoiceActivityDetector(vad_model)
             if self._transcriber is None:
-                if not stt_dependencies_available():
-                    raise DictationSessionError(
-                        "STT dependencies not installed (uv sync --extra stt)"
+                try:
+                    self._transcriber = build_live_transcriber(
+                        self._stt_engine,
+                        models_dir=self._models_dir,
+                        model_id=self._stt_model_id,
+                        openai_base_url=self._openai_base_url or None,
+                        openai_api_key=self._openai_api_key,
                     )
-                self._transcriber = ParakeetNemoTranscriber(
-                    self._models_dir / PARAKEET_FILENAME
-                )
+                except ValueError as exc:
+                    raise DictationSessionError(str(exc)) from exc
             if not self._transcriber.is_loaded:
                 # Heavy load off the event loop (heartbeats keep flowing).
                 await asyncio.to_thread(self._transcriber.load)
@@ -204,8 +231,11 @@ class DictationSessionService:
     def _open_microphone_stream(
         self, backend: CaptureBackend, ring_buffer: TimestampedAudioRingBuffer
     ) -> CaptureStreamHandle:
-        """Probe + open the CURRENT default microphone (blocking; threaded)."""
-        spec = backend.probe_default_device(StreamLabel.ME)
+        """Open preferred mic when set; otherwise the current default (threaded)."""
+        if self._preferred_me_device_key:
+            spec = backend.resolve_input_device(self._preferred_me_device_key)
+        else:
+            spec = backend.probe_default_device(StreamLabel.ME)
         resampler = StreamingResamplerTo16kMono(spec.sample_rate, spec.channels)
 
         def on_chunk(raw: bytes, t_end_monotonic: float) -> None:

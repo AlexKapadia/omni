@@ -99,6 +99,32 @@ class PyAudioWpatchCaptureBackend:
         finally:
             instance.terminate()
 
+    def resolve_input_device(self, key: str) -> CaptureDeviceSpec:
+        """Look up an input device by ``"{index}:{name}"`` PortAudio key.
+
+        Fail closed: unknown index, non-input device, or PortAudio errors
+        raise — never silently substitute the Windows default mic.
+        """
+        import pyaudiowpatch as pyaudio  # Lazy: Windows-only dependency.
+
+        try:
+            device_index = int(key.split(":", 1)[0])
+        except (ValueError, IndexError) as exc:
+            raise LookupError(f"invalid mic device key: {key!r}") from exc
+        instance = pyaudio.PyAudio()
+        try:
+            info = dict(instance.get_device_info_by_index(device_index))
+            info.setdefault("index", device_index)
+            if int(info.get("maxInputChannels", 0)) < 1:
+                raise LookupError(f"device {key!r} is not an input device")
+            return _spec_from_device_info(info)
+        except LookupError:
+            raise
+        except Exception as exc:
+            raise LookupError(f"could not resolve mic device {key!r}: {exc}") from exc
+        finally:
+            instance.terminate()
+
     def open_capture_stream(
         self, spec: CaptureDeviceSpec, on_chunk: Callable[[bytes, float], None]
     ) -> _PyAudioStreamHandle:

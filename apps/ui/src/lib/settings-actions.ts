@@ -58,7 +58,11 @@ export async function loadLedger(
 function toWireValues(partial: Partial<EngineSettings>): Record<string, unknown> {
   const values: Record<string, unknown> = {};
   if (partial.vaultDir !== undefined) values["vault_dir"] = partial.vaultDir;
-  if (partial.pushToTalkHotkey !== undefined) values["push_to_talk_hotkey"] = partial.pushToTalkHotkey;
+  // Engine `_validate_hotkey` requires a string ("Ctrl+Shift+F8"); UI keeps the
+  // token array for display and for pushDictationHotkey(combo).
+  if (partial.pushToTalkHotkey !== undefined) {
+    values["push_to_talk_hotkey"] = partial.pushToTalkHotkey.join("+");
+  }
   if (partial.keepAudio !== undefined) values["keep_audio"] = partial.keepAudio;
   if (partial.disclosureReminder !== undefined) {
     values["disclosure_reminder"] = partial.disclosureReminder;
@@ -93,6 +97,15 @@ function toWireValues(partial: Partial<EngineSettings>): Record<string, unknown>
   if (partial.summaryModelId !== undefined) {
     values["summary_model_id"] = partial.summaryModelId;
   }
+  if (partial.ollamaBaseUrl !== undefined) {
+    values["ollama_base_url"] = partial.ollamaBaseUrl;
+  }
+  if (partial.summaryProvider !== undefined) {
+    values["summary_provider"] = partial.summaryProvider;
+  }
+  if (partial.autoSummary !== undefined) {
+    values["auto_summary"] = partial.autoSummary;
+  }
   if (partial.speakerIdentity !== undefined) {
     values["speaker_identity"] = partial.speakerIdentity;
   }
@@ -106,6 +119,12 @@ function toWireValues(partial: Partial<EngineSettings>): Record<string, unknown>
   }
   if (partial.selectionTranslationLang !== undefined) {
     values["selection_translation_lang"] = partial.selectionTranslationLang;
+  }
+  if (partial.cartesiaVoiceId !== undefined) {
+    values["cartesia_voice_id"] = partial.cartesiaVoiceId;
+  }
+  if (partial.micDeviceId !== undefined) {
+    values["mic_device_id"] = partial.micDeviceId;
   }
   return values;
 }

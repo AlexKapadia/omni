@@ -2,7 +2,7 @@ import { useStore } from "zustand";
 import { OmniButton } from "../button";
 import type { OnboardingFlowStore } from "../../lib/onboarding-flow-store";
 
-export const DEFAULT_VAULT_PATH = "~/Documents/Omni Steroid";
+export const DEFAULT_VAULT_PATH = "";
 
 export function StepVault({
   store,
@@ -43,6 +43,8 @@ export function StepVault({
         style={{ fontSize: "var(--text-body-size)" }}
       >
         Choose a folder on this device. Your meetings, transcripts, and enhanced notes all stay here.
+        Use Choose folder so the path is absolute — the engine rejects relative paths like{" "}
+        <span className="font-[family-name:var(--font-mono)]">~/Documents/…</span>.
       </p>
 
       {/* Path Display & Browse Button */}

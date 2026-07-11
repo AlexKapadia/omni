@@ -85,7 +85,8 @@ class LiveAnswersSpotterWiring:
         self._hub = hub
         self._db_path = db_path
         self._migrations_dir = migrations_dir
-        self._spotter_factory = spotter_factory if spotter_factory else self._default_factory
+        # None → async default builder (reads summary Settings); tests inject fakes.
+        self._spotter_factory = spotter_factory
         # Per-meeting session state (None while idle).
         self._connection: aiosqlite.Connection | None = None
         self._queue: asyncio.Queue[object] | None = None
@@ -94,10 +95,20 @@ class LiveAnswersSpotterWiring:
         # unsubscribe used at shutdown.
         self._unsubscribe = hub.subscribe(self._on_event)
 
-    def _default_factory(
+    async def _build_default_spotter(
         self, connection: aiosqlite.Connection, emit: HitEmitter
     ) -> SpotterProtocol:
-        """Real spotter: BM25 retrieval + keyed router, ledger-bound."""
+        """Real spotter: BM25 retrieval + keyed router, ledger-bound.
+
+        Reads summary Settings so live_extraction honour preferred_provider
+        / preferred_model (Ollama-first) the same way ask/enhance do.
+        """
+        from engine.storage.app_settings_repository import (
+            SETTING_SUMMARY_MODEL_ID,
+            SETTING_SUMMARY_PROVIDER,
+            read_setting,
+        )
+
         retriever = HybridRrfRetriever(connection, None, None)  # BM25-only (documented)
 
         async def record(entry: RouterLedgerEntry) -> None:
@@ -105,7 +116,20 @@ class LiveAnswersSpotterWiring:
             await insert_router_ledger_entry(connection, entry)
 
         router = ProviderRouter(build_provider_clients(ProviderKeyStore()), record)
-        return LiveAnswersSpotter(connection, retriever, router, emit)
+        summary_model_raw = await read_setting(connection, SETTING_SUMMARY_MODEL_ID)
+        preferred_model = summary_model_raw if isinstance(summary_model_raw, str) else None
+        summary_provider_raw = await read_setting(connection, SETTING_SUMMARY_PROVIDER)
+        preferred_provider = (
+            summary_provider_raw if isinstance(summary_provider_raw, str) else None
+        )
+        return LiveAnswersSpotter(
+            connection,
+            retriever,
+            router,
+            emit,
+            preferred_model=preferred_model,
+            preferred_provider=preferred_provider,
+        )
 
     async def _on_event(self, envelope: Envelope) -> None:
         """Hub subscriber: cheap routing only; NEVER raises (see docstring)."""
@@ -127,7 +151,10 @@ class LiveAnswersSpotterWiring:
         await self.shutdown_session()  # A hanging previous session never leaks.
         await apply_migrations(self._db_path, self._migrations_dir)
         connection = await open_sqlite_connection(self._db_path)
-        spotter = self._spotter_factory(connection, self._emit_hit)
+        if self._spotter_factory is not None:
+            spotter = self._spotter_factory(connection, self._emit_hit)
+        else:
+            spotter = await self._build_default_spotter(connection, self._emit_hit)
         queue: asyncio.Queue[object] = asyncio.Queue()
         self._connection = connection
         self._queue = queue

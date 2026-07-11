@@ -15,27 +15,40 @@ describe("requestCaptureStart", () => {
   it("sends capture.start with a trimmed title and marks starting", () => {
     const store = createTranscriptStore();
     const send = vi.fn().mockReturnValue(true);
-    expect(requestCaptureStart("  Vendor call  ", store, send)).toBe(true);
+    expect(requestCaptureStart("  Vendor call  ", undefined, store, send)).toBe(true);
     expect(send).toHaveBeenCalledExactlyOnceWith("capture.start", { title: "Vendor call" });
     expect(store.getState().captureStatus).toBe("starting");
     expect(store.getState().errorMessage).toBeNull();
   });
 
+  it("includes mic_device_id when options.micDeviceId is set", () => {
+    const store = createTranscriptStore();
+    const send = vi.fn().mockReturnValue(true);
+    expect(
+      requestCaptureStart("Standup", { micDeviceId: "9:USB Mic" }, store, send),
+    ).toBe(true);
+    expect(send).toHaveBeenCalledExactlyOnceWith("capture.start", {
+      title: "Standup",
+      mic_device_id: "9:USB Mic",
+    });
+  });
+
   it("omits the title field entirely when blank (engine forbids extras/nulls)", () => {
     const store = createTranscriptStore();
     const send = vi.fn().mockReturnValue(true);
-    requestCaptureStart("   ", store, send);
+    requestCaptureStart("   ", undefined, store, send);
     expect(send).toHaveBeenCalledExactlyOnceWith("capture.start", {});
   });
 
   it("FAIL CLOSED: refused send -> idle + honest offline message, never 'starting'", () => {
     const store = createTranscriptStore();
     const send = vi.fn().mockReturnValue(false);
-    expect(requestCaptureStart(undefined, store, send)).toBe(false);
+    expect(requestCaptureStart(undefined, undefined, store, send)).toBe(false);
     expect(store.getState().captureStatus).toBe("idle");
     expect(store.getState().errorMessage).toBe(ENGINE_OFFLINE_MESSAGE);
   });
 });
+
 
 describe("requestCaptureStop", () => {
   it("sends capture.stop and marks stopping while awaiting the engine event", () => {

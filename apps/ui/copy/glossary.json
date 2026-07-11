@@ -23,7 +23,7 @@
   },
   "jargonReplacements": {
     "kill switch": "Pause all cloud AI",
-    "instant execute": "Auto-run safe actions",
+    "instant execute": "Auto-run dictation commands",
     "AI router": "AI providers",
     "transcription engine": "Transcription quality",
     "STT": "transcription",

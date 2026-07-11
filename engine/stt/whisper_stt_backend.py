@@ -1,4 +1,4 @@
-"""Optional local Whisper STT via faster-whisper when installed."""
+"""Optional local Whisper STT via whisper.cpp (pywhispercpp) on ggml bins."""
 
 from __future__ import annotations
 
@@ -8,42 +8,49 @@ from pathlib import Path
 import numpy as np
 import numpy.typing as npt
 
-from engine.audio.audio_frame_types import PIPELINE_SAMPLE_RATE
 from engine.stt.stt_backend_protocol import SttSegment
-
-
-def _whisper_device() -> str:
-    try:
-        import torch
-
-        return "cuda" if torch.cuda.is_available() else "cpu"
-    except ImportError:
-        return "cpu"
+from engine.stt.word_token_types import WordToken
 
 
 class WhisperSttBackend:
+    """Meetily-compatible ggml Whisper via pywhispercpp."""
+
     def __init__(self, *, models_dir: Path | None = None, model_id: str = "tiny") -> None:
         self._model_id = model_id
         self._models_dir = models_dir
         self._model: object | None = None
 
+    def _ggml_path(self) -> Path:
+        from engine.stt.whisper_model_catalog import (
+            is_whisper_model_present,
+            whisper_model_path,
+        )
+
+        if self._models_dir is None:
+            raise ValueError("Whisper backend requires models_dir for ggml weights")
+        if not is_whisper_model_present(self._models_dir, self._model_id):
+            raise ValueError(
+                f"Whisper model {self._model_id!r} is not installed — "
+                "download it from Settings → Transcription"
+            )
+        return whisper_model_path(self._models_dir, self._model_id)
+
     def _load(self) -> object:
         if self._model is not None:
             return self._model
         try:
-            from faster_whisper import WhisperModel
+            from pywhispercpp.model import Model
         except ImportError as exc:
             raise ValueError(
-                "Whisper backend requires faster-whisper (uv sync --extra whisper)"
+                "Whisper backend requires pywhispercpp (uv sync --extra whisper)"
             ) from exc
-        download_root = str(self._models_dir) if self._models_dir is not None else None
-        device = _whisper_device()
-        compute_type = "float16" if device == "cuda" else "int8"
-        self._model = WhisperModel(
-            self._model_id,
-            device=device,
-            compute_type=compute_type,
-            download_root=download_root,
+        path = self._ggml_path()
+        self._model = Model(
+            str(path),
+            print_progress=False,
+            print_realtime=False,
+            print_timestamps=False,
+            language="en",
         )
         return self._model
 
@@ -55,40 +62,59 @@ class WhisperSttBackend:
         on_partial: Callable[[str], None] | None = None,
     ) -> list[SttSegment]:
         model = self._load()
-        segments_iter, _info = model.transcribe(  # type: ignore[union-attr]
-            samples,
-            language="en",
-            vad_filter=True,
-        )
+        segments_raw = model.transcribe(samples)  # type: ignore[union-attr]
         segments: list[SttSegment] = []
         partial_parts: list[str] = []
-        for segment in segments_iter:
-            text = segment.text.strip()
+        for segment in segments_raw:
+            text = str(getattr(segment, "text", "")).strip()
             if not text:
                 continue
             partial_parts.append(text)
             if on_partial is not None:
                 on_partial(" ".join(partial_parts))
-            segments.append(
-                SttSegment(
-                    text=text,
-                    t_start=float(segment.start),
-                    t_end=float(segment.end),
-                    stream=stream,
-                )
-            )
+            t0 = float(getattr(segment, "t0", 0)) / 100.0
+            t1 = float(getattr(segment, "t1", 0)) / 100.0
+            segments.append(SttSegment(text=text, t_start=t0, t_end=t1, stream=stream))
         return segments
 
     def transcribe_file(self, path: str) -> list[SttSegment]:
         model = self._load()
-        segments_iter, _info = model.transcribe(str(path), vad_filter=True)  # type: ignore[union-attr]
+        segments_raw = model.transcribe(path)  # type: ignore[union-attr]
         return [
             SttSegment(
-                text=segment.text.strip(),
-                t_start=float(segment.start),
-                t_end=float(segment.end),
+                text=str(getattr(segment, "text", "")).strip(),
+                t_start=float(getattr(segment, "t0", 0)) / 100.0,
+                t_end=float(getattr(segment, "t1", 0)) / 100.0,
                 stream="them",
             )
-            for segment in segments_iter
-            if segment.text.strip()
+            for segment in segments_raw
+            if str(getattr(segment, "text", "")).strip()
         ]
+
+    def transcribe_window(self, samples: npt.NDArray[np.float32]) -> list[WordToken]:
+        """Live-capture seam: approximate word tokens from segment timestamps."""
+        model = self._load()
+        segments_raw = model.transcribe(samples)  # type: ignore[union-attr]
+        words: list[WordToken] = []
+        for segment in segments_raw:
+            text = str(getattr(segment, "text", "")).strip()
+            if not text:
+                continue
+            t0 = float(getattr(segment, "t0", 0)) / 100.0
+            t1 = float(getattr(segment, "t1", 0)) / 100.0
+            pieces = text.split()
+            if not pieces:
+                continue
+            span = max(t1 - t0, 0.01)
+            step = span / len(pieces)
+            for i, piece in enumerate(pieces):
+                start = t0 + i * step
+                words.append(WordToken(text=piece, t_start=start, t_end=start + step))
+        return words
+
+    @property
+    def is_loaded(self) -> bool:
+        return self._model is not None
+
+    def load(self) -> None:
+        self._load()

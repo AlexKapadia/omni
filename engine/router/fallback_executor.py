@@ -1,18 +1,20 @@
 """The fallback executor: kill-switch gate, chain walk, retry-once, ledger.
 
 Purpose: the ONE code path every external model call goes through. For a
-task it (1) checks the global kill switch, (2) resolves the routing-table
-chain for the current keyed world, (3) walks primary -> fallbacks with
-retry-once semantics per the error taxonomy, (4) logs EVERY attempt to the
-append-only router ledger, and (5) degrades gracefully with a typed
-``RouterUnavailableError`` when the whole chain fails.
+task it (1) resolves the routing-table chain for the current keyed world,
+(2) when the kill switch is engaged, keeps ONLY local providers
+(Ollama / LM Studio) so offline AI still works while cloud egress is
+halted, (3) walks primary -> fallbacks with retry-once semantics per the
+error taxonomy, (4) logs EVERY attempt to the append-only router ledger,
+and (5) degrades gracefully with a typed ``RouterUnavailableError`` when
+the whole chain fails.
 Pipeline position: the router's public entry point — M2+ pipelines call
 :meth:`ProviderRouter.route`; provider clients sit below; the ledger
 repository records to SQLite.
 
 Security invariants:
-- KILL SWITCH FIRST (fail closed): checked before task resolution, so no
-  task type — known or unknown — can reach a provider while it is engaged.
+- KILL SWITCH (fail closed on egress): cloud providers are stripped when
+  engaged; if no local provider remains, ``KillSwitchEngagedError``.
 - Deny by default: unknown task types refuse (``UnknownTaskTypeError``).
 - Retry policy: auth errors NEVER retry (a bad key cannot get better);
   ratelimit/timeout/server retry ONCE on the same provider, then cascade.
@@ -44,12 +46,15 @@ from engine.router.router_errors import (
     RouterUnavailableError,
 )
 from engine.router.router_ledger_repository import RouterLedgerEntry
-from engine.router.routing_table import ProviderModelSlot, resolve_route
+from engine.router.routing_table import ProviderModelSlot, ResolvedRoute, prefer_summary_model, resolve_route
 from engine.security.kill_switch import kill_switch_engaged
 
 # Brief pause before the single ratelimit retry — long enough for burst
 # quotas to breathe, short enough not to blow live latency budgets twice.
 RATELIMIT_RETRY_DELAY_SECONDS = 0.5
+
+# Local (no-egress) providers — allowed while the kill switch is engaged.
+_LOCAL_PROVIDERS: frozenset[Provider] = frozenset({Provider.OLLAMA, Provider.LM_STUDIO})
 
 # Types for the injectable seams (tested without real time or SQLite).
 LedgerRecorder = Callable[[RouterLedgerEntry], Awaitable[None]]
@@ -60,6 +65,16 @@ Clock = Callable[[], float]
 def _utc_now_iso() -> str:
     """ISO-8601 UTC timestamp — the schema's pinned time format."""
     return datetime.now(tz=UTC).isoformat()
+
+
+def _local_only_route(route: ResolvedRoute) -> ResolvedRoute:
+    """Keep only Ollama / LM Studio slots; empty means kill-switch refuse."""
+    local = tuple(slot for slot in route.attempts if slot.provider in _LOCAL_PROVIDERS)
+    return ResolvedRoute(
+        task_type=route.task_type,
+        attempts=local,
+        latency_budget_p95_ms=route.latency_budget_p95_ms,
+    )
 
 
 @dataclass(frozen=True)
@@ -101,6 +116,8 @@ class ProviderRouter:
         tools: tuple[ToolSpec, ...] = (),
         json_schema: dict[str, object] | None = None,
         max_tokens: int = 4096,
+        preferred_model: str | None = None,
+        preferred_provider: str | None = None,
     ) -> RoutedCompletion:
         """Execute ``task_type`` through its provider chain.
 
@@ -108,12 +125,20 @@ class ProviderRouter:
         ``UnknownTaskTypeError``, ``MisconfiguredRouteError``,
         ``RouterUnavailableError``.
         """
-        # SECURITY GATE — kill switch BEFORE anything else (fail closed):
-        # even an unknown task type must not observe a working router.
-        if kill_switch_engaged():
-            raise KillSwitchEngagedError
         keyed = frozenset(provider.value for provider in self._clients)
         resolved = resolve_route(task_type, keyed)  # deny-by-default inside
+        # Prefer applies for ANY task when Settings passes preferred_* —
+        # including live_extraction (live answers spotter) so Ollama-first
+        # summary settings are not a no-op on the live path.
+        if preferred_model or preferred_provider:
+            resolved = prefer_summary_model(resolved, preferred_model, keyed, preferred_provider)
+        # SECURITY GATE — kill switch strips cloud/egress providers (fail
+        # closed on egress). Local Ollama / LM Studio remain so offline
+        # Ollama-first still works; if none remain, refuse.
+        if kill_switch_engaged():
+            resolved = _local_only_route(resolved)
+            if not resolved.attempts:
+                raise KillSwitchEngagedError
         failures: list[ProviderFailure] = []
         total_calls = 0
         for slot in resolved.attempts:

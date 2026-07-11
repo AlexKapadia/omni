@@ -137,6 +137,7 @@ def test_detail_payload_keys_and_values_are_pinned_for_the_ts_mirror() -> None:
         "notes_text": "raw notes",
         "enhanced_notes_md": "## Summary\nAll agreed.\n",
         "extraction": None,
+        "has_kept_audio": False,
         "transcript": [
             {
                 "segment_id": "s1",

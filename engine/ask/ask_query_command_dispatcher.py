@@ -50,11 +50,16 @@ from engine.router import (
 from engine.security import ProviderKeyStore
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
+from engine.translate.selection_translate_command_dispatcher import (
+    SELECTION_TRANSLATE_COMMAND_NAME,
+    SelectionTranslateGateway,
+    dispatch_selection_translate_command,
+)
 
 logger = logging.getLogger(__name__)
 
 # The commands this dispatcher owns; the handler routes ONLY these here.
-ASK_COMMAND_NAMES = frozenset({ASK_QUERY_COMMAND_NAME})
+ASK_COMMAND_NAMES = frozenset({ASK_QUERY_COMMAND_NAME, SELECTION_TRANSLATE_COMMAND_NAME})
 
 # Additive error code (string literal beside the pinned enum, mirroring the
 # meeting dispatcher's `finalize_error`).
@@ -104,7 +109,25 @@ class AskAnswerGateway:
                 await insert_router_ledger_entry(connection, entry)
 
             router = self._router_factory(record)
-            service = AskOmniAnswerService(connection, retriever, router)
+            from engine.storage.app_settings_repository import (
+                SETTING_SUMMARY_MODEL_ID,
+                SETTING_SUMMARY_PROVIDER,
+                read_setting,
+            )
+
+            summary_model_raw = await read_setting(connection, SETTING_SUMMARY_MODEL_ID)
+            preferred = summary_model_raw if isinstance(summary_model_raw, str) else None
+            summary_provider_raw = await read_setting(connection, SETTING_SUMMARY_PROVIDER)
+            preferred_provider = (
+                summary_provider_raw if isinstance(summary_provider_raw, str) else None
+            )
+            service = AskOmniAnswerService(
+                connection,
+                retriever,
+                router,
+                preferred_model=preferred,
+                preferred_provider=preferred_provider,
+            )
             return await service.answer(query, meeting_id, scope)
         finally:
             await connection.close()
@@ -113,7 +136,16 @@ class AskAnswerGateway:
 async def dispatch_ask_command(
     command: Envelope, gateway: AskAnswerGateway | None, send: SendFn
 ) -> None:
-    """Handle one validated ask.* command envelope, always replying."""
+    """Handle one validated ask.* / selection.translate command, always replying."""
+    if command.name == SELECTION_TRANSLATE_COMMAND_NAME:
+        # Same DB/migrations as ask — least-invasive surface reuse.
+        sel_gateway = (
+            SelectionTranslateGateway(gateway.db_path, gateway.migrations_dir)
+            if gateway is not None
+            else None
+        )
+        await dispatch_selection_translate_command(command, sel_gateway, send)
+        return
     try:
         payload = AskQueryCommandPayload.model_validate(command.payload)
     except ValidationError:

@@ -32,6 +32,11 @@ const baseSettings = {
   speakerIdentity: "Me",
   speakerVoiceEnrolled: false,
   summaryModelId: "gemini-2.5-flash",
+  ollamaBaseUrl: "http://127.0.0.1:11434",
+  summaryProvider: "ollama" as const,
+  autoSummary: false,
+      cartesiaVoiceId: "",
+      micDeviceId: "",
 };
 
 describe("wireCaptionsOverlay", () => {

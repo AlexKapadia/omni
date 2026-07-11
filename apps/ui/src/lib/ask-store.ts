@@ -51,7 +51,7 @@ export interface AskAnswer {
   readonly latency?: AskLatencyBreakdown;
 }
 
-/** The swappable answer source. Mock now; M3 retrieval pipeline later. */
+/** The swappable answer source. Real provider: engine-ask-answer-provider.ts. */
 export interface AskAnswerProvider {
   answer(question: string): Promise<AskAnswer>;
 }

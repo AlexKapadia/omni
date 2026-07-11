@@ -51,6 +51,11 @@ from engine.wiring.models_download_command_dispatcher import (
     ModelsDownloadCommandGateway,
     dispatch_models_command,
 )
+from engine.wiring.ollama_command_dispatcher import (
+    OLLAMA_COMMAND_NAMES,
+    OllamaCommandGateway,
+    dispatch_ollama_command,
+)
 from engine.wiring.provider_keys_command_dispatcher import (
     KEYS_COMMAND_NAMES,
     ProviderKeysCommandGateway,
@@ -59,6 +64,7 @@ from engine.wiring.provider_keys_command_dispatcher import (
 from engine.wiring.server_default_service_factories import (
     default_google_gateway_factory,
     default_microsoft_gateway_factory,
+    default_ollama_gateway_factory,
     default_speaker_gateway_factory,
     default_keys_gateway_factory,
     default_ledger_gateway_factory,
@@ -73,6 +79,7 @@ M7_COMMAND_NAMES = (
     | KEYS_COMMAND_NAMES
     | LEDGER_COMMAND_NAMES
     | MODELS_COMMAND_NAMES
+    | OLLAMA_COMMAND_NAMES
     | GOOGLE_COMMAND_NAMES
     | MICROSOFT_COMMAND_NAMES
     | SPEAKER_COMMAND_NAMES
@@ -84,6 +91,7 @@ SettingsGatewayFactory = Callable[[], AppSettingsCommandGateway]
 KeysGatewayFactory = Callable[[], ProviderKeysCommandGateway]
 LedgerGatewayFactory = Callable[[], LedgerSummaryCommandGateway]
 ModelsGatewayFactory = Callable[[EventBroadcastHub], ModelsDownloadCommandGateway]
+OllamaGatewayFactory = Callable[[EventBroadcastHub], OllamaCommandGateway]
 GoogleGatewayFactory = Callable[[EventBroadcastHub], GoogleConnectCommandGateway]
 MicrosoftGatewayFactory = Callable[[EventBroadcastHub], MicrosoftConnectCommandGateway]
 SpeakerGatewayFactory = Callable[[], SpeakerEnrollCommandGateway]
@@ -97,6 +105,7 @@ class OnboardingSettingsCommandSurface:
     keys_gateway: ProviderKeysCommandGateway
     ledger_gateway: LedgerSummaryCommandGateway
     models_gateway: ModelsDownloadCommandGateway
+    ollama_gateway: OllamaCommandGateway
     google_gateway: GoogleConnectCommandGateway
     microsoft_gateway: MicrosoftConnectCommandGateway
     speaker_gateway: SpeakerEnrollCommandGateway
@@ -110,6 +119,8 @@ class OnboardingSettingsCommandSurface:
         """Cancel any in-flight download / OAuth flow (never outlive the process)."""
         with contextlib.suppress(Exception):
             await self.models_gateway.shutdown()
+        with contextlib.suppress(Exception):
+            await self.ollama_gateway.shutdown()
         with contextlib.suppress(Exception):
             await self.google_gateway.shutdown()
         with contextlib.suppress(Exception):
@@ -138,6 +149,8 @@ async def dispatch_m7_command(
         await dispatch_ledger_command(command, surface.ledger_gateway if surface else None, send)
     elif name in MODELS_COMMAND_NAMES:
         await dispatch_models_command(command, surface.models_gateway if surface else None, send)
+    elif name in OLLAMA_COMMAND_NAMES:
+        await dispatch_ollama_command(command, surface.ollama_gateway if surface else None, send)
     elif name in GOOGLE_COMMAND_NAMES:
         await dispatch_google_command(command, surface.google_gateway if surface else None, send)
     elif name in MICROSOFT_COMMAND_NAMES:
@@ -155,6 +168,7 @@ def build_onboarding_settings_command_surface(
     keys_gateway_factory: KeysGatewayFactory | None = None,
     ledger_gateway_factory: LedgerGatewayFactory | None = None,
     models_gateway_factory: ModelsGatewayFactory | None = None,
+    ollama_gateway_factory: OllamaGatewayFactory | None = None,
     google_gateway_factory: GoogleGatewayFactory | None = None,
     microsoft_gateway_factory: MicrosoftGatewayFactory | None = None,
     speaker_gateway_factory: SpeakerGatewayFactory | None = None,
@@ -165,6 +179,7 @@ def build_onboarding_settings_command_surface(
         keys_gateway=(keys_gateway_factory or default_keys_gateway_factory)(),
         ledger_gateway=(ledger_gateway_factory or default_ledger_gateway_factory)(),
         models_gateway=(models_gateway_factory or default_models_gateway_factory)(event_hub),
+        ollama_gateway=(ollama_gateway_factory or default_ollama_gateway_factory)(event_hub),
         google_gateway=(google_gateway_factory or default_google_gateway_factory)(event_hub),
         microsoft_gateway=(microsoft_gateway_factory or default_microsoft_gateway_factory)(
             event_hub

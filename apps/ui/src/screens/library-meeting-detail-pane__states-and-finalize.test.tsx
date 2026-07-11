@@ -36,6 +36,7 @@ const DETAIL: MeetingDetail = {
   notesText: "my raw notes\n  with exact   spacing",
   enhancedNotesMd: "## Summary\nRenewal agreed.",
   extraction: null,
+  hasKeptAudio: true,
   transcript: [
       { segmentId: "s1", stream: "them", speakerLabel: "Speaker 1", text: "hello there", tStart: 0, tEnd: 1 },
       { segmentId: "s2", stream: "me", speakerLabel: "Alex", text: "hi", tStart: 1, tEnd: 2 },

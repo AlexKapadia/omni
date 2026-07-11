@@ -2,8 +2,8 @@
  * Settings — the AI router matrix. Read-only display of the REAL resolved
  * routing policy from settings.get: per task, whether it runs on-device, the
  * ordered provider→model fallback chain, and the latency budget. When the
- * kill switch is engaged the card discloses that every external route is
- * refused (fail closed on egress).
+ * kill switch is engaged the card discloses that cloud routes are
+ * refused (fail closed on egress; local Ollama may still run).
  *
  * The design doc's provider/model copy is stale by contract — every value here
  * is the engine's own resolved policy, never invented.
@@ -92,7 +92,7 @@ export function RouterMatrixSection({ store }: { readonly store: SettingsStore }
           ))}
           {killSwitchEngaged && (
             <p className="m-0 pt-[var(--space-2)] text-[var(--grey-600)]" style={{ fontSize: 11 }}>
-              Cloud AI is paused — every external route above is refused until you resume it.
+              Cloud AI is paused — cloud routes above are refused. Local Ollama still works.
             </p>
           )}
         </div>

@@ -22,6 +22,7 @@ import contextlib
 import logging
 import time
 from collections.abc import AsyncIterator, Callable
+from pathlib import Path
 from typing import Any
 
 import uvicorn
@@ -69,6 +70,7 @@ from engine.wiring.server_default_service_factories import (
     default_vault_watchdog_factory,
 )
 from engine.google.calendar_poll_service import CalendarPollService
+from engine.vault import VaultWriteError, resolve_vault_root
 from engine.wiring.vault_watchdog_server_wiring import VaultWatchdogServerWiring
 
 # Factory seams (a factory, not an instance, so services are built AFTER
@@ -151,6 +153,10 @@ def create_app(
     enrichment_wiring = (
         enrichment_wiring_factory(event_hub) if enrichment_wiring_factory else None
     )
+    if enrichment_wiring is not None:
+        m7.settings_gateway.set_live_translation_settings_listener(
+            enrichment_wiring.apply_translation_lang
+        )
     # M4 card-building seams (event/hook-driven — same wired-only-when-passed
     # rule): finalization events + the dictation gateway's post-final hook.
     card_build_wiring = card_build_wiring_factory(event_hub) if card_build_wiring_factory else None
@@ -165,6 +171,13 @@ def create_app(
         )
     # M3 live vault watching (OS-event-driven — same rule).
     vault_watchdog = vault_watchdog_factory() if vault_watchdog_factory else None
+    if vault_watchdog is not None:
+        # Mid-session vault_dir change: stop the old observer and watch the new root.
+        def _rebind_vault_watcher(vault_dir: str) -> None:
+            loop = asyncio.get_running_loop()
+            loop.create_task(vault_watchdog.rebind(Path(vault_dir)))
+
+        m7.settings_gateway.set_vault_dir_listener(_rebind_vault_watcher)
     calendar_poll = calendar_poll_factory(event_hub) if calendar_poll_factory else None
     # Naomi conversation loop: command-driven but heavy (loads STT models,
     # opens the mic + persistent Cartesia socket on first listen), so wired
@@ -193,7 +206,15 @@ def create_app(
         if detection_wiring is not None:
             detection_wiring.start()  # bot-free detection poll loop
         if vault_watchdog is not None:
-            vault_watchdog.start()  # live vault reindex (or one honest OFF line)
+            # Factory may have resolved vault BEFORE boot applied DB vault_dir
+            # into OMNI_VAULT_DIR — rebind so a DB-only vault is watched.
+            if preload_stt:
+                try:
+                    await vault_watchdog.rebind(resolve_vault_root())
+                except VaultWriteError:
+                    vault_watchdog.start()  # honest OFF when still unconfigured
+            else:
+                vault_watchdog.start()  # live vault reindex (or one honest OFF line)
         if calendar_poll is not None:
             calendar_poll.start()
         yield

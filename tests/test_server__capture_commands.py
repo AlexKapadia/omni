@@ -29,15 +29,17 @@ class FakeCaptureService(LiveCaptureService):
         )
         self.running_meeting: str | None = None
         self.titles_seen: list[str | None] = []
+        self.mic_device_ids_seen: list[str | None] = []
 
     @property
     def is_stt_ready(self) -> bool:
         return True  # Models "loaded": heartbeat must reflect this.
 
-    async def start(self, title: str | None) -> str:
+    async def start(self, title: str | None, mic_device_id: str | None = None) -> str:
         if self.running_meeting is not None:
             raise CaptureServiceError("capture is already running")
         self.titles_seen.append(title)
+        self.mic_device_ids_seen.append(mic_device_id)
         self.running_meeting = f"meeting-{uuid.uuid4()}"
         await self._hub.broadcast_event(
             "capture.started", build_capture_started_payload(self.running_meeting, "command")

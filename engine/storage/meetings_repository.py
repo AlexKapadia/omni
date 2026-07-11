@@ -65,13 +65,16 @@ class MeetingRow:
 
 
 # Static SQL (no interpolation anywhere — injection defence by construction).
+# Soft-deleted rows (deleted_at set) are hidden from Library list/get.
 _SELECT_ALL_MEETINGS = (
     "SELECT id, title, started_at, ended_at, note_path, notes_text,"
-    " enhanced_notes_md, finalized_at FROM meetings ORDER BY started_at DESC"
+    " enhanced_notes_md, finalized_at FROM meetings"
+    " WHERE deleted_at IS NULL ORDER BY started_at DESC"
 )
 _SELECT_ONE_MEETING = (
     "SELECT id, title, started_at, ended_at, note_path, notes_text,"
-    " enhanced_notes_md, finalized_at FROM meetings WHERE id = ?"
+    " enhanced_notes_md, finalized_at FROM meetings"
+    " WHERE id = ? AND deleted_at IS NULL"
 )
 
 
@@ -140,3 +143,16 @@ async def record_meeting_finalization(
         " finalized_at = ? WHERE id = ?",
         (note_path, notes_text, enhanced_notes_md, finalized_at_iso, meeting_id),
     )
+
+
+async def soft_delete_meeting_row(
+    connection: aiosqlite.Connection, meeting_id: str, deleted_at_iso: str
+) -> bool:
+    """Stamp ``deleted_at`` so the meeting leaves Library. False if missing/gone."""
+    cursor = await connection.execute(
+        "UPDATE meetings SET deleted_at = ? WHERE id = ? AND deleted_at IS NULL",
+        (deleted_at_iso, meeting_id),
+    )
+    changed = cursor.rowcount > 0
+    await cursor.close()
+    return changed

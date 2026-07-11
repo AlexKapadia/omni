@@ -27,6 +27,7 @@ from datetime import date
 
 import aiosqlite
 
+from engine.ask.ask_deleted_meeting_filter import filter_deleted_meeting_chunks
 from engine.ask.ask_answer_contracts import AskAnswer, AskLatencyBreakdown
 from engine.ask.ask_prompt_frames import (
     ASK_SYNTHESIS_JSON_SCHEMA,
@@ -92,12 +93,16 @@ class AskOmniAnswerService:
         *,
         clock: Callable[[], float] = time.perf_counter,
         today: Callable[[], date] = date.today,
+        preferred_model: str | None = None,
+        preferred_provider: str | None = None,
     ) -> None:
         self._connection = connection
         self._retriever = retriever
         self._router = router
         self._clock = clock  # injectable: latency arithmetic is tested exactly
         self._today = today
+        self._preferred_model = preferred_model
+        self._preferred_provider = preferred_provider
 
     async def answer(
         self, query: str, meeting_id: str | None = None, scope: str = "all"
@@ -117,7 +122,9 @@ class AskOmniAnswerService:
             enable_graph_expansion=True,  # chat tier: recommendation step 3
             today=self._today,
         )
-        chunks = result.chunks[:MAX_CONTEXT_CHUNKS]
+        chunks = await filter_deleted_meeting_chunks(
+            self._connection, result.chunks[:MAX_CONTEXT_CHUNKS]
+        )
         retrieval_ms = self._elapsed_ms(started)
         if not chunks:
             # FAIL HONEST: nothing above the floor — no provider call at all.
@@ -138,6 +145,8 @@ class AskOmniAnswerService:
             ASK_SYNTHESIS_SYSTEM_FRAME,
             (ChatMessage(role="user", content=user_content),),
             json_schema=ASK_SYNTHESIS_JSON_SCHEMA,
+            preferred_model=self._preferred_model,
+            preferred_provider=self._preferred_provider,
         )
         synthesis_ms = self._elapsed_ms(synthesis_started)
         headline, answer_text = parse_synthesis_output(routed.completion.text)
@@ -192,6 +201,8 @@ class AskOmniAnswerService:
             ASK_SYNTHESIS_SYSTEM_FRAME,
             (ChatMessage(role="user", content=user_content),),
             json_schema=ASK_SYNTHESIS_JSON_SCHEMA,
+            preferred_model=self._preferred_model,
+            preferred_provider=self._preferred_provider,
         )
         synthesis_ms = self._elapsed_ms(synthesis_started)
         headline, answer_text = parse_synthesis_output(routed.completion.text)
@@ -243,6 +254,8 @@ class AskOmniAnswerService:
             ASK_SYNTHESIS_SYSTEM_FRAME,
             (ChatMessage(role="user", content=user_content),),
             json_schema=ASK_SYNTHESIS_JSON_SCHEMA,
+            preferred_model=self._preferred_model,
+            preferred_provider=self._preferred_provider,
         )
         synthesis_ms = self._elapsed_ms(synthesis_started)
         headline, answer_text = parse_synthesis_output(routed.completion.text)

@@ -23,7 +23,6 @@ import numpy as np
 import numpy.typing as npt
 import pytest
 
-import engine.dictation.dictation_session_service as dictation_module
 from engine.audio.audio_frame_types import StreamLabel
 from engine.audio.dual_stream_capture_controller import CaptureDeviceSpec
 from engine.dictation.dictation_session_service import (
@@ -58,6 +57,9 @@ class FakeMicBackend:
 
     def probe_default_device(self, stream: StreamLabel) -> CaptureDeviceSpec:
         return CaptureDeviceSpec(f"{stream.value}:Fake Mic", "Fake Mic", 16_000, 1)
+
+    def resolve_input_device(self, key: str) -> CaptureDeviceSpec:
+        return CaptureDeviceSpec(key, key.split(":", 1)[-1], 16_000, 1)
 
     def open_capture_stream(
         self, spec: CaptureDeviceSpec, on_chunk: Callable[[bytes, float], None]
@@ -186,7 +188,9 @@ async def test_missing_stt_dependencies_fail_closed(
 ) -> None:
     """No injected transcriber + the heavy STT stack absent -> a loud refusal,
     never a silently-deaf session."""
-    monkeypatch.setattr(dictation_module, "stt_dependencies_available", lambda: False)
+    from engine.stt import live_transcriber_factory
+
+    monkeypatch.setattr(live_transcriber_factory, "stt_dependencies_available", lambda: False)
     service = DictationSessionService(
         backend_factory=FakeMicBackend,
         models_dir=tmp_path,
@@ -203,6 +207,8 @@ async def test_transcriber_is_built_and_loaded_when_deps_available(
 ) -> None:
     """deps available + no injected transcriber -> the service constructs a
     transcriber at the parakeet path and loads it off the event loop."""
+    from engine.stt import live_transcriber_factory
+
     class FakeBuiltTranscriber:
         def __init__(self, model_path: Path) -> None:
             self.model_path = model_path
@@ -220,13 +226,15 @@ async def test_transcriber_is_built_and_loaded_when_deps_available(
 
     built_instances: list[FakeBuiltTranscriber] = []
 
-    monkeypatch.setattr(dictation_module, "stt_dependencies_available", lambda: True)
-    monkeypatch.setattr(dictation_module, "ParakeetNemoTranscriber", FakeBuiltTranscriber)
+    monkeypatch.setattr(live_transcriber_factory, "stt_dependencies_available", lambda: True)
+    monkeypatch.setattr(live_transcriber_factory, "ParakeetNemoTranscriber", FakeBuiltTranscriber)
+    # Default settings path: no db → parakeet (legacy inject-free unit path).
     service = DictationSessionService(
         backend_factory=FakeMicBackend,
         models_dir=tmp_path,
         transcriber=None,
         vad_factory=lambda: amplitude_vad,
+        stt_engine="parakeet",
     )
     await service._ensure_models_loaded()
     assert len(built_instances) == 1  # built exactly once
@@ -234,6 +242,45 @@ async def test_transcriber_is_built_and_loaded_when_deps_available(
     assert built.model_path == tmp_path / PARAKEET_FILENAME  # built at the exact path
     assert built.load_calls == 1 and built.is_loaded  # loaded exactly once
     assert service._models_ready is True
+
+
+async def test_dictation_builds_openai_compatible_from_settings(
+    tmp_path: Path,
+) -> None:
+    """Cloud STT setting must build OpenAiCompatible, never hardcode Parakeet."""
+    from engine.stt.openai_compatible_stt import OpenAiCompatibleSttBackend
+
+    service = DictationSessionService(
+        backend_factory=FakeMicBackend,
+        models_dir=tmp_path,
+        transcriber=None,
+        vad_factory=lambda: amplitude_vad,
+        stt_engine="openai_compatible",
+        stt_model_id="whisper-1",
+        openai_base_url="https://api.openai.com/v1",
+        openai_api_key="sk-test",
+    )
+    await service._ensure_models_loaded()
+    assert isinstance(service._transcriber, OpenAiCompatibleSttBackend)
+    assert service._models_ready is True
+
+
+async def test_dictation_openai_compatible_fails_closed_without_key(
+    tmp_path: Path,
+) -> None:
+    service = DictationSessionService(
+        backend_factory=FakeMicBackend,
+        models_dir=tmp_path,
+        transcriber=None,
+        vad_factory=lambda: amplitude_vad,
+        stt_engine="openai_compatible",
+        stt_model_id="whisper-1",
+        openai_base_url="https://api.openai.com/v1",
+        openai_api_key=None,
+    )
+    with pytest.raises(DictationSessionError, match="openai_compatible|API key"):
+        await service._ensure_models_loaded()
+    assert service._models_ready is False
 
 
 async def test_ensure_models_loaded_is_idempotent(tmp_path: Path) -> None:

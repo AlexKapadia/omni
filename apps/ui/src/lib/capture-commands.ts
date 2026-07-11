@@ -12,6 +12,7 @@ import {
   CAPTURE_STOP_COMMAND_NAME,
 } from "./capture-protocol";
 import { sendEngineCommand } from "./live-engine-socket";
+import { appSettingsStore } from "./settings-store";
 import { transcriptStore, type TranscriptStore } from "./transcript-store";
 
 export type CommandSender = (name: string, payload?: Record<string, unknown>) => boolean;
@@ -19,12 +20,28 @@ export type CommandSender = (name: string, payload?: Record<string, unknown>) =>
 export const ENGINE_OFFLINE_MESSAGE =
   "The engine is offline. Capture needs the engine running on this device.";
 
+export interface CaptureStartOptions {
+  readonly micDeviceId?: string;
+}
+
 export function requestCaptureStart(
   title?: string,
+  options?: CaptureStartOptions,
   store: TranscriptStore = transcriptStore,
   send: CommandSender = sendEngineCommand,
 ): boolean {
-  const payload = title !== undefined && title.trim().length > 0 ? { title: title.trim() } : {};
+  const payload: Record<string, unknown> = {};
+  if (title !== undefined && title.trim().length > 0) {
+    payload.title = title.trim();
+  }
+  // Explicit option wins; otherwise the Settings mic pick (device id).
+  const micDeviceId =
+    options !== undefined
+      ? options.micDeviceId
+      : appSettingsStore.getState().microphone;
+  if (typeof micDeviceId === "string" && micDeviceId.trim().length > 0) {
+    payload.mic_device_id = micDeviceId.trim();
+  }
   const sent = send(CAPTURE_START_COMMAND_NAME, payload);
   if (!sent) {
     // Fail closed: no engine, no capture — say so instead of pretending.

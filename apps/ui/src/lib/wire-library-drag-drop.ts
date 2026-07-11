@@ -7,6 +7,7 @@ const MEDIA_EXTENSIONS = new Set([
   ".wav",
   ".mp3",
   ".m4a",
+  ".aac",
   ".flac",
   ".ogg",
   ".webm",
@@ -26,7 +27,24 @@ function isTauriRuntime(): boolean {
   return typeof window !== "undefined" && "__TAURI_INTERNALS__" in window;
 }
 
-export function wireLibraryDragDrop(onImported: () => void): () => void {
+function resolveIdentifySpeakers(
+  value: boolean | (() => boolean) | undefined,
+): boolean {
+  if (typeof value === "function") return value() === true;
+  return value === true;
+}
+
+export type LibraryDragDropOptions = {
+  /** Same toggle as the Import media button — read at drop time. */
+  readonly identifySpeakers?: boolean | (() => boolean);
+  /** Surface per-file import failures (silent swallow was a bug). */
+  readonly onError?: (message: string) => void;
+};
+
+export function wireLibraryDragDrop(
+  onImported: () => void,
+  options: LibraryDragDropOptions = {},
+): () => void {
   if (!isTauriRuntime()) {
     return () => undefined;
   }
@@ -40,14 +58,20 @@ export function wireLibraryDragDrop(onImported: () => void): () => void {
       const paths = event.payload.paths.filter(isMediaPath);
       if (paths.length === 0) return;
       void (async () => {
+        let imported = 0;
         for (const path of paths) {
           try {
-            await importMediaFile(path);
-          } catch {
-            // Import errors surface via meetings store refresh; keep going.
+            await importMediaFile(path, undefined, {
+              identifySpeakers: resolveIdentifySpeakers(options.identifySpeakers),
+            });
+            imported += 1;
+          } catch (err) {
+            const message =
+              err instanceof Error ? err.message : `Could not import ${path}`;
+            options.onError?.(message);
           }
         }
-        onImported();
+        if (imported > 0) onImported();
       })();
     });
   })();

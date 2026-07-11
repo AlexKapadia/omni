@@ -96,6 +96,8 @@ async def run_enhance_step(
     note_path: Path,
     warnings: list[str],
     summary_language: str = "",
+    preferred_model: str | None = None,
+    preferred_provider: str | None = None,
 ) -> tuple[bool, str | None]:
     """Enhancement + managed-region write, isolated.
 
@@ -106,7 +108,13 @@ async def run_enhance_step(
     """
     try:
         result = await run_enhanced_notes(
-            router, template, notepad_text, transcript_lines, summary_language
+            router,
+            template,
+            notepad_text,
+            transcript_lines,
+            summary_language,
+            preferred_model=preferred_model,
+            preferred_provider=preferred_provider,
         )
         update_meeting_enhanced_notes(note_path, result.markdown)
         return True, result.markdown

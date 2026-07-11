@@ -15,24 +15,29 @@ import {
   type MeetingFinalizeStore,
 } from "../../lib/meeting-finalize-store";
 import { notepadStore, type NotepadStore } from "../../lib/notepad-store";
+import { appSettingsStore, type SettingsStore } from "../../lib/settings-store";
 
 export function FinalizeMeetingPanel({
   meetingId,
   store = meetingFinalizeStore,
   notepad = notepadStore,
+  settingsStore = appSettingsStore,
 }: {
   readonly meetingId: string;
   readonly store?: MeetingFinalizeStore;
   readonly notepad?: NotepadStore;
+  readonly settingsStore?: SettingsStore;
 }) {
   const status = useStore(store, (s) => s.status);
   const notePath = useStore(store, (s) => s.notePath);
   const errorMessage = useStore(store, (s) => s.errorMessage);
   const warnings = useStore(store, (s) => s.warnings);
+  const autoSummary = useStore(settingsStore, (s) => s.settings?.autoSummary ?? false);
 
   const startFinalize = () => {
     // The notepad buffer travels verbatim — the engine stores exact bytes.
-    void finalizeMeeting(meetingId, notepad.getState().text, store);
+    const activeTemplate = settingsStore.getState().settings?.activeTemplate ?? null;
+    void finalizeMeeting(meetingId, notepad.getState().text, store, undefined, activeTemplate);
   };
 
   if (status === "ready" && notePath !== null) {
@@ -54,6 +59,11 @@ export function FinalizeMeetingPanel({
 
   return (
     <div className="flex flex-col items-start gap-[var(--space-2)]">
+      {autoSummary && status === "idle" && (
+        <p className="m-0 text-[var(--grey-600)]" style={{ fontSize: 12 }}>
+          Auto-summary is on — this runs automatically now that capture has stopped.
+        </p>
+      )}
       <OmniButton variant="primary" disabled={status === "pending"} onClick={startFinalize}>
         {status === "pending"
           ? "Enhancing notes"

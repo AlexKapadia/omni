@@ -1,9 +1,9 @@
 /**
  * Settings — the instant-execute whitelist. Each per-intent toggle lets a
- * dictation intent of that type run WITHOUT an approval card. So this is a
- * security surface: every intent DEFAULTS OFF (deny by default, §5.6), the
- * copy states plainly that a whitelisted intent still gets audited, and email
- * remains draft-only regardless.
+ * DICTATION intent of that type run WITHOUT an approval card. Meeting-extracted
+ * actions still always need Approve. So this is a security surface: every
+ * intent DEFAULTS OFF (deny by default, §5.6), the copy states plainly that a
+ * whitelisted dictation intent still gets audited, and email remains draft-only.
  *
  * Persisted via instant_execute_whitelist (the array of enabled intent types).
  */
@@ -15,23 +15,27 @@ import { INSTANT_INTENT_TYPES, type InstantIntentType } from "../../lib/setup-se
 import type { SettingsStore } from "../../lib/settings-store";
 import type { SettingsUpdater } from "../../lib/settings-actions";
 
-/** Plain-voice label + the exact effect of enabling each intent. */
+/** Plain-voice label + the exact effect of enabling each intent (dictation only). */
 const INTENT_COPY: Readonly<Record<InstantIntentType, { label: string; effect: string }>> = {
   create_event: {
-    label: "Create calendar events",
-    effect: "adds events straight to your calendar, no card — still audited",
+    label: "Create Google Calendar events",
+    effect:
+      "dictation: adds events to Google Calendar with no card — still audited; meeting actions still need Approve",
   },
   upsert_contact: {
     label: "Save contacts",
-    effect: "writes contacts straight through, no card — still audited",
+    effect:
+      "dictation: writes contacts with no card — still audited; meeting actions still need Approve",
   },
   draft_email: {
     label: "Draft emails",
-    effect: "writes Gmail drafts straight through, no card — never sends, still audited",
+    effect:
+      "dictation: writes Gmail drafts with no card — never sends, still audited; meeting actions still need Approve",
   },
   write_note: {
     label: "Write notes",
-    effect: "writes vault notes straight through, no card — still audited",
+    effect:
+      "dictation: writes vault notes with no card — still audited; meeting actions still need Approve",
   },
 };
 
@@ -56,7 +60,14 @@ export function InstantExecuteWhitelistSection({
   };
 
   return (
-    <SettingsGroupCard label="Auto-run safe actions">
+    <SettingsGroupCard label="Auto-run dictation commands">
+      <p
+        className="m-0 text-[var(--ink-secondary)]"
+        style={{ fontSize: "var(--text-meta-size)", paddingBottom: 8 }}
+      >
+        Whitelisted dictation commands skip the approval card. Actions extracted from meetings
+        still need Approve.
+      </p>
       {INSTANT_INTENT_TYPES.map((intent, index) => {
         const enabled = whitelist.includes(intent);
         const copy = INTENT_COPY[intent];

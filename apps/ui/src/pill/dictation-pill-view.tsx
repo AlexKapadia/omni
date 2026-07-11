@@ -11,6 +11,7 @@
 import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { OmniMark } from "../components/omni-mark";
+import { approveCard, useApprovalCards } from "../lib/approval-cards-store";
 
 import type { DictationFinalPayload } from "./dictation-events-protocol";
 import {
@@ -158,10 +159,12 @@ function ResultPopover({
   final,
   totalMs,
   injection,
+  pendingCardId,
 }: {
   readonly final: DictationFinalPayload;
   readonly totalMs?: number | undefined;
   readonly injection?: PillInjectionStatus | undefined;
+  readonly pendingCardId?: number | undefined;
 }) {
   if (final.mode === "inject") {
     return <InjectResultPopover final={final} totalMs={totalMs} injection={injection} />;
@@ -207,6 +210,8 @@ function ResultPopover({
           .map(([key, value]) => `${key}: ${String(value)}`)
           .join(" · ")
       : "";
+  const showApprove =
+    intent !== undefined && intent.intent_type !== "unknown" && pendingCardId !== undefined;
   return (
     <div className="pill-popover" role="status">
       <span className="pill-popover-label">{label}</span>
@@ -220,6 +225,18 @@ function ResultPopover({
       </span>
       <LatencyLine final={final} totalMs={totalMs} />
       <div className="pill-popover-buttons">
+        {showApprove && (
+          <button
+            type="button"
+            className="pill-button-primary"
+            onClick={() => {
+              approveCard(pendingCardId);
+              dismiss();
+            }}
+          >
+            Approve
+          </button>
+        )}
         <button type="button" className="pill-button-ghost" onClick={dismiss}>
           Dismiss
         </button>
@@ -228,8 +245,21 @@ function ResultPopover({
   );
 }
 
-export function DictationPillView() {
+export function DictationPillView({
+  holdLabel = "Hold F9",
+}: {
+  readonly holdLabel?: string;
+} = {}) {
   const state = usePillState((s) => s);
+  const pendingCardId = useApprovalCards((s) => {
+    const pending = s.cards.find(
+      (card) =>
+        card.status === "pending" &&
+        card.source === "dictation" &&
+        card.meetingId === null,
+    );
+    return pending?.id;
+  });
 
   // Result popovers self-dismiss — but never while a paste is still in
   // flight (dismissing a pending injection would hide its honest outcome).
@@ -268,7 +298,7 @@ export function DictationPillView() {
         <OmniMark size={20} />
         {state.phase === "idle" && (
           <span className="pill-idle-hint">
-            Hold F9
+            {holdLabel}
           </span>
         )}
         <PillWaveformCanvas active={listening} />
@@ -326,6 +356,7 @@ export function DictationPillView() {
           final={state.final}
           totalMs={state.totalMs}
           injection={state.injection}
+          pendingCardId={pendingCardId}
         />
       )}
 

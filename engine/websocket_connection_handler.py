@@ -17,8 +17,11 @@ Security invariants:
 
 import asyncio
 import contextlib
+import logging
 import time
 import uuid
+from collections.abc import Awaitable, Coroutine
+from typing import Any
 
 from fastapi import WebSocket, WebSocketDisconnect
 
@@ -57,6 +60,11 @@ from engine.protocol import (
     build_heartbeat_payload,
     error_reply,
     parse_envelope,
+)
+from engine.protocol.meeting_finalization_payloads import (
+    COMMAND_IMPORT_MEDIA,
+    COMMAND_MEETING_FINALIZE,
+    COMMAND_MEETING_RETRANSCRIBE,
 )
 from engine.runtime_settings import HEARTBEAT_INTERVAL_SECONDS
 from engine.stt.live_capture_service import LiveCaptureService
@@ -123,6 +131,9 @@ class WebSocketConnectionHandler:
         # Multiple tasks write to one socket (heartbeat + replies + broadcast
         # events); the lock serialises sends so frames never interleave.
         self._send_lock = asyncio.Lock()
+        # Long-running meeting commands keep a strong ref so they are not GC'd
+        # mid-flight (same pattern as server.py vault_rebind_tasks).
+        self._background_command_tasks: set[asyncio.Task[None]] = set()
 
     async def run(self) -> None:
         """Serve the connection until the client disconnects.
@@ -134,10 +145,10 @@ class WebSocketConnectionHandler:
         """
         heartbeat_task = asyncio.create_task(self._emit_heartbeats())
         unsubscribe = self._event_hub.subscribe(self._send)
-        # UI may have missed the one-shot meeting.detected while offline /
-        # remounting — re-arm so the next detection poll can toast again.
+        # UI may have missed the one-shot meeting.detected while offline —
+        # re-arm only on the 0→1 UI subscriber transition (not every connect).
         if self._detection_service is not None:
-            self._detection_service.rearm_suggestions_for_ui()
+            self._detection_service.notify_ui_connected()
         try:
             while True:
                 raw = await self._websocket.receive_text()
@@ -145,11 +156,23 @@ class WebSocketConnectionHandler:
         except WebSocketDisconnect:
             pass  # Normal client hang-up; nothing to report.
         finally:
+            if self._detection_service is not None:
+                self._detection_service.notify_ui_disconnected()
             unsubscribe()
             heartbeat_task.cancel()
             # Await cancellation so shutdown is graceful, not fire-and-forget.
-            with contextlib.suppress(asyncio.CancelledError):
+            # Suppress CancelledError (BaseException on 3.11+) AND ordinary
+            # exceptions (e.g. raced send-on-closed-socket) so disconnect never
+            # surfaces as an unhandled ASGI error.
+            with contextlib.suppress(asyncio.CancelledError, Exception):
                 await heartbeat_task
+            # Cancel any in-flight long commands so they do not outlive the socket.
+            pending = [t for t in self._background_command_tasks if not t.done()]
+            for task in pending:
+                task.cancel()
+            if pending:
+                with contextlib.suppress(asyncio.CancelledError, Exception):
+                    await asyncio.gather(*pending, return_exceptions=True)
 
     async def _send(self, envelope: Envelope) -> None:
         """Serialised send — the only path that writes to the socket."""
@@ -237,6 +260,13 @@ class WebSocketConnectionHandler:
             await dispatch_naomi_loop_command(command, self._naomi_loop_control, self._send)
             return
         if command.name in MEETING_COMMAND_NAMES:
+            # Long-running finalize / retranscribe / import.media must not
+            # block the receive loop (capture.stop and other commands).
+            if command.name in _LONG_MEETING_COMMANDS:
+                self._spawn_background_command(
+                    dispatch_meeting_command(command, self._finalization_service, self._send)
+                )
+                return
             # Additive meeting.finalize / meetings.list / meeting.get surface
             # (engine.enhance owns validation, refusal semantics, and replies).
             await dispatch_meeting_command(command, self._finalization_service, self._send)
@@ -275,6 +305,37 @@ class WebSocketConnectionHandler:
                 f"unknown command name: {command.name!r}",
             )
         )
+
+    def _spawn_background_command(
+        self, coro: Coroutine[Any, Any, None] | Awaitable[None]
+    ) -> None:
+        """Run a long command off the receive loop; keep a strong task ref."""
+        task = asyncio.create_task(self._run_background_command(coro))
+        self._background_command_tasks.add(task)
+        task.add_done_callback(self._background_command_tasks.discard)
+
+    async def _run_background_command(
+        self, coro: Coroutine[Any, Any, None] | Awaitable[None]
+    ) -> None:
+        """Await the command; unexpected errors are logged (socket stays up)."""
+        try:
+            await coro
+        except Exception:
+            # Dispatcher already sends structured errors for known refusal paths;
+            # unexpected exceptions must not kill the receive loop.
+            logging.getLogger(__name__).exception(
+                "background meeting command failed without a reply"
+            )
+
+
+# Commands that can run for minutes; keep the receive loop draining.
+_LONG_MEETING_COMMANDS = frozenset(
+    {
+        COMMAND_MEETING_FINALIZE,
+        COMMAND_MEETING_RETRANSCRIBE,
+        COMMAND_IMPORT_MEDIA,
+    }
+)
 
 
 def _best_effort_frame_id(raw: str) -> str:

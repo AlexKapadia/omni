@@ -171,15 +171,15 @@ def create_app(
         )
     # M3 live vault watching (OS-event-driven — same rule).
     vault_watchdog = vault_watchdog_factory() if vault_watchdog_factory else None
-    vault_rebind_tasks: list[asyncio.Task[None]] = []
+    vault_rebind_tasks: set[asyncio.Task[None]] = set()
     if vault_watchdog is not None:
         # Mid-session vault_dir change: stop the old observer and watch the new root.
         def _rebind_vault_watcher(vault_dir: str) -> None:
             loop = asyncio.get_running_loop()
             # Keep a strong ref so the task is not GC'd mid-flight (RUF006).
-            vault_rebind_tasks.append(
-                loop.create_task(vault_watchdog.rebind(Path(vault_dir)))
-            )
+            task = loop.create_task(vault_watchdog.rebind(Path(vault_dir)))
+            vault_rebind_tasks.add(task)
+            task.add_done_callback(vault_rebind_tasks.discard)
 
         m7.settings_gateway.set_vault_dir_listener(_rebind_vault_watcher)
     calendar_poll = calendar_poll_factory(event_hub) if calendar_poll_factory else None
@@ -227,6 +227,14 @@ def create_app(
             with contextlib.suppress(Exception):
                 await detection_wiring.stop()
         if vault_watchdog is not None:
+            # Cancel/await straggling rebind tasks so they do not outlive shutdown.
+            pending_rebinds = [t for t in vault_rebind_tasks if not t.done()]
+            for task in pending_rebinds:
+                task.cancel()
+            if pending_rebinds:
+                with contextlib.suppress(Exception):
+                    await asyncio.gather(*pending_rebinds, return_exceptions=True)
+            vault_rebind_tasks.clear()
             with contextlib.suppress(Exception):
                 await vault_watchdog.shutdown()
         if calendar_poll is not None:

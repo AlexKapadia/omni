@@ -23,6 +23,7 @@ import hashlib
 import json
 import os
 import sys
+import threading
 import urllib.request
 from collections.abc import Callable
 from dataclasses import dataclass
@@ -65,9 +66,10 @@ MODEL_SPECS: tuple[ModelSpec, ...] = (
     ),
 )
 
-# fetch(url, destination, progress(bytes_done, bytes_total|None)) — injectable
-# so unit tests never touch the network (no-network-in-unit-tests rule).
-FetchFn = Callable[[str, Path, Callable[[int, int | None], None]], None]
+# fetch(url, destination, progress(bytes_done, bytes_total|None), cancel?) —
+# injectable so unit tests never touch the network (no-network-in-unit-tests).
+# cancel is an optional threading.Event checked per 256KB block.
+FetchFn = Callable[..., None]
 
 
 def models_directory() -> Path:
@@ -94,7 +96,16 @@ def sha256_of_file(path: Path) -> str:
     return digest.hexdigest()
 
 
-def _https_fetch(url: str, destination: Path, progress: Callable[[int, int | None], None]) -> None:
+class ModelDownloadCancelled(Exception):
+    """User cancelled an in-flight model download (fail closed, clean retry)."""
+
+
+def _https_fetch(
+    url: str,
+    destination: Path,
+    progress: Callable[[int, int | None], None],
+    cancel_event: threading.Event | None = None,
+) -> None:
     """Default fetcher: streaming HTTPS download to ``destination``."""
     if not url.startswith("https://"):
         # Deny by default: plaintext or exotic schemes are refused outright.
@@ -108,6 +119,10 @@ def _https_fetch(url: str, destination: Path, progress: Callable[[int, int | Non
         done = 0
         with destination.open("wb") as out:
             for block in iter(lambda: response.read(1024 * 256), b""):
+                # Cooperative cancel: checked per block so models.cancel stops
+                # the worker thread (asyncio task cancel alone cannot).
+                if cancel_event is not None and cancel_event.is_set():
+                    raise ModelDownloadCancelled("models.download cancelled")
                 out.write(block)
                 done += len(block)
                 progress(done, total)
@@ -177,6 +192,7 @@ def download_models_with_progress(
     specs: tuple[ModelSpec, ...] = MODEL_SPECS,
     manifest_path: Path | None = None,
     fetch: FetchFn = _https_fetch,
+    cancel_event: threading.Event | None = None,
 ) -> list[dict[str, Any]]:
     """Ensure each model is present AND integrity-verified, emitting progress.
 
@@ -199,7 +215,11 @@ def download_models_with_progress(
                 # Mid-download: verification not yet known (None), not a guess.
                 on_progress(_name, done, total, None)
 
-            fetch(spec.url, partial_path, _beat)
+            try:
+                fetch(spec.url, partial_path, _beat, cancel_event)
+            except TypeError:
+                # Test fakes may still use the 3-arg fetch signature.
+                fetch(spec.url, partial_path, _beat)
             # Atomic completion gate: a torn download never gets the real name.
             partial_path.replace(final_path)
         size = final_path.stat().st_size

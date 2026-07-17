@@ -9,6 +9,7 @@ from engine.microsoft.dpapi_microsoft_token_store import MicrosoftOAuthTokens, M
 from engine.microsoft.microsoft_auth_errors import (
     MicrosoftApiCallError,
     MicrosoftDependencyMissingError,
+    MicrosoftEgressBlockedError,
     MicrosoftNotConnectedError,
     MicrosoftTokenRefreshError,
 )
@@ -16,6 +17,7 @@ from engine.microsoft.oauth_desktop_flow import (
     MICROSOFT_TOKEN_ENDPOINT,
     tokens_from_token_response,
 )
+from engine.security.kill_switch import kill_switch_engaged
 
 FormPoster = Callable[[str, dict[str, str]], Awaitable[dict[str, object]]]
 
@@ -45,6 +47,9 @@ class DpapiMicrosoftSession(MicrosoftSession):
         self._clock = clock
 
     async def _fresh_access_token(self) -> str:
+        # kill-switch: refuse all egress when engaged (including refresh)
+        if kill_switch_engaged():
+            raise MicrosoftEgressBlockedError
         tokens = self._token_store.load_tokens()
         if tokens is None:
             raise MicrosoftNotConnectedError
@@ -53,6 +58,9 @@ class DpapiMicrosoftSession(MicrosoftSession):
         return tokens.access_token
 
     async def _refresh(self, tokens: MicrosoftOAuthTokens) -> MicrosoftOAuthTokens:
+        # kill-switch: refuse all egress when engaged
+        if kill_switch_engaged():
+            raise MicrosoftEgressBlockedError
         credentials = self._token_store.load_client_credentials()
         if credentials is None:
             raise MicrosoftTokenRefreshError("no client credentials for refresh")
@@ -80,6 +88,9 @@ class DpapiMicrosoftSession(MicrosoftSession):
         params: dict[str, str] | None = None,
         json_body: dict[str, object] | None = None,
     ) -> dict[str, object]:
+        # kill-switch: refuse all egress when engaged
+        if kill_switch_engaged():
+            raise MicrosoftEgressBlockedError
         token = await self._fresh_access_token()
         try:
             import httpx

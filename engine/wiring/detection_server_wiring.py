@@ -108,6 +108,8 @@ class DetectionServerWiring:
                 on_decision=self._on_decision,
             )
         )
+        # Strong refs for broadcast tasks so they are not GC'd mid-flight.
+        self._broadcast_tasks: set[asyncio.Task[None]] = set()
         # Device swaps must reset the sustained-VAD accounting (stale speech
         # time from the old endpoint must not bill the new one).
         self._unsubscribe = hub.subscribe(self._on_hub_event)
@@ -135,7 +137,13 @@ class DetectionServerWiring:
             logger.exception("unmappable detection decision dropped")
             return
         # The poll tick is sync; the broadcast is async — schedule it.
-        asyncio.get_running_loop().create_task(self._hub.broadcast_event(name, payload))
+        # Keep a strong ref + done-callback discard so the task is not GC'd
+        # mid-flight (RUF006 / silent event drop).
+        task = asyncio.get_running_loop().create_task(
+            self._hub.broadcast_event(name, payload)
+        )
+        self._broadcast_tasks.add(task)
+        task.add_done_callback(self._broadcast_tasks.discard)
 
     async def _on_hub_event(self, envelope: Envelope) -> None:
         """Hub subscriber: cheap, and NEVER raises (a raiser gets dropped)."""

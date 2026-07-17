@@ -158,11 +158,22 @@ class AutoStartRulesEngine:
 
         Why: suggest fires once per app-session. If the UI missed that event
         (wasn't mounted / reconnecting), the session stays handled forever
-        while Zoom/Teams stays open — no toast ever appears. Rearm on UI
-        connect; honour dismiss cooldown so "Not now" still sticks.
+        while Zoom/Teams stays open — no toast ever appears. Rearm on the
+        hub's 0→1 UI subscriber transition only; honour dismiss cooldown so
+        "Not now" still sticks.
+
+        Auto-start-eligible sources are excluded: clearing ``handled`` after a
+        manual stop would re-emit ``AutoStart`` and restart capture against
+        the user's explicit stop while the meeting app is still open.
         """
         for source, session in self._sessions.items():
             if now_s < self._dismissed_until_s.get(source, float("-inf")):
+                continue
+            # Exclude auto-start sources: reconnect must not resurrect auto-start.
+            if (
+                source in KNOWN_DETECTION_SOURCES
+                and source in self._settings.auto_start_sources
+            ):
                 continue
             session.handled = False
 

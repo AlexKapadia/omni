@@ -54,11 +54,17 @@ Refuted by first pass: vite inputs complete (incl. meeting-toast.html); lib.rs r
 ## Agent ledger
 | Agent | Brief | Status |
 | --- | --- | --- |
-| explore-scan | product-level blocker scan | running |
-| grok batch A | fix 44 tsc errors | pending |
-| grok batch B | fix ruff | pending |
-| grok batch C | fix mypy | pending |
-| grok batch D | fix product blockers | pending |
+| explore-scan | product-level blocker scan (first pass) | returned, integrated |
+| grok batch A | fix 44 tsc errors | done, verified, committed 8b89675 |
+| grok batch B+C | fix ruff+mypy | done, verified, committed 8b89675 |
+| fable sweep UI | deep UI defect hunt | returned → docs/progress/sweep-ui.md (7 MAJOR, 4 MINOR) |
+| fable sweep Rust/pkg | deep Rust+packaging hunt | returned → docs/progress/sweep-rust-packaging.md (6 MAJOR, 3 MINOR) |
+| fable sweep engine | deep engine defect hunt | returned → docs/progress/sweep-engine.md (1 BLOCKER, 7 MAJOR, 5 MINOR) |
+| grok batch D1 (UI+Rust) | fix all sweep-ui + sweep-rust items per grok-brief-ui-rust-fixes.md | running → grok-run-ui-rust.log |
+| grok batch D2 (engine) | fix all 13 sweep-engine items per grok-brief-engine-fixes.md | running → grok-run-engine-fixes.log |
+
+## Resume here (updated)
+Both grok fix runs in flight (D1: apps/ui + src-tauri + pyproject; D2: engine/ + tests/ — disjoint scopes, safe in parallel). When they exit: re-verify ALL gates independently (tsc, vitest, cargo check, vite build, pytest, ruff, mypy), spot-check the security fixes (kill-switch in Graph gateway, reveal_path_in_explorer validation), then commit.
 
 ## Resume here
 If picking this up cold: check gate state table vs reality (`npx tsc --noEmit` in apps/ui; `uv run ruff check .`; `uv run mypy`), then continue with the first non-green batch. Verify after every batch: the fixing agent's word is not evidence.

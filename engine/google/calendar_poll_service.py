@@ -16,7 +16,10 @@ from engine.google.google_auth_errors import GoogleNotConnectedError
 from engine.google.google_session import DpapiGoogleSession, GoogleSession
 from engine.microsoft.graph_api_gateway import UpcomingOutlookEvent, list_upcoming_outlook_events
 from engine.microsoft.graph_session import DpapiMicrosoftSession, MicrosoftSession
-from engine.microsoft.microsoft_auth_errors import MicrosoftNotConnectedError
+from engine.microsoft.microsoft_auth_errors import (
+    MicrosoftEgressBlockedError,
+    MicrosoftNotConnectedError,
+)
 from engine.protocol.calendar_event_payloads import (
     EVENT_CALENDAR_UPCOMING,
     build_calendar_upcoming_payload,
@@ -50,7 +53,9 @@ class CalendarPollService:
         self._lookahead = timedelta(minutes=lookahead_minutes)
         self._now_factory = now_factory or (lambda: datetime.now(tz=UTC))
         self._task: asyncio.Task[None] | None = None
-        self._last_broadcast_ids: frozenset[str] = frozenset()
+        # Per-provider dedupe: a Microsoft tick must not wipe Google ids (and
+        # vice versa), or every event re-broadcasts every poll with both live.
+        self._last_broadcast_ids_by_provider: dict[str, frozenset[str]] = {}
 
     def start(self) -> None:
         if self._task is not None and not self._task.done():
@@ -101,7 +106,7 @@ class CalendarPollService:
                 time_min_iso=time_min_iso,
                 time_max_iso=time_max_iso,
             )
-        except MicrosoftNotConnectedError:
+        except (MicrosoftNotConnectedError, MicrosoftEgressBlockedError):
             return
         except Exception:
             logger.exception("outlook calendar poll tick failed; skipping")
@@ -114,9 +119,10 @@ class CalendarPollService:
         provider: str,
     ) -> None:
         current_ids = frozenset(f"{provider}:{event.event_id}" for event in events)
+        previously_seen = self._last_broadcast_ids_by_provider.get(provider, frozenset())
         for event in events:
             key = f"{provider}:{event.event_id}"
-            if key in self._last_broadcast_ids:
+            if key in previously_seen:
                 continue
             payload = build_calendar_upcoming_payload(
                 event_id=event.event_id,
@@ -130,4 +136,4 @@ class CalendarPollService:
                 await self._hub.broadcast_event(EVENT_CALENDAR_UPCOMING, payload)
             except Exception:
                 logger.exception("calendar.upcoming broadcast failed")
-        self._last_broadcast_ids = current_ids
+        self._last_broadcast_ids_by_provider[provider] = current_ids

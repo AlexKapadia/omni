@@ -136,6 +136,9 @@ class LiveCaptureService:
         # keep_audio setting is explicitly False (kept audio saved as MP3).
         self._keep_audio_recorder: KeepAudioRecorder | None = None
         self._speaker_labeler: SpeakerSessionLabeler | None = None
+        # Serialize start/stop so concurrent capture.start cannot race past the
+        # meeting_id check and leak a second set of streams.
+        self._lifecycle_lock = asyncio.Lock()
 
     @property
     def is_stt_ready(self) -> bool:
@@ -159,6 +162,10 @@ class LiveCaptureService:
 
     async def start(self, title: str | None, mic_device_id: str | None = None) -> str:
         """Begin a capture session; returns the new meeting id."""
+        async with self._lifecycle_lock:
+            return await self._start_locked(title, mic_device_id)
+
+    async def _start_locked(self, title: str | None, mic_device_id: str | None) -> str:
         if self._meeting_id is not None:
             raise CaptureServiceError("capture is already running")
         await apply_migrations(self._db_path, self._migrations_dir)
@@ -240,38 +247,48 @@ class LiveCaptureService:
 
     async def stop(self, reason: str = "command") -> str:
         """End the session; ``reason`` ('command'|'silence'|'error') rides capture.stopped."""
+        async with self._lifecycle_lock:
+            return await self._stop_locked(reason)
+
+    async def _stop_locked(self, reason: str) -> str:
         meeting_id = self._meeting_id
-        if meeting_id is None or self._controller is None or self._connection is None:
+        controller = self._controller
+        connection = self._connection
+        if meeting_id is None or controller is None or connection is None:
             raise CaptureServiceError("capture is not running")
-        await self._controller.stop()  # No new audio beyond this point.
-        current = asyncio.current_task()  # the auto-stop task may be the caller
-        for task in self._tasks:
-            if task is current:
-                continue  # never self-cancel/self-await (would abort this stop)
-            task.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await task
-        for pipeline in self._pipelines.values():
-            await pipeline.finalize()  # Emits any in-flight finals.
-        if self._keep_audio_recorder is not None:
-            self._keep_audio_recorder.close()  # finalise WAV, transcode to MP3
+        try:
+            await controller.stop()  # No new audio beyond this point.
+            current = asyncio.current_task()  # the auto-stop task may be the caller
+            for task in self._tasks:
+                if task is current:
+                    continue  # never self-cancel/self-await (would abort this stop)
+                task.cancel()
+                with contextlib.suppress(asyncio.CancelledError):
+                    await task
+            for pipeline in self._pipelines.values():
+                await pipeline.finalize()  # Emits any in-flight finals.
+            if self._keep_audio_recorder is not None:
+                self._keep_audio_recorder.close()  # finalise WAV, transcode to MP3
+                self._keep_audio_recorder = None
+            await mark_meeting_ended(connection, meeting_id, utc_now_iso())
+            await connection.close()
+            if self._emitter is not None:
+                self._emitter.log_latency_summary()  # Closing latency report.
+            await self._hub.broadcast_event(
+                EVENT_CAPTURE_STOPPED, build_capture_stopped_payload(meeting_id, reason)
+            )
+            logger.info("capture stopped: meeting %s (%s)", meeting_id, reason)
+            return meeting_id
+        finally:
+            # Always clear session state so a failed finalize cannot wedge capture.
+            self._emitter = None
+            self._speaker_labeler = None
+            self._connection = None
+            self._controller = None
+            self._pipelines = {}
+            self._tasks = []
+            self._meeting_id = None
             self._keep_audio_recorder = None
-        await mark_meeting_ended(self._connection, meeting_id, utc_now_iso())
-        await self._connection.close()
-        if self._emitter is not None:
-            self._emitter.log_latency_summary()  # Closing latency report.
-        self._emitter = None
-        self._speaker_labeler = None
-        self._connection = None
-        self._controller = None
-        self._pipelines = {}
-        self._tasks = []
-        self._meeting_id = None
-        await self._hub.broadcast_event(
-            EVENT_CAPTURE_STOPPED, build_capture_stopped_payload(meeting_id, reason)
-        )
-        logger.info("capture stopped: meeting %s (%s)", meeting_id, reason)
-        return meeting_id
 
     def _build_pipeline(self, label: StreamLabel) -> PerStreamTranscriptionPipeline:
         vad_factory = self._models.vad_factory

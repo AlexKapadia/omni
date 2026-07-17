@@ -81,7 +81,7 @@ async def retranscribe_meeting(
                     meeting_id,
                 )
                 continue
-            samples = decode_kept_audio(audio_path)
+            samples = await asyncio.to_thread(decode_kept_audio, audio_path)
             all_segments.extend(
                 await asyncio.to_thread(
                     transcribe_samples_with_backend,

@@ -1,12 +1,26 @@
-"""Microsoft Graph calendar helpers."""
+"""Microsoft Graph calendar helpers.
+
+Security invariants:
+- KILL SWITCH FIRST (fail closed): every function checks the global egress
+  kill switch BEFORE touching the session, mirroring the Google gateway.
+"""
 
 from __future__ import annotations
 
 from dataclasses import dataclass
 
 from engine.microsoft.graph_session import MicrosoftSession
+from engine.microsoft.microsoft_auth_errors import MicrosoftEgressBlockedError
+from engine.security.kill_switch import kill_switch_engaged
 
 GRAPH_BASE = "https://graph.microsoft.com/v1.0"
+
+
+def _refuse_egress_when_kill_switch_engaged() -> None:
+    """claude.md §5.6 kill switch: engaged means NO Graph call, period."""
+    # kill-switch: refuse all egress when engaged
+    if kill_switch_engaged():
+        raise MicrosoftEgressBlockedError
 
 
 @dataclass(frozen=True)
@@ -24,6 +38,7 @@ async def list_upcoming_outlook_events(
     time_min_iso: str,
     time_max_iso: str,
 ) -> tuple[UpcomingOutlookEvent, ...]:
+    _refuse_egress_when_kill_switch_engaged()
     payload = await session.request_json(
         "GET",
         f"{GRAPH_BASE}/me/calendarView",

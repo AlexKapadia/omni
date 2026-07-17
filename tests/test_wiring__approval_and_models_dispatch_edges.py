@@ -358,7 +358,13 @@ async def test_models_download_completes_ok_with_default_specs(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def fake_download(
-        on_progress: object, *, models_dir: object, manifest_path: object, fetch: object
+        on_progress: object,
+        *,
+        models_dir: object,
+        manifest_path: object,
+        fetch: object,
+        cancel_event: object = None,
+        **_kwargs: object,
     ) -> list[dict[str, object]]:
         return [{"file": "parakeet.bin"}]
 
@@ -385,6 +391,8 @@ async def test_models_download_uses_explicit_specs_when_provided(
         manifest_path: object,
         fetch: object,
         specs: object,
+        cancel_event: object = None,
+        **_kwargs: object,
     ) -> list[dict[str, object]]:
         seen["specs"] = specs
         return []
@@ -403,7 +411,13 @@ async def test_models_download_reports_integrity_failure_per_file(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def fake_download(
-        on_progress: object, *, models_dir: object, manifest_path: object, fetch: object
+        on_progress: object,
+        *,
+        models_dir: object,
+        manifest_path: object,
+        fetch: object,
+        cancel_event: object = None,
+        **_kwargs: object,
     ) -> list[dict[str, object]]:
         raise ModelIntegrityError("bge-small.bin", "expected", "actual")
 
@@ -421,7 +435,13 @@ async def test_models_download_reports_generic_failure_without_a_filename(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     def fake_download(
-        on_progress: object, *, models_dir: object, manifest_path: object, fetch: object
+        on_progress: object,
+        *,
+        models_dir: object,
+        manifest_path: object,
+        fetch: object,
+        cancel_event: object = None,
+        **_kwargs: object,
     ) -> list[dict[str, object]]:
         raise RuntimeError("disk full")
 

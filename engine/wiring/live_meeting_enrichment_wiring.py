@@ -239,6 +239,9 @@ class LiveMeetingEnrichmentWiring:
             item = await queue.get()
             try:
                 if item is _FLUSH_AND_STOP:
+                    # Stop the ticker before closing sqlite so tick() cannot
+                    # race against a closed connection (unretrieved exception).
+                    await self._cancel_tick_task()
                     await session.flush()
                     break
                 if isinstance(item, tuple):
@@ -247,8 +250,17 @@ class LiveMeetingEnrichmentWiring:
             except Exception:
                 logger.exception("live enrichment pass failed")
                 if item is _FLUSH_AND_STOP:
+                    await self._cancel_tick_task()
                     break
         await self._close_connection()
+
+    async def _cancel_tick_task(self) -> None:
+        """Cancel the 5s ticker; safe to call more than once."""
+        tick, self._tick_task = self._tick_task, None
+        if tick is not None and not tick.done():
+            tick.cancel()
+            with contextlib.suppress(asyncio.CancelledError):
+                await tick
 
     async def _close_connection(self) -> None:
         connection, self._connection = self._connection, None
@@ -264,11 +276,7 @@ class LiveMeetingEnrichmentWiring:
         self._session_preferred_model = None
         self._session_preferred_provider = None
         self._combined = None
-        tick, self._tick_task = self._tick_task, None
-        if tick is not None and not tick.done():
-            tick.cancel()
-            with contextlib.suppress(asyncio.CancelledError):
-                await tick
+        await self._cancel_tick_task()
         worker, self._worker = self._worker, None
         if worker is not None and not worker.done():
             worker.cancel()

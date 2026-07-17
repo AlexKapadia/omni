@@ -20,7 +20,11 @@ from engine.microsoft.dpapi_microsoft_token_store import (
     MicrosoftOAuthTokens,
     MicrosoftTokenStore,
 )
-from engine.microsoft.microsoft_auth_errors import MicrosoftOAuthFlowError
+from engine.microsoft.microsoft_auth_errors import (
+    MicrosoftEgressBlockedError,
+    MicrosoftOAuthFlowError,
+)
+from engine.security.kill_switch import kill_switch_engaged
 
 MICROSOFT_AUTHORIZATION_ENDPOINT = (
     "https://login.microsoftonline.com/common/oauth2/v2.0/authorize"
@@ -86,6 +90,9 @@ async def run_microsoft_oauth_desktop_flow(
     token_exchange: TokenExchangeTransport = _default_token_exchange,
     timeout_seconds: float = 300.0,
 ) -> MicrosoftOAuthTokens:
+    # kill-switch: refuse all egress when engaged (OAuth is external egress)
+    if kill_switch_engaged():
+        raise MicrosoftEgressBlockedError
     credentials = token_store.load_client_credentials()
     if credentials is None:
         raise MicrosoftOAuthFlowError(

@@ -18,6 +18,7 @@ Security invariants:
 import asyncio
 import contextlib
 import logging
+import threading
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 from typing import Any
@@ -48,6 +49,7 @@ from engine.protocol import (
 )
 from engine.stt.model_weights_downloader import (
     FetchFn,
+    ModelDownloadCancelled,
     ModelIntegrityError,
     ModelSpec,
     _https_fetch,
@@ -56,12 +58,9 @@ from engine.stt.model_weights_downloader import (
 )
 from engine.stt.whisper_model_catalog import download_whisper_model
 from engine.wiring.models_lifecycle_ops import (
-    cancel_in_flight_task,
-    open_folder_payload,
-)
-from engine.wiring.models_lifecycle_ops import (
     delete_model_file as _delete_model_file_op,
 )
+from engine.wiring.models_lifecycle_ops import open_folder_payload
 
 logger = logging.getLogger(__name__)
 
@@ -100,6 +99,10 @@ class ModelsDownloadCommandGateway:
         self._fetch = fetch
         self._specs = specs
         self._task: asyncio.Task[None] | None = None
+        # Cooperative cancel for the worker thread (asyncio cancel alone cannot
+        # stop a blocked urllib read). Single-flight stays held until the thread
+        # exits so a second download cannot open the same .partial file.
+        self._cancel_event = threading.Event()
 
     def is_downloading(self) -> bool:
         """True while a download task is in flight (single-flight guard)."""
@@ -109,16 +112,20 @@ class ModelsDownloadCommandGateway:
         """Start the background download. Returns False if one is already running."""
         if self.is_downloading():
             return False
+        self._cancel_event = threading.Event()
         self._task = asyncio.create_task(self._run_download(bundle=bundle, model_id=model_id))
         return True
 
     async def _run_download(self, *, bundle: str, model_id: str | None) -> None:
         """Run the blocking download off-loop, streaming events as it goes."""
         loop = asyncio.get_running_loop()
+        cancel_event = self._cancel_event
 
         def on_progress(
             file: str, received: int, total: int | None, verified: bool | None
         ) -> None:
+            if cancel_event.is_set():
+                return  # stop progress spam after cancel
             payload = build_models_download_progress_payload(file, received, total, verified)
             asyncio.run_coroutine_threadsafe(
                 self._hub.broadcast_event(EVENT_MODELS_DOWNLOAD_PROGRESS, payload), loop
@@ -140,16 +147,28 @@ class ModelsDownloadCommandGateway:
                     manifest_path=self._manifest_path,
                     fetch=self._fetch,
                     specs=specs,
+                    cancel_event=cancel_event,
                 )
             return download_models_with_progress(
                 on_progress,
                 models_dir=self._models_dir,
                 manifest_path=self._manifest_path,
                 fetch=self._fetch,
+                cancel_event=cancel_event,
             )
 
         try:
             files = await asyncio.to_thread(_download)
+        except ModelDownloadCancelled:
+            await self._hub.broadcast_event(
+                EVENT_MODELS_DOWNLOAD_FAILED,
+                build_models_download_failed_payload("", "download cancelled"),
+            )
+            await self._hub.broadcast_event(
+                EVENT_MODELS_DOWNLOAD_COMPLETED,
+                build_models_download_completed_payload(ok=False, files=[]),
+            )
+            return
         except ModelIntegrityError as exc:
             await self._hub.broadcast_event(
                 EVENT_MODELS_DOWNLOAD_FAILED,
@@ -178,14 +197,22 @@ class ModelsDownloadCommandGateway:
 
     async def shutdown(self) -> None:
         """Cancel any in-flight download so it never outlives the process."""
-        if self._task is not None and not self._task.done():
-            self._task.cancel()
-            with contextlib.suppress(asyncio.CancelledError, Exception):
-                await self._task
+        await self.cancel_download()
 
     async def cancel_download(self) -> bool:
-        """User-requested cancel of an in-flight download. False if none running."""
-        return await cancel_in_flight_task(self._task)
+        """User-requested cancel. Sets the thread Event then awaits worker exit.
+
+        Does NOT asyncio-cancel the task alone: that would leave the worker
+        thread writing to .partial while is_downloading flips false. Single-
+        flight remains held until to_thread returns (thread exited).
+        """
+        task = self._task
+        if task is None or task.done():
+            return False
+        self._cancel_event.set()  # cooperative: checked per 256KB block
+        with contextlib.suppress(Exception):
+            await task  # drain until worker thread exits
+        return True
 
     def delete_model_file(self, filename: str) -> dict[str, object]:
         """Delete one weight file, strictly confined to the models directory."""

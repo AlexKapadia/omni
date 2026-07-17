@@ -95,6 +95,9 @@ class DetectionService:
         self._task: asyncio.Task[None] | None = None
         # VAD events raised between ticks, drained into the next tick's signals.
         self._pending_vad_signals: list[DetectionSignal] = []
+        # UI sockets only (not internal hub listeners). Rearm on 0→1 only so
+        # multi-window reconnects do not re-broadcast meeting.detected.
+        self._ui_subscriber_count = 0
 
     @property
     def is_running(self) -> bool:
@@ -112,8 +115,19 @@ class DetectionService:
         """Wiring surface for the UI's 'dismiss' action on a suggestion card."""
         self._rules_engine.dismiss(dedupe_key, self._clock.monotonic())
 
+    def notify_ui_connected(self) -> None:
+        """A UI WebSocket subscribed — rearm only on the 0→1 transition."""
+        was_zero = self._ui_subscriber_count == 0
+        self._ui_subscriber_count += 1
+        if was_zero:
+            self.rearm_suggestions_for_ui()
+
+    def notify_ui_disconnected(self) -> None:
+        """A UI WebSocket unsubscribed — count drops so a later 0→1 can rearm."""
+        self._ui_subscriber_count = max(0, self._ui_subscriber_count - 1)
+
     def rearm_suggestions_for_ui(self) -> None:
-        """UI just connected — allow one more suggest for still-active meetings.
+        """Allow one more suggest for still-active meetings (0→1 UI only).
 
         Immediately tick once so a meeting already in progress surfaces a toast
         without waiting for the next poll interval.

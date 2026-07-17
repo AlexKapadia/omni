@@ -20,7 +20,6 @@ import { LiveTranslationPanel } from "../components/live/live-translation-panel"
 import { VaultSuggestionsPanel } from "../components/live/vault-suggestions-panel";
 import { CaptureBar } from "../components/live/capture-bar";
 import { FinalizeMeetingPanel } from "../components/live/finalize-meeting-panel";
-import { MeetingDetectedToast } from "../components/live/meeting-detected-toast";
 import { NotepadPane } from "../components/live/notepad-pane";
 import { TranscriptStream } from "../components/live/transcript-stream";
 import { requestCaptureStart } from "../lib/capture-commands";
@@ -196,7 +195,6 @@ export function LiveMeetingScreen() {
   if (captureStatus === "idle" || captureStatus === "starting") {
     return (
       <div className="relative h-full">
-        <MeetingDetectedToast />
         <PreCaptureState
           heading="Record a meeting"
           body="Capture the room and your mic as two labelled streams, transcribed on this device. No bot joins the call and nothing leaves this machine."
@@ -209,7 +207,6 @@ export function LiveMeetingScreen() {
   if (captureStatus === "stopped" || captureStatus === "error") {
     return (
       <div className="relative h-full">
-        <MeetingDetectedToast />
         <PreCaptureState
           heading={captureStatus === "error" ? "Capture ended with an error" : "Capture stopped"}
           body={
@@ -226,10 +223,9 @@ export function LiveMeetingScreen() {
     );
   }
 
-  // live / stopping: the full flagship layout.
+  // live / stopping: the full flagship layout. Detection toast lives on App shell.
   return (
     <div className="relative flex h-full min-h-0 flex-col">
-      <MeetingDetectedToast />
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex min-h-0 flex-1">
           {/* Left column: auxiliary panels as collapsible drawers (summary and

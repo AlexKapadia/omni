@@ -1,0 +1,105 @@
+﻿[1mengine\ask\ask_omni_answer_service.py[0m[36m:[0m23[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\ask\live_summary_service.py[0m[36m:[0m23[36m:[0m10[36m:[0m [1m[31mRUF001[0m String contains ambiguous `ΓÇô` (EN DASH). Did you mean `-` (HYPHEN-MINUS)?
+[1mengine\ask\proactive_vault_poller.py[0m[36m:[0m16[36m:[0m45[36m:[0m [1m[31mF401[0m [[36m*[0m] `engine.ask.ask_answer_contracts.LiveAnswerHit` imported but unused
+[1mengine\cli_app.py[0m[36m:[0m123[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (104 > 100)
+[1mengine\detect\meeting_process_watcher.py[0m[36m:[0m111[36m:[0m5[36m:[0m [1m[31mSIM103[0m Return the condition directly
+[1mengine\dictation\dictation_cleanup.py[0m[36m:[0m45[36m:[0m1[36m:[0m [1m[31mE402[0m Module level import not at top of file
+[1mengine\dictation\dictation_cleanup.py[0m[36m:[0m45[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\dictation\dictation_finalization.py[0m[36m:[0m32[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\enhance\meeting_command_dispatcher.py[0m[36m:[0m19[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\enhance\meeting_command_dispatcher.py[0m[36m:[0m239[36m:[0m5[36m:[0m [1m[31mS110[0m `try`-`except`-`pass` detected, consider logging the exception
+[1mengine\enhance\meeting_finalization_service.py[0m[36m:[0m24[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\enhance\meeting_finalization_service.py[0m[36m:[0m219[36m:[0m13[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1mengine\enhance\meeting_finalization_service.py[0m[36m:[0m282[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (103 > 100)
+[1mengine\enhance\meeting_finalization_service.py[0m[36m:[0m362[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (103 > 100)
+[1mengine\enhance\meeting_summary_presenter.py[0m[36m:[0m19[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\google\calendar_poll_service.py[0m[36m:[0m10[36m:[0m29[36m:[0m [1m[31mF401[0m [[36m*[0m] `collections.abc.Awaitable` imported but unused
+[1mengine\google\calendar_poll_service.py[0m[36m:[0m66[36m:[0m9[36m:[0m [1m[31mSIM105[0m Use `contextlib.suppress(asyncio.CancelledError)` instead of `try`-`except`-`pass`
+[1mengine\import_\media_import_service.py[0m[36m:[0m3[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\import_\media_import_service.py[0m[36m:[0m13[36m:[0m8[36m:[0m [1m[31mF401[0m [[36m*[0m] `aiosqlite` imported but unused
+[1mengine\microsoft\oauth_desktop_flow.py[0m[36m:[0m3[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\protocol\__init__.py[0m[36m:[0m14[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\protocol\__init__.py[0m[36m:[0m77[36m:[0m5[36m:[0m [1m[31mF401[0m `engine.protocol.meeting_finalization_payloads.ImportMediaCommandPayload` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+[1mengine\protocol\__init__.py[0m[36m:[0m79[36m:[0m5[36m:[0m [1m[31mF401[0m `engine.protocol.meeting_finalization_payloads.MeetingRetranscribeCommandPayload` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+[1mengine\protocol\__init__.py[0m[36m:[0m80[36m:[0m5[36m:[0m [1m[31mF401[0m `engine.protocol.meeting_finalization_payloads.MeetingTextReplacePayload` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+[1mengine\protocol\__init__.py[0m[36m:[0m81[36m:[0m5[36m:[0m [1m[31mF401[0m `engine.protocol.meeting_finalization_payloads.MeetingExportCommandPayload` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+[1mengine\protocol\__init__.py[0m[36m:[0m85[36m:[0m5[36m:[0m [1m[31mF401[0m `engine.protocol.meeting_finalization_payloads.TranscriptSegmentUpdatePayload` imported but unused; consider removing, adding to `__all__`, or using a redundant alias
+[1mengine\protocol\__init__.py[0m[36m:[0m147[36m:[0m11[36m:[0m [1m[31mRUF022[0m [[36m*[0m] `__all__` is not sorted
+[1mengine\protocol\live_enrichment_payloads.py[0m[36m:[0m10[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (103 > 100)
+[1mengine\protocol\models_download_payloads.py[0m[36m:[0m44[36m:[0m9[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1mengine\router\fallback_executor.py[0m[36m:[0m25[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\router\fallback_executor.py[0m[36m:[0m49[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (109 > 100)
+[1mengine\router\model_pricing.py[0m[36m:[0m15[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\router\ollama_http_client.py[0m[36m:[0m35[36m:[0m11[36m:[0m [1m[31mS310[0m Audit URL open for permitted schemes. Allowing use of `file:` or custom schemes is often unexpected.
+[1mengine\router\ollama_http_client.py[0m[36m:[0m80[36m:[0m11[36m:[0m [1m[31mS310[0m Audit URL open for permitted schemes. Allowing use of `file:` or custom schemes is often unexpected.
+[1mengine\router\provider_client_azure_openai.py[0m[36m:[0m41[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (102 > 100)
+[1mengine\router\routing_table.py[0m[36m:[0m104[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (134 > 100)
+[1mengine\server.py[0m[36m:[0m20[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\server.py[0m[36m:[0m178[36m:[0m13[36m:[0m [1m[31mRUF006[0m Store a reference to the return value of `loop.create_task`
+[1mengine\stt\file_diarization_service.py[0m[36m:[0m25[36m:[0m9[36m:[0m [1m[31mSIM108[0m Use ternary operator `speaker_id = "1" if end <= start else diarizer.assign(samples[start:end])` instead of `if`-`else`-block
+[1mengine\stt\live_capture_service.py[0m[36m:[0m21[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\stt\live_capture_service.py[0m[36m:[0m303[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (104 > 100)
+[1mengine\stt\offline_audio_transcriber.py[0m[36m:[0m32[36m:[0m14[36m:[0m [1m[31mS603[0m `subprocess` call: check for execution of untrusted input
+[1mengine\stt\offline_audio_transcriber.py[0m[36m:[0m33[36m:[0m9[36m:[0m [1m[31mS607[0m Starting a process with a partial executable path
+[1mengine\stt\silence_auto_stop_monitor.py[0m[36m:[0m127[36m:[0m9[36m:[0m [1m[31mE731[0m Do not assign a `lambda` expression, use a `def`
+[1mengine\stt\speaker_voice_profile.py[0m[36m:[0m102[36m:[0m26[36m:[0m [1m[31mRUF046[0m Value being cast to `int` is already an integer
+[1mengine\stt\speaker_voice_profile.py[0m[36m:[0m119[36m:[0m9[36m:[0m [1m[31mSIM102[0m Use a single `if` statement instead of nested `if` statements
+[1mengine\stt\stt_settings_loader.py[0m[36m:[0m3[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\stt\transcript_event_emitter.py[0m[36m:[0m60[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (106 > 100)
+[1mengine\stt\transcript_event_emitter.py[0m[36m:[0m69[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (106 > 100)
+[1mengine\stt\whisper_model_catalog.py[0m[36m:[0m13[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\stt\whisper_model_catalog.py[0m[36m:[0m36[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (102 > 100)
+[1mengine\stt\whisper_model_catalog.py[0m[36m:[0m37[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (112 > 100)
+[1mengine\stt\whisper_model_catalog.py[0m[36m:[0m38[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (112 > 100)
+[1mengine\stt\whisper_model_catalog.py[0m[36m:[0m39[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (117 > 100)
+[1mengine\stt\whisper_model_catalog.py[0m[36m:[0m52[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (108 > 100)
+[1mengine\stt\whisper_model_catalog.py[0m[36m:[0m53[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (101 > 100)
+[1mengine\stt\whisper_model_catalog.py[0m[36m:[0m54[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (105 > 100)
+[1mengine\wiring\app_settings_command_gateway.py[0m[36m:[0m20[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\wiring\app_settings_command_gateway.py[0m[36m:[0m251[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (101 > 100)
+[1mengine\wiring\detection_server_wiring.py[0m[36m:[0m26[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\wiring\dictation_command_dispatcher.py[0m[36m:[0m24[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\wiring\dictation_history_command_dispatcher.py[0m[36m:[0m3[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\wiring\dictation_history_command_dispatcher.py[0m[36m:[0m8[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (106 > 100)
+[1mengine\wiring\microsoft_connect_command_dispatcher.py[0m[36m:[0m58[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (103 > 100)
+[1mengine\wiring\models_download_command_dispatcher.py[0m[36m:[0m18[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\wiring\models_download_command_dispatcher.py[0m[36m:[0m130[36m:[0m17[36m:[0m [1m[31mS101[0m Use of `assert` detected
+[1mengine\wiring\models_download_command_dispatcher.py[0m[36m:[0m248[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (104 > 100)
+[1mengine\wiring\models_lifecycle_ops.py[0m[36m:[0m22[36m:[0m39[36m:[0m [1m[31mUP037[0m [[36m*[0m] Remove quotes from type annotation
+[1mengine\wiring\ollama_command_dispatcher.py[0m[36m:[0m197[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (102 > 100)
+[1mengine\wiring\onboarding_settings_command_surface.py[0m[36m:[0m19[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\wiring\server_default_service_factories.py[0m[36m:[0m17[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\wiring\settings_value_validation.py[0m[36m:[0m21[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\wiring\speaker_enroll_command_dispatcher.py[0m[36m:[0m3[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mengine\wiring\speaker_enroll_command_dispatcher.py[0m[36m:[0m61[36m:[0m33[36m:[0m [1m[31mF821[0m Undefined name `Path`
+[1mengine\wiring\speaker_enroll_command_dispatcher.py[0m[36m:[0m61[36m:[0m55[36m:[0m [1m[31mF821[0m Undefined name `Path`
+[1mengine\wiring\speaker_enroll_command_dispatcher.py[0m[36m:[0m81[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (107 > 100)
+[1mtests\test_audio__capture_backend_and_device_listing_fake.py[0m[36m:[0m545[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (105 > 100)
+[1mtests\test_dictation__session_service_error_edges.py[0m[36m:[0m281[36m:[0m53[36m:[0m [1m[31mRUF043[0m Pattern passed to `match=` contains metacharacters but is neither escaped nor raw
+[1mtests\test_enhance__meeting_export_replace_integration.py[0m[36m:[0m73[36m:[0m5[36m:[0m [1m[31mF841[0m Local variable `hub` is assigned to but never used
+[1mtests\test_import__media_import_indexes_transcript.py[0m[36m:[0m3[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mtests\test_import__media_import_indexes_transcript.py[0m[36m:[0m17[36m:[0m73[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `ANN001`)
+[1mtests\test_import__media_import_indexes_transcript.py[0m[36m:[0m42[36m:[0m64[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `ANN001`)
+[1mtests\test_ollama_http_client__ping_list.py[0m[36m:[0m28[36m:[0m28[36m:[0m [1m[31mUP037[0m [[36m*[0m] Remove quotes from type annotation
+[1mtests\test_protocol__meetily_parity_payloads.py[0m[36m:[0m3[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mtests\test_server__websocket_lifecycle.py[0m[36m:[0m59[36m:[0m101[36m:[0m [1m[31mE501[0m Line too long (109 > 100)
+[1mtests\test_talkis_integration__features.py[0m[36m:[0m3[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mtests\test_translate__selection_translate_command.py[0m[36m:[0m3[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mtests\test_translate__selection_translate_command.py[0m[36m:[0m71[36m:[0m30[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `ANN001`)
+[1mtests\test_voice__cartesia_voice_id_setting.py[0m[36m:[0m3[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mtests\test_wiring__live_translation_lang_hot_reload.py[0m[36m:[0m17[36m:[0m46[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `ANN002`, `ANN003`)
+[1mtests\test_wiring__live_translation_lang_hot_reload.py[0m[36m:[0m52[36m:[0m32[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `SLF001`)
+[1mtests\test_wiring__live_translation_lang_hot_reload.py[0m[36m:[0m54[36m:[0m42[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `SLF001`)
+[1mtests\test_wiring__live_translation_lang_hot_reload.py[0m[36m:[0m70[36m:[0m38[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `SLF001`)
+[1mtests\test_wiring__live_translation_lang_hot_reload.py[0m[36m:[0m71[36m:[0m46[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `SLF001`)
+[1mtests\test_wiring__live_translation_lang_hot_reload.py[0m[36m:[0m72[36m:[0m45[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `SLF001`)
+[1mtests\test_wiring__live_translation_lang_hot_reload.py[0m[36m:[0m73[36m:[0m48[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `SLF001`)
+[1mtests\test_wiring__live_translation_lang_hot_reload.py[0m[36m:[0m74[36m:[0m34[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `SLF001`)
+[1mtests\test_wiring__live_translation_lang_hot_reload.py[0m[36m:[0m75[36m:[0m33[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `SLF001`)
+[1mtests\test_wiring__live_translation_lang_hot_reload.py[0m[36m:[0m79[36m:[0m45[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `SLF001`)
+[1mtests\test_wiring__live_translation_lang_hot_reload.py[0m[36m:[0m80[36m:[0m58[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `SLF001`)
+[1mtests\test_wiring__live_translation_lang_hot_reload.py[0m[36m:[0m81[36m:[0m58[36m:[0m [1m[31mRUF100[0m [[36m*[0m] Unused `noqa` directive (non-enabled: `SLF001`)
+[1mtests\test_wiring__speaker_enroll_command.py[0m[36m:[0m3[36m:[0m1[36m:[0m [1m[31mI001[0m [[36m*[0m] Import block is un-sorted or un-formatted
+[1mtests\test_wiring__speaker_enroll_command.py[0m[36m:[0m4[36m:[0m8[36m:[0m [1m[31mF401[0m [[36m*[0m] `struct` imported but unused
+Found 103 errors.
+[[36m*[0m] 52 fixable with the `--fix` option (6 hidden fixes can be enabled with the `--unsafe-fixes` option).

@@ -134,6 +134,10 @@ class WebSocketConnectionHandler:
         """
         heartbeat_task = asyncio.create_task(self._emit_heartbeats())
         unsubscribe = self._event_hub.subscribe(self._send)
+        # UI may have missed the one-shot meeting.detected while offline /
+        # remounting — re-arm so the next detection poll can toast again.
+        if self._detection_service is not None:
+            self._detection_service.rearm_suggestions_for_ui()
         try:
             while True:
                 raw = await self._websocket.receive_text()

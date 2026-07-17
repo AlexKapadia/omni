@@ -7,13 +7,14 @@ import tailwindcss from "@tailwindcss/vite";
 export default defineConfig({
   plugins: [react(), tailwindcss()],
 
-  // Three windows, three entries: main app, dictation pill, live captions overlay.
+  // Four windows, four entries: main app, dictation pill, live captions, meeting toast.
   build: {
     rollupOptions: {
       input: {
         main: "./index.html",
         pill: "./pill.html",
         captions: "./captions.html",
+        "meeting-toast": "./meeting-toast.html",
       },
     },
   },

@@ -1,0 +1,165 @@
+﻿src/App__boot-refreshes-devices.test.tsx(14,90): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/App__boot-refreshes-devices.test.tsx(19,74): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/captions/captions-engine-bridge.ts(19,5): error TS2322: Type '(url: string) => WebSocket' is not assignable to type '(url: string) => WebSocketLike'.
+  Call signature return types 'WebSocket' and 'WebSocketLike' are incompatible.
+    The types of 'onopen' are incompatible between these types.
+      Type '((this: WebSocket, ev: Event) => any) | null' is not assignable to type '(() => void) | null'.
+        Type '(this: WebSocket, ev: Event) => any' is not assignable to type '() => void'.
+          Target signature provides too few arguments. Expected 1 or more, but got 0.
+src/components/coachmark.tsx(78,11): error TS2375: Type '{ accentColor?: Property.AccentColor | undefined; alignContent?: Property.AlignContent | undefined; alignItems?: Property.AlignItems | undefined; ... 853 more ...; glyphOrientationVertical?: Property.GlyphOrientationVertical | undefined; }' is not assignable to type 'MotionStyle' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'x' are incompatible.
+    Type 'X<string | number> | undefined' is not assignable to type 'AnyResolvedKeyframe | AnyMotionValue'.
+      Type 'undefined' is not assignable to type 'AnyResolvedKeyframe | AnyMotionValue'.
+src/components/live/meeting-board-panel.tsx(45,18): error TS2379: Argument of type '{ title: string; owner: string | undefined; dueHint: string | undefined; }' is not assignable to parameter of type 'ExtractionAction' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'owner' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/components/live/meeting-board-panel.tsx(59,22): error TS2379: Argument of type '{ who: string; what: string; when: string | undefined; }' is not assignable to parameter of type 'ExtractionCommitment' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'when' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/components/live/meeting-detected-toast.tsx(52,12): error TS2375: Type '{ children: Element[]; key: string; role: "status"; "aria-label": string; className: string; initial: false | { opacity: number; y: number; }; animate: { opacity: number; y: number; }; exit: { ...; } | undefined; transition: { ...; }; style: { ...; }; }' is not assignable to type 'Omit<HTMLMotionProps<"div">, "ref">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'exit' are incompatible.
+    Type '{ opacity: number; y: number; } | undefined' is not assignable to type 'TargetAndTransition | VariantLabels'.
+      Type 'undefined' is not assignable to type 'TargetAndTransition | VariantLabels'.
+src/components/live/meeting-detected-toast.tsx(107,12): error TS2375: Type '{ children: Element[]; key: string; role: "status"; "aria-label": string; className: string; initial: false | { opacity: number; y: number; }; animate: { opacity: number; y: number; }; exit: { ...; } | undefined; transition: { ...; }; style: { ...; }; }' is not assignable to type 'Omit<HTMLMotionProps<"div">, "ref">' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'exit' are incompatible.
+    Type '{ opacity: number; y: number; } | undefined' is not assignable to type 'TargetAndTransition | VariantLabels'.
+      Type 'undefined' is not assignable to type 'TargetAndTransition | VariantLabels'.
+src/components/nav-rail.tsx(167,20): error TS2367: This comparison appears to be unintentional because the types '"home" | "library" | "ask" | "dictation" | "naomi" | "settings"' and '"live"' have no overlap.
+src/components/onboarding/step-features-tour.tsx(27,34): error TS6133: 'onContinue' is declared but its value is never read.
+src/components/settings/summary-model-section__ollama-url-local-state.test.tsx(52,47): error TS2322: Type 'Mock<() => Promise<undefined>>' is not assignable to type 'SettingsUpdater'.
+  Type 'Promise<undefined>' is not assignable to type 'Promise<UpdateResult>'.
+    Type 'undefined' is not assignable to type 'UpdateResult'.
+src/components/settings/summary-model-section__ollama-url-local-state.test.tsx(65,47): error TS2322: Type 'Mock<() => Promise<undefined>>' is not assignable to type 'SettingsUpdater'.
+  Type 'Promise<undefined>' is not assignable to type 'Promise<UpdateResult>'.
+    Type 'undefined' is not assignable to type 'UpdateResult'.
+src/components/settings/transcription-backend-section.test.tsx(106,9): error TS2322: Type '(partial: Partial<EngineSettings>) => Promise<void>' is not assignable to type 'SettingsUpdater'.
+  Type 'Promise<void>' is not assignable to type 'Promise<UpdateResult>'.
+    Type 'void' is not assignable to type 'UpdateResult'.
+src/components/toggle-chip__aria-pressed-and-label.test.tsx(51,88): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; size?: number; "aria-hidden"?: boolean; }>'.
+  Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; size?: number; "aria-hidden"?: boolean; }>'.
+    Types of property 'propTypes' are incompatible.
+      Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'WeakValidationMap<{ className?: string; size?: number; "aria-hidden"?: boolean; }> | undefined'.
+        Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'WeakValidationMap<{ className?: string; size?: number; "aria-hidden"?: boolean; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'size' are incompatible.
+            Type 'Validator<string | number | null | undefined>' is not assignable to type 'Validator<number | null | undefined>'.
+              Type 'string | number | null | undefined' is not assignable to type 'number | null | undefined'.
+                Type 'string' is not assignable to type 'number'.
+src/components/tooltip.tsx(115,13): error TS2375: Type '{ accentColor?: Property.AccentColor | undefined; alignContent?: Property.AlignContent | undefined; alignItems?: Property.AlignItems | undefined; ... 853 more ...; glyphOrientationVertical?: Property.GlyphOrientationVertical | undefined; }' is not assignable to type 'MotionStyle' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'x' are incompatible.
+    Type 'X<string | number> | undefined' is not assignable to type 'AnyResolvedKeyframe | AnyMotionValue'.
+      Type 'undefined' is not assignable to type 'AnyResolvedKeyframe | AnyMotionValue'.
+src/lib/capture-protocol.ts(85,3): error TS2375: Type '{ stream: StreamLabel; text: string; t_start: number; t_end: number; seq: number; speaker_id: string | undefined; speaker_label: string | undefined; }' is not assignable to type 'TranscriptPartialPayload' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+  Types of property 'speaker_id' are incompatible.
+    Type 'string | undefined' is not assignable to type 'string'.
+      Type 'undefined' is not assignable to type 'string'.
+src/lib/meetings-live-repository.ts(170,13): error TS2339: Property 'push' does not exist on type 'readonly { readonly title: string; readonly owner?: string; }[]'.
+src/lib/meetings-live-repository.ts(179,17): error TS2339: Property 'push' does not exist on type 'readonly { readonly who: string; readonly what: string; }[]'.
+src/lib/wire-auto-summary__fires-on-capture-stopped.test.ts(45,5): error TS2739: Type '{ autoSummary: boolean; vaultDir: null; pushToTalkHotkey: readonly ["F9"]; keepAudio: boolean; disclosureReminder: boolean; killSwitch: boolean; instantExecuteWhitelist: readonly []; activeTemplate: string; ... 17 more ...; summaryProvider: "ollama"; }' is missing the following properties from type 'EngineSettings': cartesiaVoiceId, micDeviceId
+src/lib/wire-auto-summary__fires-on-capture-stopped.test.ts(109,7): error TS2322: Type '{ autoSummary: true; cartesiaVoiceId: string; micDeviceId: string; activeTemplate: string; vaultDir: null; pushToTalkHotkey: readonly ["F9"]; keepAudio: boolean; disclosureReminder: boolean; killSwitch: boolean; ... 18 more ...; summaryProvider: "ollama"; }' is not assignable to type 'EngineSettings'.
+  Types of property 'dictationCleanupStyle' are incompatible.
+    Type '"none"' is not assignable to type '"classic" | "business" | "tech"'.
+src/lib/wire-captions-overlay__syncs-visibility.test.ts(52,7): error TS2739: Type '{ pushToTalkHotkey: string[]; vaultDir: null; keepAudio: boolean; disclosureReminder: boolean; killSwitch: boolean; instantExecuteWhitelist: readonly []; activeTemplate: string; customTemplates: readonly []; onboardingComplete: boolean; ... 13 more ...; micDeviceId: string; }' is missing the following properties from type 'EngineSettings': dictationCleanupStyle, sttEngine, sttModelId, sttOpenaiBaseUrl, selectionTranslationLang
+src/lib/wire-captions-overlay__syncs-visibility.test.ts(82,7): error TS2739: Type '{ pushToTalkHotkey: string[]; liveCaptionsOverlay: false; vaultDir: null; keepAudio: boolean; disclosureReminder: boolean; killSwitch: boolean; instantExecuteWhitelist: readonly []; activeTemplate: string; ... 14 more ...; micDeviceId: string; }' is missing the following properties from type 'EngineSettings': dictationCleanupStyle, sttEngine, sttModelId, sttOpenaiBaseUrl, selectionTranslationLang
+src/lib/wire-meeting-toast-desktop__show-hide.test.ts(21,42): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/meeting-toast/meeting-toast-engine-bridge.ts(26,36): error TS2339: Property 'message' does not exist on type '{ readonly ok: true; readonly envelope: InboundEnvelope; }'.
+src/meeting-toast/meeting-toast-engine-bridge.ts(46,5): error TS2322: Type '(url: string) => WebSocket' is not assignable to type '(url: string) => WebSocketLike'.
+  Call signature return types 'WebSocket' and 'WebSocketLike' are incompatible.
+    The types of 'onopen' are incompatible between these types.
+      Type '((this: WebSocket, ev: Event) => any) | null' is not assignable to type '(() => void) | null'.
+        Type '(this: WebSocket, ev: Event) => any' is not assignable to type '() => void'.
+          Target signature provides too few arguments. Expected 1 or more, but got 0.
+src/meeting-toast/meeting-toast-view.test.tsx(15,42): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/pill/dictation-pill-view.test.tsx(18,64): error TS2556: A spread argument must either have a tuple type or be passed to a rest parameter.
+src/screens/ask-screen.tsx(30,3): error TS6133: 'provider' is declared but its value is never read.
+src/screens/dictation-history-screen.tsx(207,41): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; size?: number; }>'.
+  Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; size?: number; }>'.
+    Types of property 'propTypes' are incompatible.
+      Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'WeakValidationMap<{ className?: string; size?: number; }> | undefined'.
+        Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'WeakValidationMap<{ className?: string; size?: number; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'size' are incompatible.
+            Type 'Validator<string | number | null | undefined>' is not assignable to type 'Validator<number | null | undefined>'.
+              Type 'string | number | null | undefined' is not assignable to type 'number | null | undefined'.
+                Type 'string' is not assignable to type 'number'.
+src/screens/dictation-history-screen.tsx(260,43): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ className?: string; size?: number; }>'.
+  Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ className?: string; size?: number; }>'.
+    Types of property 'propTypes' are incompatible.
+      Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'WeakValidationMap<{ className?: string; size?: number; }> | undefined'.
+        Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'WeakValidationMap<{ className?: string; size?: number; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'size' are incompatible.
+            Type 'Validator<string | number | null | undefined>' is not assignable to type 'Validator<number | null | undefined>'.
+              Type 'string | number | null | undefined' is not assignable to type 'number | null | undefined'.
+                Type 'string' is not assignable to type 'number'.
+src/screens/home-screen.tsx(3,57): error TS6133: 'HelpCircle' is declared but its value is never read.
+src/screens/home-screen.tsx(6,39): error TS6133: 'filterMeetings' is declared but its value is never read.
+src/screens/library-meeting-detail-pane.tsx(242,17): error TS2322: Type '{ title: string; owner: string | undefined; }[]' is not assignable to type 'readonly ExtractionAction[]'.
+  Type '{ title: string; owner: string | undefined; }' is not assignable to type 'ExtractionAction' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+    Types of property 'owner' are incompatible.
+      Type 'string | undefined' is not assignable to type 'string'.
+        Type 'undefined' is not assignable to type 'string'.
+src/screens/onboarding/onboarding-wizard.tsx(102,9): error TS6133: 'vaultConfigured' is declared but its value is never read.
+src/screens/onboarding/onboarding-wizard__drives-every-control.test.tsx(29,3): error TS2739: Type '{ groq: true; gemini: true; anthropic: false; cartesia: false; }' is missing the following properties from type 'Readonly<Record<KeyProvider, boolean>>': openai, openrouter, azure_openai
+src/screens/onboarding/onboarding-wizard__drives-every-control.test.tsx(87,9): error TS2322: Type '(provider: "groq" | "gemini" | "anthropic" | "cartesia") => Promise<KeyValidationResult>' is not assignable to type 'KeyValidator'.
+  Types of parameters 'provider' and 'provider' are incompatible.
+    Type 'KeyProvider' is not assignable to type '"groq" | "gemini" | "anthropic" | "cartesia"'.
+      Type '"openai"' is not assignable to type '"groq" | "gemini" | "anthropic" | "cartesia"'.
+src/screens/onboarding/onboarding-wizard__drives-every-control.test.tsx(150,9): error TS2322: Type '(provider: "groq" | "gemini" | "anthropic" | "cartesia") => Promise<KeyValidationResult>' is not assignable to type 'KeyValidator'.
+  Types of parameters 'provider' and 'provider' are incompatible.
+    Type 'KeyProvider' is not assignable to type '"groq" | "gemini" | "anthropic" | "cartesia"'.
+      Type '"openai"' is not assignable to type '"groq" | "gemini" | "anthropic" | "cartesia"'.
+src/screens/onboarding/onboarding-wizard__models-ready-saves-engine.test.tsx(25,3): error TS2739: Type '{ groq: true; gemini: true; anthropic: false; cartesia: false; }' is missing the following properties from type 'Readonly<Record<KeyProvider, boolean>>': openai, openrouter, azure_openai
+src/screens/settings-screen.tsx(76,38): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ size?: number; className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ size?: number; className?: string; }>'.
+    Types of property 'propTypes' are incompatible.
+      Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'WeakValidationMap<{ size?: number; className?: string; }> | undefined'.
+        Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'WeakValidationMap<{ size?: number; className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'size' are incompatible.
+            Type 'Validator<string | number | null | undefined>' is not assignable to type 'Validator<number | null | undefined>'.
+              Type 'string | number | null | undefined' is not assignable to type 'number | null | undefined'.
+                Type 'string' is not assignable to type 'number'.
+src/screens/settings-screen.tsx(77,34): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ size?: number; className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ size?: number; className?: string; }>'.
+    Types of property 'propTypes' are incompatible.
+      Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'WeakValidationMap<{ size?: number; className?: string; }> | undefined'.
+        Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'WeakValidationMap<{ size?: number; className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'size' are incompatible.
+            Type 'Validator<string | number | null | undefined>' is not assignable to type 'Validator<number | null | undefined>'.
+              Type 'string | number | null | undefined' is not assignable to type 'number | null | undefined'.
+                Type 'string' is not assignable to type 'number'.
+src/screens/settings-screen.tsx(78,44): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ size?: number; className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ size?: number; className?: string; }>'.
+    Types of property 'propTypes' are incompatible.
+      Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'WeakValidationMap<{ size?: number; className?: string; }> | undefined'.
+        Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'WeakValidationMap<{ size?: number; className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'size' are incompatible.
+            Type 'Validator<string | number | null | undefined>' is not assignable to type 'Validator<number | null | undefined>'.
+              Type 'string | number | null | undefined' is not assignable to type 'number | null | undefined'.
+                Type 'string' is not assignable to type 'number'.
+src/screens/settings-screen.tsx(79,50): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ size?: number; className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ size?: number; className?: string; }>'.
+    Types of property 'propTypes' are incompatible.
+      Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'WeakValidationMap<{ size?: number; className?: string; }> | undefined'.
+        Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'WeakValidationMap<{ size?: number; className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'size' are incompatible.
+            Type 'Validator<string | number | null | undefined>' is not assignable to type 'Validator<number | null | undefined>'.
+              Type 'string | number | null | undefined' is not assignable to type 'number | null | undefined'.
+                Type 'string' is not assignable to type 'number'.
+src/screens/settings-screen.tsx(80,28): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ size?: number; className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ size?: number; className?: string; }>'.
+    Types of property 'propTypes' are incompatible.
+      Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'WeakValidationMap<{ size?: number; className?: string; }> | undefined'.
+        Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'WeakValidationMap<{ size?: number; className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'size' are incompatible.
+            Type 'Validator<string | number | null | undefined>' is not assignable to type 'Validator<number | null | undefined>'.
+              Type 'string | number | null | undefined' is not assignable to type 'number | null | undefined'.
+                Type 'string' is not assignable to type 'number'.
+src/screens/settings-screen.tsx(81,38): error TS2322: Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'ComponentType<{ size?: number; className?: string; }>'.
+  Type 'ForwardRefExoticComponent<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'FunctionComponent<{ size?: number; className?: string; }>'.
+    Types of property 'propTypes' are incompatible.
+      Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>> | undefined' is not assignable to type 'WeakValidationMap<{ size?: number; className?: string; }> | undefined'.
+        Type 'WeakValidationMap<Omit<LucideProps, "ref"> & RefAttributes<SVGSVGElement>>' is not assignable to type 'WeakValidationMap<{ size?: number; className?: string; }>' with 'exactOptionalPropertyTypes: true'. Consider adding 'undefined' to the types of the target's properties.
+          Types of property 'size' are incompatible.
+            Type 'Validator<string | number | null | undefined>' is not assignable to type 'Validator<number | null | undefined>'.
+              Type 'string | number | null | undefined' is not assignable to type 'number | null | undefined'.
+                Type 'string' is not assignable to type 'number'.

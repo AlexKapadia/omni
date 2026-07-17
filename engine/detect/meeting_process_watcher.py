@@ -39,6 +39,7 @@ from engine.detect.detection_signal_types import (
     SOURCE_BROWSER_WHEREBY,
     SOURCE_BROWSER_ZOOM,
     SOURCE_DISCORD,
+    SOURCE_SKYPE,
     SOURCE_SLACK,
     SOURCE_TEAMS,
     SOURCE_ZOOM,
@@ -48,24 +49,39 @@ from engine.detect.detection_signal_types import (
 
 logger = logging.getLogger(__name__)
 
-# Exact executable base names (lower-case) -> (source, weak confidence).
+# Exact executable base names (lower-case) -> (source, confidence).
 # WHY exact equality: substring matching turns "teamspeak.exe" into Teams
 # and "zoomit.exe" (Sysinternals) into Zoom — near-misses must not match.
+# Meeting-grade processes (>= 0.6) clear the suggest threshold alone; idle
+# tray apps stay weak (< 0.6) until a title or mic corroborates them.
 _PROCESS_SIGNATURES: dict[str, tuple[str, float]] = {
     "zoom.exe": (SOURCE_ZOOM, 0.3),
+    "zoomhybridconf.exe": (SOURCE_ZOOM, 0.7),  # Zoom's in-call helper
     "ms-teams.exe": (SOURCE_TEAMS, 0.3),
     "teams.exe": (SOURCE_TEAMS, 0.3),
-    "discord.exe": (SOURCE_DISCORD, 0.3),  # voice state is NOT inferable from the process
-    "slack.exe": (SOURCE_SLACK, 0.2),  # huddles only show via the window title below
+    "cpthost.exe": (SOURCE_TEAMS, 0.55),  # call host — needs mic to clear 0.6 alone
+    "discord.exe": (SOURCE_DISCORD, 0.3),
+    "slack.exe": (SOURCE_SLACK, 0.2),
+    "skype.exe": (SOURCE_SKYPE, 0.3),
+    "webexhost.exe": (SOURCE_BROWSER_WEBEX, 0.65),
+    "ciscocollabhost.exe": (SOURCE_BROWSER_WEBEX, 0.65),
+    "webex.exe": (SOURCE_BROWSER_WEBEX, 0.3),
 }
 
 # Case-folded substrings of window titles that mark an in-meeting NATIVE app
 # window. Zoom's meeting window is reliably titled "Zoom Meeting"/"Zoom
-# Webinar"; Teams call windows carry "Microsoft Teams" plus a meeting word.
-_ZOOM_TITLE_MARKERS = ("zoom meeting", "zoom webinar")
+# Webinar"; newer shells use "Zoom Workplace - Meeting" / "Zoom - <topic>".
+_ZOOM_TITLE_MARKERS = (
+    "zoom meeting",
+    "zoom webinar",
+    "zoom workplace - meeting",
+    "in a zoom meeting",
+)
 _TEAMS_TITLE_MARKER = "microsoft teams"  # NB: NOT a substring of "teams.microsoft.com"
-_TEAMS_MEETING_WORDS = ("meeting", "call", "compact view")
+_TEAMS_MEETING_WORDS = ("meeting", "call", "compact view", "| meeting")
 _SLACK_HUDDLE_MARKER = "huddle"
+_SKYPE_CALL_MARKERS = ("call with", "skype call", " - skype")
+_WEBEX_TITLE_MARKERS = ("cisco webex", "webex meeting", "webex |")
 
 # Browser-tab title substrings (case-folded) -> source. A tab title normally
 # embeds the page title and often the domain; these are the patterns the
@@ -74,6 +90,7 @@ _BROWSER_TITLE_SIGNATURES: tuple[tuple[str, str], ...] = (
     ("meet.google.com", SOURCE_BROWSER_MEET),
     ("google meet", SOURCE_BROWSER_MEET),
     ("zoom.us", SOURCE_BROWSER_ZOOM),
+    ("zoom.com/j/", SOURCE_BROWSER_ZOOM),
     ("teams.microsoft.com", SOURCE_BROWSER_TEAMS),
     ("whereby", SOURCE_BROWSER_WHEREBY),
     ("webex", SOURCE_BROWSER_WEBEX),
@@ -82,7 +99,18 @@ _BROWSER_TITLE_SIGNATURES: tuple[tuple[str, str], ...] = (
 _WINDOW_TITLE_CONFIDENCE_ZOOM = 0.9
 _WINDOW_TITLE_CONFIDENCE_TEAMS = 0.75
 _WINDOW_TITLE_CONFIDENCE_SLACK_HUDDLE = 0.85
+_WINDOW_TITLE_CONFIDENCE_SKYPE = 0.8
+_WINDOW_TITLE_CONFIDENCE_WEBEX = 0.8
 _BROWSER_TAB_CONFIDENCE = 0.65
+
+
+def _is_zoom_meeting_title(title_cf: str) -> bool:
+    if any(marker in title_cf for marker in _ZOOM_TITLE_MARKERS):
+        return True
+    # "Zoom - <topic>" meeting windows; exclude the idle "Zoom Workplace" shell.
+    if title_cf.startswith("zoom - ") and "workplace" not in title_cf:
+        return True
+    return False
 
 
 def classify_desktop_snapshot(snapshot: DesktopSnapshot) -> tuple[MeetingAppDetected, ...]:
@@ -118,8 +146,7 @@ def classify_desktop_snapshot(snapshot: DesktopSnapshot) -> tuple[MeetingAppDete
         title_cf = window.title.casefold()
         owner_exe = pid_to_exe.get(window.pid, "")
 
-        # Zoom's meeting window title is distinctive on its own.
-        if any(marker in title_cf for marker in _ZOOM_TITLE_MARKERS):
+        if _is_zoom_meeting_title(title_cf):
             offer(
                 MeetingAppDetected(
                     source=SOURCE_ZOOM,
@@ -151,6 +178,29 @@ def classify_desktop_snapshot(snapshot: DesktopSnapshot) -> tuple[MeetingAppDete
                     app="slack.exe",
                     window_title_hint=window.title,
                     confidence=_WINDOW_TITLE_CONFIDENCE_SLACK_HUDDLE,
+                    evidence="window_title",
+                )
+            )
+        if owner_exe == "skype.exe" and any(m in title_cf for m in _SKYPE_CALL_MARKERS):
+            offer(
+                MeetingAppDetected(
+                    source=SOURCE_SKYPE,
+                    app="skype.exe",
+                    window_title_hint=window.title,
+                    confidence=_WINDOW_TITLE_CONFIDENCE_SKYPE,
+                    evidence="window_title",
+                )
+            )
+        if any(m in title_cf for m in _WEBEX_TITLE_MARKERS) and (
+            owner_exe in {"webexhost.exe", "webex.exe", "ciscocollabhost.exe"}
+            or owner_exe.startswith("webex")
+        ):
+            offer(
+                MeetingAppDetected(
+                    source=SOURCE_BROWSER_WEBEX,
+                    app=owner_exe or "webex",
+                    window_title_hint=window.title,
+                    confidence=_WINDOW_TITLE_CONFIDENCE_WEBEX,
                     evidence="window_title",
                 )
             )

@@ -103,6 +103,75 @@ def test_zoom_meeting_window_is_strong_evidence() -> None:
     assert only.window_title_hint == "Zoom Meeting"
 
 
+@pytest.mark.parametrize(
+    "title",
+    [
+        "Zoom Meeting",
+        "Zoom Webinar",
+        "Zoom Workplace - Meeting",
+        "in a Zoom meeting",
+        "Zoom - Standup sync",
+    ],
+)
+def test_modern_zoom_meeting_titles_are_strong(title: str) -> None:
+    signals = classify_desktop_snapshot(snap(windows=[(5, title)]))
+    assert by_source(signals)[SOURCE_ZOOM].confidence >= 0.85
+
+
+def test_zoom_hybrid_conf_process_clears_suggest_threshold() -> None:
+    """Zoom's in-call helper process must clear the suggest threshold alone."""
+    signals = classify_desktop_snapshot(snap(processes=[(9, "ZoomHybridConf.exe")]))
+    only = by_source(signals)[SOURCE_ZOOM]
+    assert only.evidence == "process"
+    assert only.confidence >= 0.6
+
+
+def test_teams_call_host_process_needs_mic_to_suggest() -> None:
+    """CptHost can linger; keep it under the suggest floor without mic."""
+    signals = classify_desktop_snapshot(snap(processes=[(11, "CptHost.exe")]))
+    only = by_source(signals)[SOURCE_TEAMS]
+    assert only.confidence < 0.6
+
+
+def test_idle_zoom_workplace_title_alone_is_not_a_meeting() -> None:
+    """Idle Zoom shell must not toast — needs Meeting / HybridConf / mic."""
+    signals = classify_desktop_snapshot(
+        snap(processes=[(1, "Zoom.exe")], windows=[(1, "Zoom Workplace")])
+    )
+    zoom = by_source(signals).get(SOURCE_ZOOM)
+    assert zoom is not None
+    assert zoom.confidence < 0.6
+
+
+def test_webex_host_process_and_meeting_title() -> None:
+    by_proc = by_source(
+        classify_desktop_snapshot(snap(processes=[(2, "WebexHost.exe")]))
+    )
+    assert by_proc[SOURCE_BROWSER_WEBEX].confidence >= 0.6
+    by_both = by_source(
+        classify_desktop_snapshot(
+            snap(
+                processes=[(2, "WebexHost.exe")],
+                windows=[(2, "Cisco Webex Meeting")],
+            )
+        )
+    )
+    assert by_both[SOURCE_BROWSER_WEBEX].confidence >= 0.75
+
+
+def test_skype_call_window_owned_by_skype() -> None:
+    from engine.detect.detection_signal_types import SOURCE_SKYPE
+
+    signals = classify_desktop_snapshot(
+        snap(
+            processes=[(3, "Skype.exe")],
+            windows=[(3, "Call with Alex - Skype")],
+        )
+    )
+    assert by_source(signals)[SOURCE_SKYPE].confidence >= 0.75
+
+
+
 def test_zoom_webinar_and_unicode_titles_match() -> None:
     signals = classify_desktop_snapshot(
         # Real-world titles carry en/em dashes; deliberate here. noqa: RUF001

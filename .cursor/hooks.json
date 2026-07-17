@@ -5,6 +5,12 @@
       {
         "command": ".cursor/hooks/session-start.sh"
       }
+    ],
+    "preToolUse": [
+      {
+        "command": "node \".cursor/skills/impeccable/scripts/hook-before-edit.mjs\"",
+        "timeout": 5
+      }
     ]
   }
 }

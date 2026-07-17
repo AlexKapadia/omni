@@ -16,6 +16,7 @@ import { startLiveEngineConnection } from "./lib/live-engine-socket";
 import { wireTrayStartCapture } from "./lib/wire-tray-capture";
 import { wireCaptionsOverlay } from "./lib/wire-captions-overlay";
 import { wireAutoSummary } from "./lib/wire-auto-summary";
+import { wireMeetingToastDesktop } from "./lib/wire-meeting-toast-desktop";
 import { setAutoStartNavigateLive } from "./lib/auto-start-reaction";
 import { loadSettings } from "./lib/settings-actions";
 import { refreshDevicesIntoSettings } from "./lib/engine-devices";
@@ -151,6 +152,7 @@ function MainShell() {
     const goLive = (): void => setActiveSection("live");
     setAutoStartNavigateLive(goLive);
     let unwireCaptions: (() => void) | undefined;
+    let unwireMeetingToast: (() => void) | undefined;
     let unlistenTray: (() => void) | undefined;
     try {
       unwireCaptions = wireCaptionsOverlay(appSettingsStore);
@@ -164,14 +166,18 @@ function MainShell() {
           (event, handler) => listen(event, handler).then((fn) => fn),
           goLive,
         );
+        unwireMeetingToast = wireMeetingToastDesktop(goLive, undefined, undefined, (event, handler) =>
+          listen(event, handler).then((fn) => fn),
+        );
       } catch {
-        // Web build / tests: no Tauri shell — tray capture is unavailable.
+        // Web build / tests: no Tauri shell — tray / desktop toast unavailable.
       }
     })();
     const unwireAutoSummary = wireAutoSummary();
     return () => {
       setAutoStartNavigateLive(undefined);
       unwireCaptions?.();
+      unwireMeetingToast?.();
       unlistenTray?.();
       unwireAutoSummary();
     };

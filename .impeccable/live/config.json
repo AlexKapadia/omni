@@ -1,0 +1,10 @@
+{
+  "files": [
+    "apps/ui/index.html",
+    "apps/ui/pill.html",
+    "apps/ui/captions.html"
+  ],
+  "insertBefore": "</body>",
+  "commentSyntax": "html",
+  "cspChecked": true
+}

@@ -1,0 +1,12 @@
+{
+  "$schema": "../gen/schemas/desktop-schema.json",
+  "identifier": "meeting-toast",
+  "description": "Least-privilege capability for the desktop meeting-detected toast. Core defaults plus show/hide/focus so Start and Not now work over other apps.",
+  "windows": ["meeting-toast"],
+  "permissions": [
+    "core:default",
+    "core:window:allow-show",
+    "core:window:allow-hide",
+    "core:window:allow-set-focus"
+  ]
+}

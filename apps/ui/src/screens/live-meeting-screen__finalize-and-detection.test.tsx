@@ -1,17 +1,15 @@
 /**
  * Live-screen tests for the reconciliation surfaces: the post-stop
  * "Finalize meeting" flow (verbatim notepad hand-off, honest
- * pending/ready/failed states) and the detection toast ("Start capturing?"
- * one-click + dismiss, the stop hint while live).
+ * pending/ready/failed states). Detection toast lives on the App shell —
+ * see App__meeting-detected-toast-global and meeting-detected-toast.test.
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
-import { act, cleanup, fireEvent, render, screen, within } from "@testing-library/react";
+import { act, cleanup, render, screen } from "@testing-library/react";
 import { LiveMeetingScreen } from "./live-meeting-screen";
 import { engineStatusStore, INITIAL_ENGINE_STATUS } from "../lib/engine-status-store";
 import { INITIAL_LIVE_ANSWERS_STATE, liveAnswersStore } from "../lib/live-answers-store";
 import {
-  applyCaptureSuggestStop,
-  applyMeetingDetected,
   INITIAL_MEETING_DETECTION_STATE,
   meetingDetectionStore,
 } from "../lib/meeting-detection-store";
@@ -37,13 +35,6 @@ beforeEach(() => {
 });
 
 afterEach(cleanup);
-
-const SUGGESTION = {
-  source: "zoom",
-  reason: "zoom meeting activity detected",
-  confidence: 0.7,
-  dedupe_key: "zoom",
-};
 
 describe("finalize flow (stopped state)", () => {
   it("offers Finalize meeting after a stop, and pending disables it honestly", () => {
@@ -93,57 +84,5 @@ describe("finalize flow (stopped state)", () => {
   it("no finalize surface without a meeting (idle screen)", () => {
     render(<LiveMeetingScreen />);
     expect(screen.queryByRole("button", { name: "Finalize meeting" })).toBeNull();
-  });
-});
-
-describe("detection toast", () => {
-  it("meeting.detected raises the one-click Start capturing? card while idle", () => {
-    engineStatusStore.setState({ status: "connected" });
-    act(() => {
-      applyMeetingDetected(meetingDetectionStore, SUGGESTION);
-    });
-    render(<LiveMeetingScreen />);
-    const toast = screen.getByRole("status", { name: "Meeting detected" });
-    expect(toast.textContent).toContain("zoom meeting activity detected — start capturing?");
-    // One click sends the ordinary capture.start; no socket in jsdom means
-    // the command layer refuses honestly — the toast's action is REAL.
-    act(() => {
-      fireEvent.click(within(toast).getByRole("button", { name: "Start capture" }));
-    });
-    expect(transcriptStore.getState().errorMessage).not.toBeNull(); // fail closed
-  });
-
-  it("Dismiss clears the card (and the engine cooldown ride-along is best-effort)", () => {
-    act(() => {
-      applyMeetingDetected(meetingDetectionStore, SUGGESTION);
-    });
-    render(<LiveMeetingScreen />);
-    act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "Dismiss" }));
-    });
-    expect(meetingDetectionStore.getState().suggestion).toBeNull();
-    expect(screen.queryByRole("status", { name: "Meeting detected" })).toBeNull();
-  });
-
-  it("capture.suggest_stop shows the stop hint ONLY while live, and Keep going clears it", () => {
-    act(() => {
-      applyCaptureSuggestStop(meetingDetectionStore, { reason: "meeting app closed" });
-    });
-    render(<LiveMeetingScreen />); // idle: no hint surface at all
-    expect(screen.queryByRole("status", { name: "Capture stop suggested" })).toBeNull();
-    act(() => {
-      transcriptStore.setState({
-        captureStatus: "live",
-        meetingId: "m1",
-        captureStartedAtMs: Date.now(),
-      });
-    });
-    const hint = screen.getByRole("status", { name: "Capture stop suggested" });
-    expect(hint.textContent).toContain("meeting app closed — stop capturing?");
-    act(() => {
-      fireEvent.click(screen.getByRole("button", { name: "Keep going" }));
-    });
-    expect(meetingDetectionStore.getState().stopHintReason).toBeNull();
-    expect(screen.queryByRole("status", { name: "Capture stop suggested" })).toBeNull();
   });
 });

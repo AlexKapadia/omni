@@ -97,7 +97,22 @@ def build_service(
     )
 
 
-async def test_start_polls_and_delivers_decisions_then_stop_is_clean() -> None:
+async def test_rearm_for_ui_re_emits_active_meeting_immediately() -> None:
+    """After the one-shot suggest, reconnecting UI must toast again without waiting."""
+    desktop = ScriptedDesktop()
+    desktop.titles = ["Zoom Meeting"]
+    clock = FakeClock()
+    decisions: list[DetectionDecision] = []
+    service = build_service(desktop, clock, decisions, {"active": False})
+    service.start()
+    await drain_event_loop()
+    assert len(decisions) == 1
+    service.rearm_suggestions_for_ui()
+    assert len(decisions) == 2
+    assert isinstance(decisions[1], SuggestCapture)
+    assert decisions[1].source == SOURCE_ZOOM
+    await service.stop()
+
     desktop = ScriptedDesktop()
     desktop.titles = ["Zoom Meeting"]
     clock = FakeClock()

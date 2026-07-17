@@ -26,6 +26,7 @@ pub mod dictation_hotkey_accelerator;
 pub mod dictation_injection_win32;
 mod captions_overlay_window;
 mod dictation_pill_window;
+mod meeting_toast_window;
 pub mod dictation_text_injection;
 mod engine_sidecar;
 mod tray;
@@ -86,6 +87,10 @@ pub fn run() {
             dictation_text_injection::inject_dictation_text,
             dictation_pill_window::set_dictation_hotkey,
             captions_overlay_window::set_captions_overlay_visible,
+            meeting_toast_window::set_meeting_toast_visible,
+            meeting_toast_window::meeting_toast_start_capture,
+            meeting_toast_window::meeting_toast_dismiss,
+            meeting_toast_window::meeting_toast_stop_capture,
             updater_launch_check::updater_download_and_install,
             updater_launch_check::updater_restart_app,
             reveal_path_in_explorer
@@ -121,6 +126,9 @@ pub fn run() {
             }
             if let Err(e) = captions_overlay_window::setup_captions_overlay(app.handle()) {
                 log::warn!("captions overlay setup skipped: {e}");
+            }
+            if let Err(e) = meeting_toast_window::setup_meeting_toast(app.handle()) {
+                log::warn!("meeting toast setup skipped: {e}");
             }
             // Start supervising the engine sidecar immediately; the supervisor
             // tolerates the engine being absent (retry loop, never a crash)

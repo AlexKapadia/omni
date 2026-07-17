@@ -27,6 +27,7 @@ SOURCE_ZOOM = "zoom"
 SOURCE_TEAMS = "teams"
 SOURCE_DISCORD = "discord"
 SOURCE_SLACK = "slack"
+SOURCE_SKYPE = "skype"
 SOURCE_BROWSER_MEET = "browser_meet"
 SOURCE_BROWSER_ZOOM = "browser_zoom"
 SOURCE_BROWSER_TEAMS = "browser_teams"
@@ -42,6 +43,7 @@ KNOWN_DETECTION_SOURCES: frozenset[str] = frozenset(
         SOURCE_TEAMS,
         SOURCE_DISCORD,
         SOURCE_SLACK,
+        SOURCE_SKYPE,
         SOURCE_BROWSER_MEET,
         SOURCE_BROWSER_ZOOM,
         SOURCE_BROWSER_TEAMS,

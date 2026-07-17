@@ -47,6 +47,7 @@ from engine.detect.detection_signal_types import (
     SOURCE_BROWSER_WHEREBY,
     SOURCE_BROWSER_ZOOM,
     SOURCE_DISCORD,
+    SOURCE_SKYPE,
     SOURCE_SLACK,
     SOURCE_TEAMS,
     SOURCE_ZOOM,
@@ -65,11 +66,16 @@ from engine.detect.detection_signal_types import (
 # corroborate Teams — the same near-miss trap as process matching.
 _MIC_APP_TO_SOURCE: dict[str, str] = {
     "zoom.exe": SOURCE_ZOOM,
+    "zoomhybridconf.exe": SOURCE_ZOOM,
     "ms-teams.exe": SOURCE_TEAMS,
     "teams.exe": SOURCE_TEAMS,
+    "cpthost.exe": SOURCE_TEAMS,
     "msteams": SOURCE_TEAMS,  # packaged Teams family name prefix
     "discord.exe": SOURCE_DISCORD,
     "slack.exe": SOURCE_SLACK,
+    "skype.exe": SOURCE_SKYPE,
+    "webexhost.exe": SOURCE_BROWSER_WEBEX,
+    "webex.exe": SOURCE_BROWSER_WEBEX,
 }
 
 # A browser holding the mic corroborates any active browser_* source.
@@ -146,6 +152,19 @@ class AutoStartRulesEngine:
         session = self._sessions.get(dedupe_key)
         if session is not None:
             session.handled = True
+
+    def rearm_suggestions_for_ui(self, now_s: float) -> None:
+        """Clear ``handled`` so a freshly connected UI can see an active meeting.
+
+        Why: suggest fires once per app-session. If the UI missed that event
+        (wasn't mounted / reconnecting), the session stays handled forever
+        while Zoom/Teams stays open — no toast ever appears. Rearm on UI
+        connect; honour dismiss cooldown so "Not now" still sticks.
+        """
+        for source, session in self._sessions.items():
+            if now_s < self._dismissed_until_s.get(source, float("-inf")):
+                continue
+            session.handled = False
 
     def update(
         self,

@@ -112,6 +112,15 @@ class DetectionService:
         """Wiring surface for the UI's 'dismiss' action on a suggestion card."""
         self._rules_engine.dismiss(dedupe_key, self._clock.monotonic())
 
+    def rearm_suggestions_for_ui(self) -> None:
+        """UI just connected — allow one more suggest for still-active meetings.
+
+        Immediately tick once so a meeting already in progress surfaces a toast
+        without waiting for the next poll interval.
+        """
+        self._rules_engine.rearm_suggestions_for_ui(self._clock.monotonic())
+        self._tick()
+
     def apply_detection_settings(self, settings: DetectionRuleSettings) -> None:
         """Hot-reload user knobs without restarting the poll loop."""
         self._rules_engine.apply_settings(settings)

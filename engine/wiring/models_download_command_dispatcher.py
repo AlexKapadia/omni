@@ -57,8 +57,10 @@ from engine.stt.model_weights_downloader import (
 from engine.stt.whisper_model_catalog import download_whisper_model
 from engine.wiring.models_lifecycle_ops import (
     cancel_in_flight_task,
-    delete_model_file as _delete_model_file_op,
     open_folder_payload,
+)
+from engine.wiring.models_lifecycle_ops import (
+    delete_model_file as _delete_model_file_op,
 )
 
 logger = logging.getLogger(__name__)
@@ -127,7 +129,8 @@ class ModelsDownloadCommandGateway:
 
         def _download() -> list[dict[str, Any]]:
             if bundle == "whisper":
-                assert model_id is not None  # validated by payload
+                if model_id is None:
+                    raise ValueError("model_id required for whisper bundle")
                 entry = download_whisper_model(model_id, models_dir, on_progress)
                 return [entry]
             if specs is not None:
@@ -245,7 +248,9 @@ async def _dispatch_cancel(
     except ValidationError:
         await send(
             error_reply(
-                command.id, ProtocolErrorCode.INVALID_PAYLOAD, "models.cancel payload failed validation"
+                command.id,
+                ProtocolErrorCode.INVALID_PAYLOAD,
+                "models.cancel payload failed validation",
             )
         )
         return

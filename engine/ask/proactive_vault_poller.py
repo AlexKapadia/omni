@@ -9,11 +9,11 @@ from __future__ import annotations
 import time
 from collections.abc import Awaitable, Callable
 from datetime import date
-from typing import Protocol
 
 import aiosqlite
 
-from engine.ask.ask_answer_contracts import LiveAnswerHit, LiveAnswerSource
+from engine.ask.ask_answer_contracts import LiveAnswerSource
+from engine.ask.ask_service_protocols import ChunkRetrieverProtocol
 from engine.ask.citation_marker_mapping import truncate_quote
 from engine.ask.structured_first_retrieval import retrieve_structured_first
 from engine.index.hybrid_rrf_retriever import TIER_LIVE
@@ -24,10 +24,6 @@ _QUERY_CHARS = 280
 _TOP_N = 3
 
 SuggestionEmitter = Callable[[str, tuple[LiveAnswerSource, ...], int], Awaitable[None]]
-
-
-class ChunkRetrieverProtocol(Protocol):
-    async def retrieve(self, *args, **kwargs): ...
 
 
 class ProactiveVaultPoller:

@@ -5,9 +5,11 @@ from __future__ import annotations
 import base64
 import logging
 from collections.abc import Awaitable, Callable
+from pathlib import Path
 
 from pydantic import ValidationError
 
+from engine.audio.audio_frame_types import PIPELINE_SAMPLE_RATE
 from engine.protocol import (
     PROTOCOL_VERSION,
     Envelope,
@@ -19,11 +21,6 @@ from engine.protocol.speaker_enroll_payloads import (
     COMMAND_SPEAKER_ENROLL,
     SpeakerEnrollCommandPayload,
 )
-from engine.stt.speaker_voice_profile import (
-    decode_wav_pcm16_mono_16k,
-    embedding_to_json,
-    extract_voice_embedding,
-)
 from engine.storage.app_settings_repository import (
     SETTING_SPEAKER_IDENTITY,
     SETTING_SPEAKER_VOICE_EMBEDDING,
@@ -31,6 +28,11 @@ from engine.storage.app_settings_repository import (
 )
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
+from engine.stt.speaker_voice_profile import (
+    decode_wav_pcm16_mono_16k,
+    embedding_to_json,
+    extract_voice_embedding,
+)
 from engine.wiring.settings_value_validation import validate_settings_values
 
 logger = logging.getLogger(__name__)
@@ -78,7 +80,9 @@ class SpeakerEnrollCommandGateway:
         await apply_migrations(self._db_path, self._migrations_dir)
         connection = await open_sqlite_connection(self._db_path)
         try:
-            await write_setting(connection, SETTING_SPEAKER_IDENTITY, normalized[SETTING_SPEAKER_IDENTITY])
+            await write_setting(
+                connection, SETTING_SPEAKER_IDENTITY, normalized[SETTING_SPEAKER_IDENTITY]
+            )
             if embedding_json is not None:
                 await write_setting(connection, SETTING_SPEAKER_VOICE_EMBEDDING, embedding_json)
             await connection.commit()
@@ -88,9 +92,6 @@ class SpeakerEnrollCommandGateway:
             "display_name": normalized[SETTING_SPEAKER_IDENTITY],
             "voice_enrolled": embedding_json is not None,
         }
-
-
-from engine.audio.audio_frame_types import PIPELINE_SAMPLE_RATE  # noqa: E402
 
 
 async def dispatch_speaker_command(

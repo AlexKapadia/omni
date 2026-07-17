@@ -17,6 +17,7 @@ import urllib.error
 import urllib.request
 from collections.abc import Callable
 from typing import Any
+from urllib.parse import urlparse
 
 _MODEL_NAME_RE = re.compile(r"^[A-Za-z0-9._:-]{1,128}$")
 ProgressFn = Callable[[str, int, int | None], None]
@@ -31,9 +32,28 @@ def normalize_ollama_base(url: str) -> str:
     return trimmed
 
 
+def _assert_http_url(url: str) -> str:
+    """Fail closed unless scheme is http or https (S310 defence)."""
+    scheme = urlparse(url).scheme.lower()
+    if scheme not in ("http", "https"):
+        raise ValueError(f"unsupported URL scheme: {scheme!r}")
+    return url
+
+
+def _http_urlopen(req: urllib.request.Request, timeout: float) -> Any:
+    """Open an HTTP(S) request after re-validating the scheme (S310)."""
+    target = req.full_url if hasattr(req, "full_url") else req.get_full_url()
+    _assert_http_url(target)
+    # Scheme validated http(s) only by normalize_ollama_base / _assert_http_url.
+    return urllib.request.urlopen(req, timeout=timeout)  # noqa: S310
+
+
 def _get_json(url: str, timeout_s: float = 10.0) -> Any:
-    req = urllib.request.Request(url, method="GET", headers={"Accept": "application/json"})
-    with urllib.request.urlopen(req, timeout=timeout_s) as resp:  # noqa: S310 — http(s) only
+    safe_url = _assert_http_url(url)
+    req = urllib.request.Request(  # noqa: S310 — scheme validated by _assert_http_url
+        safe_url, method="GET", headers={"Accept": "application/json"}
+    )
+    with _http_urlopen(req, timeout=timeout_s) as resp:
         return json.loads(resp.read().decode("utf-8"))
 
 
@@ -77,14 +97,15 @@ def pull_ollama_model(
         raise ValueError("invalid Ollama model name")
     base = normalize_ollama_base(base_url)
     body = json.dumps({"name": model, "stream": True}).encode("utf-8")
-    req = urllib.request.Request(
-        f"{base}/api/pull",
+    pull_url = _assert_http_url(f"{base}/api/pull")
+    req = urllib.request.Request(  # noqa: S310 — scheme validated by _assert_http_url
+        pull_url,
         data=body,
         method="POST",
         headers={"Content-Type": "application/json", "Accept": "application/x-ndjson"},
     )
     completed = False
-    with urllib.request.urlopen(req, timeout=3600) as resp:  # noqa: S310
+    with _http_urlopen(req, timeout=3600) as resp:
         for raw in resp:
             line = raw.decode("utf-8").strip()
             if not line:

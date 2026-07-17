@@ -3,10 +3,11 @@
 from __future__ import annotations
 
 import json
+import urllib.error
+import urllib.request
 
 import pytest
 
-import engine.router.ollama_http_client as ollama_mod
 from engine.router.ollama_http_client import (
     list_ollama_models,
     normalize_ollama_base,
@@ -25,13 +26,13 @@ class _FakeResponse:
     def read(self) -> bytes:
         return self._payload
 
-    def __enter__(self) -> "_FakeResponse":
+    def __enter__(self) -> _FakeResponse:
         return self
 
     def __exit__(self, *exc: object) -> None:
         return None
 
-    def __iter__(self):  # NDJSON streaming body
+    def __iter__(self) -> object:  # NDJSON streaming body
         return iter(self._lines)
 
 
@@ -47,15 +48,15 @@ def test_ping_ollama_reports_ok_and_version(monkeypatch: pytest.MonkeyPatch) -> 
     def fake_urlopen(req: object, timeout: float | None = None) -> _FakeResponse:
         return _FakeResponse(json.dumps({"version": "0.5.1"}).encode("utf-8"))
 
-    monkeypatch.setattr(ollama_mod.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr("engine.router.ollama_http_client.urllib.request.urlopen", fake_urlopen)
     assert ping_ollama("http://127.0.0.1:11434") == {"ok": True, "version": "0.5.1"}
 
 
 def test_ping_ollama_fails_closed_on_connection_error(monkeypatch: pytest.MonkeyPatch) -> None:
     def fake_urlopen(req: object, timeout: float | None = None) -> _FakeResponse:
-        raise ollama_mod.urllib.error.URLError("connection refused")
+        raise urllib.error.URLError("connection refused")
 
-    monkeypatch.setattr(ollama_mod.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr("engine.router.ollama_http_client.urllib.request.urlopen", fake_urlopen)
     result = ping_ollama("http://127.0.0.1:11434")
     assert result["ok"] is False
     assert "connection refused" in str(result["error"])
@@ -65,7 +66,7 @@ def test_ping_ollama_tolerates_a_missing_version_field(monkeypatch: pytest.Monke
     def fake_urlopen(req: object, timeout: float | None = None) -> _FakeResponse:
         return _FakeResponse(json.dumps({}).encode("utf-8"))
 
-    monkeypatch.setattr(ollama_mod.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr("engine.router.ollama_http_client.urllib.request.urlopen", fake_urlopen)
     assert ping_ollama("http://127.0.0.1:11434") == {"ok": True, "version": None}
 
 
@@ -83,7 +84,7 @@ def test_list_ollama_models_filters_malformed_rows(monkeypatch: pytest.MonkeyPat
     def fake_urlopen(req: object, timeout: float | None = None) -> _FakeResponse:
         return _FakeResponse(json.dumps(payload).encode("utf-8"))
 
-    monkeypatch.setattr(ollama_mod.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr("engine.router.ollama_http_client.urllib.request.urlopen", fake_urlopen)
     models = list_ollama_models("http://127.0.0.1:11434")
     assert models == [{"name": "llama3.2", "size": 123}, {"name": "gemma3:1b", "size": 0}]
 
@@ -94,7 +95,7 @@ def test_list_ollama_models_returns_empty_list_on_wrong_shape(
     def fake_urlopen(req: object, timeout: float | None = None) -> _FakeResponse:
         return _FakeResponse(json.dumps({"models": "not-a-list"}).encode("utf-8"))
 
-    monkeypatch.setattr(ollama_mod.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr("engine.router.ollama_http_client.urllib.request.urlopen", fake_urlopen)
     assert list_ollama_models("http://127.0.0.1:11434") == []
 
 
@@ -124,7 +125,7 @@ def test_pull_ollama_model_streams_progress_and_reports_completion(
     def fake_urlopen(req: object, timeout: float | None = None) -> _FakeResponse:
         return _FakeResponse(lines=lines)
 
-    monkeypatch.setattr(ollama_mod.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr("engine.router.ollama_http_client.urllib.request.urlopen", fake_urlopen)
     beats: list[tuple[str, int, int | None]] = []
 
     def on_progress(model: str, done: int, total: int | None) -> None:
@@ -148,7 +149,7 @@ def test_pull_ollama_model_tolerates_blank_and_malformed_ndjson_lines(
     def fake_urlopen(req: object, timeout: float | None = None) -> _FakeResponse:
         return _FakeResponse(lines=lines)
 
-    monkeypatch.setattr(ollama_mod.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr("engine.router.ollama_http_client.urllib.request.urlopen", fake_urlopen)
     result = pull_ollama_model("http://127.0.0.1:11434", "llama3.2")
     assert result == {"ok": True, "model": "llama3.2"}
 
@@ -163,7 +164,7 @@ def test_pull_ollama_model_without_progress_callback_still_completes(
     def fake_urlopen(req: object, timeout: float | None = None) -> _FakeResponse:
         return _FakeResponse(lines=lines)
 
-    monkeypatch.setattr(ollama_mod.urllib.request, "urlopen", fake_urlopen)
+    monkeypatch.setattr("engine.router.ollama_http_client.urllib.request.urlopen", fake_urlopen)
     assert pull_ollama_model("http://127.0.0.1:11434", "llama3.2") == {
         "ok": True,
         "model": "llama3.2",

@@ -27,13 +27,11 @@ import { createEngineAskAnswerProvider } from "../lib/engine-ask-answer-provider
 const defaultProvider: AskAnswerProvider = createEngineAskAnswerProvider();
 
 function QueryInput({
-  provider,
   emphasized,
   value,
   onChange,
   onSubmit,
 }: {
-  readonly provider: AskAnswerProvider;
   readonly emphasized: boolean;
   readonly value: string;
   readonly onChange: (val: string) => void;
@@ -118,7 +116,6 @@ export function AskScreen({
             Ask about your meetings
           </h1>
           <QueryInput
-            provider={provider}
             emphasized={false}
             value={draft}
             onChange={setDraft}
@@ -159,7 +156,6 @@ export function AskScreen({
         style={{ maxWidth: 720, padding: "72px 0" }}
       >
         <QueryInput
-          provider={provider}
           emphasized
           value={draft}
           onChange={setDraft}

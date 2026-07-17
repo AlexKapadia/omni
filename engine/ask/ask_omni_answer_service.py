@@ -27,8 +27,8 @@ from datetime import date
 
 import aiosqlite
 
-from engine.ask.ask_deleted_meeting_filter import filter_deleted_meeting_chunks
 from engine.ask.ask_answer_contracts import AskAnswer, AskLatencyBreakdown
+from engine.ask.ask_deleted_meeting_filter import filter_deleted_meeting_chunks
 from engine.ask.ask_prompt_frames import (
     ASK_SYNTHESIS_JSON_SCHEMA,
     ASK_SYNTHESIS_SYSTEM_FRAME,
@@ -44,12 +44,12 @@ from engine.ask.citation_marker_mapping import (
     strip_dangling_markers,
 )
 from engine.ask.structured_first_retrieval import retrieve_structured_first
-from engine.index.hybrid_rrf_retriever import TIER_CHAT
 from engine.dictation.dictation_history_repository import search_dictation_entries
+from engine.index.hybrid_rrf_retriever import TIER_CHAT
+from engine.router.completion_contract import ChatMessage
 from engine.storage.meetings_repository import fetch_meeting_row
 from engine.storage.transcript_segments_repository import list_transcript_segment_rows
 from engine.stt.speaker_voice_profile import resolve_speaker_label
-from engine.router.completion_contract import ChatMessage
 
 ASK_SYNTHESIS_TASK = "ask_synthesis"
 # Top 5-8 chunks per the M3 recommendation; 8 is the synthesis context cap.

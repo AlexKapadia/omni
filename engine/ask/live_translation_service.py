@@ -5,8 +5,8 @@ from __future__ import annotations
 import logging
 import time
 from collections.abc import Awaitable, Callable
-from typing import Protocol
 
+from engine.ask.ask_service_protocols import CompletionRouterProtocol
 from engine.router.completion_contract import ChatMessage, TaskType
 from engine.router.router_errors import RouterError
 
@@ -21,10 +21,6 @@ TRANSLATION_SYSTEM_FRAME = (
 )
 
 TranslationEmitter = Callable[[list[dict[str, object]]], Awaitable[None]]
-
-
-class CompletionRouterProtocol(Protocol):
-    async def route(self, task_type: str, system_frame: str, messages: tuple, **kwargs): ...
 
 
 class LiveTranslationService:
@@ -87,7 +83,7 @@ class LiveTranslationService:
         except RouterError as exc:
             logger.warning("live translation failed: %s", exc)
             return
-        lines = [
+        lines: list[dict[str, object]] = [
             {
                 "stream": "them" if line.startswith("Them:") else "me",
                 "text": line.split(":", 1)[-1].strip(),

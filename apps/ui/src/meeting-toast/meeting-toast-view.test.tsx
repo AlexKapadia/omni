@@ -10,7 +10,7 @@ import {
   INITIAL_MEETING_DETECTION_STATE,
 } from "../lib/meeting-detection-store";
 
-const invoke = vi.fn(async () => undefined);
+const invoke = vi.fn(async (..._args: unknown[]) => undefined);
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (...args: unknown[]) => invoke(...args),
 }));

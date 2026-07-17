@@ -16,10 +16,9 @@ Correctness invariants:
   the enhancement output (markup stripped), or empty.
 """
 
+import json
 import re
 from datetime import datetime
-
-import json
 
 from engine.storage.meetings_repository import MeetingRow
 from engine.storage.transcript_segments_repository import TranscriptSegmentRow

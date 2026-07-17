@@ -37,9 +37,8 @@ from pathlib import Path
 
 import aiosqlite
 
-from engine.dictation.dictation_history_repository import insert_dictation_entry
-from engine.storage.app_settings_repository import SETTING_STT_ENGINE, read_setting
 from engine.dictation.dictation_cleanup import CleanupResult, clean_dictation_text
+from engine.dictation.dictation_history_repository import insert_dictation_entry
 from engine.dictation.dictation_intent_schema import (
     DICTATION_INTENT_JSON_SCHEMA,
     INTENT_PARSING_SYSTEM_FRAME,
@@ -53,6 +52,7 @@ from engine.dictation.dictation_note_flow import NoteIndexerProtocol, persist_di
 from engine.dictation.dictation_note_titler import RouteCompletionFn
 from engine.dictation.personal_dictionary import PersonalDictionary
 from engine.router.completion_contract import ChatMessage, TaskType
+from engine.storage.app_settings_repository import SETTING_STT_ENGINE, read_setting
 
 logger = logging.getLogger(__name__)
 

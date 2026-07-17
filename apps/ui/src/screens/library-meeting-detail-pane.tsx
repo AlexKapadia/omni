@@ -241,7 +241,7 @@ export function LibraryMeetingDetailPane({
               extraction={{
                 actions: detail.extraction.actions.map((a) => ({
                   title: a.title,
-                  owner: a.owner,
+                  ...(a.owner !== undefined ? { owner: a.owner } : {}),
                 })),
                 commitments: detail.extraction.commitments,
                 openQuestions: detail.extraction.openQuestions,

@@ -38,7 +38,10 @@ interface TooltipProps {
 
 // Anchors the floating label to the wrapper; no measurement/collision logic
 // (out of scope for this lightweight primitive — see brief §5.2 "lightweight").
-const SIDE_OFFSET: Readonly<Record<TooltipSide, React.CSSProperties>> = {
+// Concrete keys only — avoid CSSProperties optionals under exactOptionalPropertyTypes.
+const SIDE_OFFSET: Readonly<
+  Record<TooltipSide, { readonly [key: string]: string | number }>
+> = {
   top: { bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 6 },
   bottom: { top: "100%", left: "50%", transform: "translateX(-50%)", marginTop: 6 },
   left: { right: "100%", top: "50%", transform: "translateY(-50%)", marginRight: 6 },

@@ -26,10 +26,19 @@ beforeAll(installJsdomMatchMediaShim);
 afterEach(cleanup);
 
 const DONE_STATUS: SetupStatus = {
-  keys: { groq: true, gemini: true, anthropic: false, cartesia: false },
+  keys: {
+    groq: true,
+    gemini: true,
+    anthropic: false,
+    openai: false,
+    openrouter: false,
+    azure_openai: false,
+    cartesia: false,
+  },
   vault: { configured: true, path: "C:/picked" },
   models: [{ file: "m", present: true, bytes: 1 }],
   googleConnected: false,
+  microsoftConnected: false,
   onboardingComplete: true,
   setupComplete: true,
 };
@@ -57,7 +66,7 @@ function fakeActions(onDoneSpy: () => void): OnboardingActions {
   };
 }
 
-const validValidator = (provider: "groq" | "gemini" | "anthropic" | "cartesia"): Promise<KeyValidationResult> =>
+const validValidator = (provider: KeyValidationResult["provider"]): Promise<KeyValidationResult> =>
   Promise.resolve({ provider, valid: true, message: "reachable", latencyMs: 20 });
 
 async function saveAndValidate(label: string): Promise<void> {

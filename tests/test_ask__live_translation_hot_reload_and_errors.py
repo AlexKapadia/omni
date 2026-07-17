@@ -8,6 +8,13 @@ from typing import Any
 import pytest
 
 from engine.ask.live_translation_service import LiveTranslationService
+from engine.router.completion_contract import (
+    ChatMessage,
+    Provider,
+    ProviderCompletion,
+    RoutedCompletion,
+    ToolSpec,
+)
 from engine.router.router_errors import RouterError
 
 
@@ -16,17 +23,40 @@ class _ScriptedRouter:
         self.outcomes = list(outcomes)
         self.calls: list[dict[str, Any]] = []
 
-    async def route(self, task_type: str, system_frame: str, messages: tuple, **kwargs):
-        self.calls.append({"task_type": task_type, "system_frame": system_frame, "kwargs": kwargs})
+    async def route(
+        self,
+        task_type: str,
+        system_frame: str,
+        messages: tuple[ChatMessage, ...],
+        *,
+        tools: tuple[ToolSpec, ...] = (),
+        json_schema: dict[str, object] | None = None,
+        max_tokens: int = 4096,
+        preferred_model: str | None = None,
+        preferred_provider: str | None = None,
+    ) -> RoutedCompletion:
+        self.calls.append({"task_type": task_type, "system_frame": system_frame, "kwargs": {
+            "tools": tools,
+            "json_schema": json_schema,
+            "max_tokens": max_tokens,
+            "preferred_model": preferred_model,
+            "preferred_provider": preferred_provider,
+        }})
         outcome = self.outcomes.pop(0)
         if isinstance(outcome, Exception):
             raise outcome
-
-        class _Routed:
-            class completion:
-                text = outcome
-
-        return _Routed()
+        return RoutedCompletion(
+            completion=ProviderCompletion(
+                text=str(outcome),
+                provider=Provider.GROQ,
+                model="stub",
+                prompt_tokens=1,
+                completion_tokens=1,
+            ),
+            provider=Provider.GROQ,
+            model="stub",
+            latency_ms=1,
+        )
 
 
 @pytest.mark.asyncio

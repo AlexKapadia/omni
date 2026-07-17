@@ -28,6 +28,12 @@ import re
 import unicodedata
 from dataclasses import dataclass
 
+from engine.dictation.cleanup_styles import (
+    DEFAULT_CLEANUP_STYLE,
+)
+from engine.dictation.cleanup_styles import (
+    build_cleanup_system_frame as _style_frame,
+)
 from engine.dictation.dictation_note_titler import RouteCompletionFn
 from engine.router.completion_contract import ChatMessage, TaskType
 from engine.router.routing_table import ROUTING_TABLE
@@ -41,11 +47,6 @@ DICTATION_CLEANUP_JSON_SCHEMA: dict[str, object] = {
     "required": ["cleaned"],
     "additionalProperties": False,
 }
-
-from engine.dictation.cleanup_styles import (
-    DEFAULT_CLEANUP_STYLE,
-    build_cleanup_system_frame as _style_frame,
-)
 
 # Back-compat alias for tests and callers.
 CLEANUP_SYSTEM_FRAME = _style_frame((), DEFAULT_CLEANUP_STYLE)

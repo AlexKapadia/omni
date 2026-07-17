@@ -9,10 +9,10 @@ import pytest
 from engine.protocol import PROTOCOL_VERSION, Envelope, EnvelopeKind
 from engine.router.completion_contract import (
     ChatMessage,
+    CompletionRequest,
     Provider,
     ProviderCompletion,
     ProviderCompletionClient,
-    CompletionRequest,
 )
 from engine.router.fallback_executor import ProviderRouter
 from engine.router.router_ledger_repository import RouterLedgerEntry
@@ -68,7 +68,7 @@ async def test_selection_translate_uses_settings_lang_and_prefers_ollama(
     gemini = _OkClient(Provider.GEMINI, "should-not-win")
     ledger = _Ledger()
 
-    def factory(_recorder):  # noqa: ANN001
+    def factory(_recorder: object) -> ProviderRouter:
         return ProviderRouter(
             {Provider.OLLAMA: ollama, Provider.GEMINI: gemini}, ledger.record
         )

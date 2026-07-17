@@ -31,12 +31,17 @@ const baseSettings = {
   summaryLanguage: "",
   speakerIdentity: "Me",
   speakerVoiceEnrolled: false,
+  dictationCleanupStyle: "classic" as const,
+  sttEngine: "parakeet" as const,
+  sttModelId: "",
+  sttOpenaiBaseUrl: "",
+  selectionTranslationLang: "English",
   summaryModelId: "gemini-2.5-flash",
   ollamaBaseUrl: "http://127.0.0.1:11434",
   summaryProvider: "ollama" as const,
   autoSummary: false,
-      cartesiaVoiceId: "",
-      micDeviceId: "",
+  cartesiaVoiceId: "",
+  micDeviceId: "",
 };
 
 describe("wireCaptionsOverlay", () => {
@@ -58,12 +63,10 @@ describe("wireCaptionsOverlay", () => {
       ledgerPhase: "loading",
       ledgerError: null,
       ledger: null,
-      devicesPhase: "pending",
-      devicesError: null,
-      devices: [],
       devicesSource: "pending",
-      selectedInputDeviceId: null,
-      selectedOutputDeviceId: null,
+      microphone: "",
+      microphoneOptions: [],
+      systemAudioDevice: "",
     });
 
     const unwire = wireCaptionsOverlay(settingsStore);
@@ -88,12 +91,10 @@ describe("wireCaptionsOverlay", () => {
       ledgerPhase: "loading",
       ledgerError: null,
       ledger: null,
-      devicesPhase: "pending",
-      devicesError: null,
-      devices: [],
       devicesSource: "pending",
-      selectedInputDeviceId: null,
-      selectedOutputDeviceId: null,
+      microphone: "",
+      microphoneOptions: [],
+      systemAudioDevice: "",
     });
 
     const unwire = wireCaptionsOverlay(settingsStore);

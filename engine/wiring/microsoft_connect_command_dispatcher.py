@@ -55,7 +55,9 @@ def _microsoft_error_reply(reply_id: str, message: str) -> Envelope:
 
 
 class MicrosoftConnectCommandGateway:
-    def __init__(self, hub: EventBroadcastHub, token_store: MicrosoftTokenStore | None = None) -> None:
+    def __init__(
+        self, hub: EventBroadcastHub, token_store: MicrosoftTokenStore | None = None
+    ) -> None:
         self._hub = hub
         self._token_store = token_store if token_store is not None else MicrosoftTokenStore()
         self._task: asyncio.Task[None] | None = None

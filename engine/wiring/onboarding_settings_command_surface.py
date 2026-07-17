@@ -31,20 +31,15 @@ from engine.wiring.google_connect_command_dispatcher import (
     GoogleConnectCommandGateway,
     dispatch_google_command,
 )
-from engine.wiring.microsoft_connect_command_dispatcher import (
-    MICROSOFT_COMMAND_NAMES,
-    MicrosoftConnectCommandGateway,
-    dispatch_microsoft_command,
-)
-from engine.wiring.speaker_enroll_command_dispatcher import (
-    SPEAKER_COMMAND_NAMES,
-    SpeakerEnrollCommandGateway,
-    dispatch_speaker_command,
-)
 from engine.wiring.ledger_summary_command_dispatcher import (
     LEDGER_COMMAND_NAMES,
     LedgerSummaryCommandGateway,
     dispatch_ledger_command,
+)
+from engine.wiring.microsoft_connect_command_dispatcher import (
+    MICROSOFT_COMMAND_NAMES,
+    MicrosoftConnectCommandGateway,
+    dispatch_microsoft_command,
 )
 from engine.wiring.models_download_command_dispatcher import (
     MODELS_COMMAND_NAMES,
@@ -63,13 +58,18 @@ from engine.wiring.provider_keys_command_dispatcher import (
 )
 from engine.wiring.server_default_service_factories import (
     default_google_gateway_factory,
-    default_microsoft_gateway_factory,
-    default_ollama_gateway_factory,
-    default_speaker_gateway_factory,
     default_keys_gateway_factory,
     default_ledger_gateway_factory,
+    default_microsoft_gateway_factory,
     default_models_gateway_factory,
+    default_ollama_gateway_factory,
     default_settings_gateway_factory,
+    default_speaker_gateway_factory,
+)
+from engine.wiring.speaker_enroll_command_dispatcher import (
+    SPEAKER_COMMAND_NAMES,
+    SpeakerEnrollCommandGateway,
+    dispatch_speaker_command,
 )
 
 # Every command name the M7 surface owns — the handler routes exactly these

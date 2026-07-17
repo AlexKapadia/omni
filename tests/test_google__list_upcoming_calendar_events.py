@@ -5,9 +5,10 @@ from __future__ import annotations
 import pytest
 
 from engine.google.google_api_gateway import UpcomingCalendarEvent, list_upcoming_calendar_events
+from engine.google.google_session import GoogleSession
 
 
-class _FakeSession:
+class _FakeSession(GoogleSession):
     def __init__(self, response: dict[str, object]) -> None:
         self._response = response
         self.last_params: dict[str, str] | None = None

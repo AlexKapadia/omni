@@ -57,7 +57,9 @@ class TranscriptEventEmitter:
         self, label: StreamLabel, active_speaker_id: str | None
     ) -> tuple[str, str]:
         if self._labeler is None:
-            return ("me" if label is StreamLabel.ME else "1", "Me" if label is StreamLabel.ME else "Them")
+            speaker_id = "me" if label is StreamLabel.ME else "1"
+            display = "Me" if label is StreamLabel.ME else "Them"
+            return (speaker_id, display)
         if label is StreamLabel.ME:
             return self._labeler.me_labels()
         return self._labeler.them_partial_label(active_speaker_id)
@@ -66,7 +68,9 @@ class TranscriptEventEmitter:
         self, label: StreamLabel, audio: npt.NDArray[np.float32]
     ) -> tuple[str, str]:
         if self._labeler is None:
-            return ("me" if label is StreamLabel.ME else "1", "Me" if label is StreamLabel.ME else "Them")
+            speaker_id = "me" if label is StreamLabel.ME else "1"
+            display = "Me" if label is StreamLabel.ME else "Them"
+            return (speaker_id, display)
         if label is StreamLabel.ME:
             return self._labeler.me_labels()
         return self._labeler.assign_them(audio)

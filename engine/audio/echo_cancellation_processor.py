@@ -2,7 +2,10 @@
 
 from __future__ import annotations
 
+from typing import cast
+
 import numpy as np
+import numpy.typing as npt
 
 
 def apply_echo_cancellation(
@@ -22,4 +25,4 @@ def apply_echo_cancellation(
     mic = np.pad(mic_samples.astype(np.float32), (0, length - mic_samples.shape[0]))
     loop = np.pad(loopback_samples.astype(np.float32), (0, length - loopback_samples.shape[0]))
     out = mic - np.clip(strength, 0.0, 1.0) * loop
-    return np.clip(out, -1.0, 1.0)
+    return cast(npt.NDArray[np.floating], np.clip(out, -1.0, 1.0))

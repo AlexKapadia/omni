@@ -3,7 +3,7 @@
 import pytest
 from pydantic import ValidationError
 
-from engine.protocol.ask_query_payloads import AskQueryCommandPayload, MAX_ASK_QUERY_CHARS
+from engine.protocol.ask_query_payloads import MAX_ASK_QUERY_CHARS, AskQueryCommandPayload
 from engine.protocol.meeting_finalization_payloads import (
     MeetingExportCommandPayload,
     MeetingTextReplacePayload,

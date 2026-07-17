@@ -108,9 +108,7 @@ def _is_zoom_meeting_title(title_cf: str) -> bool:
     if any(marker in title_cf for marker in _ZOOM_TITLE_MARKERS):
         return True
     # "Zoom - <topic>" meeting windows; exclude the idle "Zoom Workplace" shell.
-    if title_cf.startswith("zoom - ") and "workplace" not in title_cf:
-        return True
-    return False
+    return bool(title_cf.startswith("zoom - ") and "workplace" not in title_cf)
 
 
 def classify_desktop_snapshot(snapshot: DesktopSnapshot) -> tuple[MeetingAppDetected, ...]:

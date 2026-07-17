@@ -7,6 +7,9 @@ import logging
 from datetime import UTC, datetime
 from pathlib import Path
 
+import numpy as np
+import numpy.typing as npt
+
 from engine.audio.audio_frame_types import StreamLabel
 from engine.storage.meetings_repository import fetch_meeting_row
 from engine.storage.sqlite_connection import open_sqlite_connection
@@ -42,7 +45,7 @@ def resolve_kept_audio_path(session_dir: Path, label: StreamLabel) -> Path | Non
     return None
 
 
-def decode_kept_audio(path: Path):
+def decode_kept_audio(path: Path) -> npt.NDArray[np.float32]:
     """Decode kept audio: WAV via wave module; anything else via ffmpeg."""
     if path.suffix.lower() == ".wav":
         return decode_wav_to_mono_16k(path)

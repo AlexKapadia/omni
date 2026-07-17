@@ -56,7 +56,7 @@ export function MeetingDetectedToast({
             className="pointer-events-auto flex w-full flex-col border border-[var(--grey-200)] bg-[var(--surface)]"
             initial={reducedMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={reducedMotion ? undefined : { opacity: 0, y: 6 }}
+            {...(reducedMotion ? {} : { exit: { opacity: 0, y: 6 } })}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             style={{
               borderRadius: "var(--radius-card)",
@@ -111,7 +111,7 @@ export function MeetingDetectedToast({
             className="pointer-events-auto flex w-full flex-col border border-[var(--grey-200)] bg-[var(--surface)]"
             initial={reducedMotion ? false : { opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            exit={reducedMotion ? undefined : { opacity: 0, y: 6 }}
+            {...(reducedMotion ? {} : { exit: { opacity: 0, y: 6 } })}
             transition={{ duration: 0.2, ease: [0.16, 1, 0.3, 1] }}
             style={{
               borderRadius: "var(--radius-card)",

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from collections.abc import Sequence
+
 import aiosqlite
 
 __all__ = [
@@ -41,6 +43,8 @@ async def insert_dictation_entry(
     )
     row_id = cursor.lastrowid
     await cursor.close()
+    if row_id is None:
+        raise RuntimeError("dictation_entries insert did not return a row id")
     return int(row_id)
 
 
@@ -84,7 +88,7 @@ async def search_dictation_entries(
     return [_row_to_dict(row) for row in rows]
 
 
-def _row_to_dict(row: tuple[object, ...]) -> dict[str, object]:
+def _row_to_dict(row: Sequence[object]) -> dict[str, object]:
     return {
         "id": row[0],
         "created_at": row[1],

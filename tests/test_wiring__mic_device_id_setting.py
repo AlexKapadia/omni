@@ -35,4 +35,4 @@ def test_mic_device_id_rejects_malformed() -> None:
     with pytest.raises(SettingsValueError):
         validate_settings_values({SETTING_MIC_DEVICE_ID: "9:"})
     with pytest.raises(SettingsValueError):
-        validate_settings_values({SETTING_MIC_DEVICE_ID: 9})  # type: ignore[dict-item]
+        validate_settings_values({SETTING_MIC_DEVICE_ID: 9})

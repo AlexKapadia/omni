@@ -18,6 +18,7 @@ from pathlib import Path
 
 from engine.stt.model_weights_downloader import FetchFn, _https_fetch
 
+
 # Meetily WHISPER_MODEL_CATALOG (name, filename, size_mb, accuracy, speed, description)
 @dataclass(frozen=True)
 class WhisperModelSpec:
@@ -33,10 +34,36 @@ class WhisperModelSpec:
 
 
 WHISPER_MODEL_SPECS: tuple[WhisperModelSpec, ...] = (
-    WhisperModelSpec("tiny", "ggml-tiny.bin", 74, "Decent", "Very Fast", "Fastest processing", False),
-    WhisperModelSpec("base", "ggml-base.bin", 142, "Good", "Fast", "Good balance of speed and accuracy", False),
-    WhisperModelSpec("small", "ggml-small.bin", 466, "Good", "Medium", "Better accuracy, moderate speed", True),
-    WhisperModelSpec("medium", "ggml-medium.bin", 1463, "High", "Slow", "High accuracy for professional use", False),
+    WhisperModelSpec(
+        "tiny", "ggml-tiny.bin", 74, "Decent", "Very Fast", "Fastest processing", False
+    ),
+    WhisperModelSpec(
+        "base",
+        "ggml-base.bin",
+        142,
+        "Good",
+        "Fast",
+        "Good balance of speed and accuracy",
+        False,
+    ),
+    WhisperModelSpec(
+        "small",
+        "ggml-small.bin",
+        466,
+        "Good",
+        "Medium",
+        "Better accuracy, moderate speed",
+        True,
+    ),
+    WhisperModelSpec(
+        "medium",
+        "ggml-medium.bin",
+        1463,
+        "High",
+        "Slow",
+        "High accuracy for professional use",
+        False,
+    ),
     WhisperModelSpec(
         "large-v3-turbo",
         "ggml-large-v3-turbo.bin",
@@ -49,9 +76,15 @@ WHISPER_MODEL_SPECS: tuple[WhisperModelSpec, ...] = (
     WhisperModelSpec(
         "large-v3", "ggml-large-v3.bin", 2951, "High", "Slow", "Most accurate large model", True
     ),
-    WhisperModelSpec("tiny-q5_1", "ggml-tiny-q5_1.bin", 31, "Decent", "Very Fast", "Quantized tiny", False),
-    WhisperModelSpec("base-q5_1", "ggml-base-q5_1.bin", 57, "Good", "Fast", "Quantized base", False),
-    WhisperModelSpec("small-q5_1", "ggml-small-q5_1.bin", 181, "Good", "Fast", "Quantized small", False),
+    WhisperModelSpec(
+        "tiny-q5_1", "ggml-tiny-q5_1.bin", 31, "Decent", "Very Fast", "Quantized tiny", False
+    ),
+    WhisperModelSpec(
+        "base-q5_1", "ggml-base-q5_1.bin", 57, "Good", "Fast", "Quantized base", False
+    ),
+    WhisperModelSpec(
+        "small-q5_1", "ggml-small-q5_1.bin", 181, "Good", "Fast", "Quantized small", False
+    ),
     WhisperModelSpec(
         "medium-q5_0", "ggml-medium-q5_0.bin", 514, "High", "Medium", "Quantized medium", True
     ),

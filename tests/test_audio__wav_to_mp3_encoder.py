@@ -14,7 +14,6 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from engine.audio import wav_to_mp3_encoder
 from engine.audio.audio_frame_types import PIPELINE_SAMPLE_RATE
 from engine.audio.wav_to_mp3_encoder import encode_wav_to_mp3
 
@@ -35,7 +34,7 @@ def _write_wav(path: Path, seconds: float = 0.5) -> None:
 def test_returns_none_when_ffmpeg_missing(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(wav_to_mp3_encoder.shutil, "which", lambda _name: None)
+    monkeypatch.setattr("engine.audio.wav_to_mp3_encoder.shutil.which", lambda _name: None)
     wav = tmp_path / "me.wav"
     _write_wav(wav)
     assert encode_wav_to_mp3(wav) is None
@@ -45,12 +44,15 @@ def test_returns_none_when_ffmpeg_missing(
 def test_returns_none_when_subprocess_raises(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(wav_to_mp3_encoder.shutil, "which", lambda _name: "/usr/bin/ffmpeg")
+    monkeypatch.setattr(
+        "engine.audio.wav_to_mp3_encoder.shutil.which",
+        lambda _name: "/usr/bin/ffmpeg",
+    )
 
     def _boom(*_args: object, **_kwargs: object) -> object:
         raise OSError("cannot spawn ffmpeg")
 
-    monkeypatch.setattr(wav_to_mp3_encoder.subprocess, "run", _boom)
+    monkeypatch.setattr("engine.audio.wav_to_mp3_encoder.subprocess.run", _boom)
     wav = tmp_path / "me.wav"
     _write_wav(wav)
     assert encode_wav_to_mp3(wav) is None  # fail-soft: no raise, WAV kept by caller
@@ -59,12 +61,15 @@ def test_returns_none_when_subprocess_raises(
 def test_returns_none_when_ffmpeg_exits_nonzero(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    monkeypatch.setattr(wav_to_mp3_encoder.shutil, "which", lambda _name: "/usr/bin/ffmpeg")
+    monkeypatch.setattr(
+        "engine.audio.wav_to_mp3_encoder.shutil.which",
+        lambda _name: "/usr/bin/ffmpeg",
+    )
 
     def _fail(*_args: object, **_kwargs: object) -> subprocess.CompletedProcess[bytes]:
         return subprocess.CompletedProcess(args=[], returncode=1, stdout=b"", stderr=b"boom")
 
-    monkeypatch.setattr(wav_to_mp3_encoder.subprocess, "run", _fail)
+    monkeypatch.setattr("engine.audio.wav_to_mp3_encoder.subprocess.run", _fail)
     wav = tmp_path / "me.wav"
     _write_wav(wav)
     assert encode_wav_to_mp3(wav) is None

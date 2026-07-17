@@ -35,7 +35,7 @@ def _command(name: str, payload: dict[str, Any], command_id: str | None = None) 
     )
 
 
-def _reply(ws, limit: int = 20) -> dict[str, Any]:
+def _reply(ws: Any, limit: int = 20) -> dict[str, Any]:
     for _ in range(limit):
         frame = receive_frame(ws)
         if frame.get("name") == "engine.heartbeat":
@@ -70,7 +70,7 @@ async def test_export_md_returns_full_meeting_markdown(
     finally:
         await connection.close()
 
-    hub = EventBroadcastHub()
+    EventBroadcastHub()
 
     def finalization_factory(h: EventBroadcastHub) -> MeetingFinalizationService:
         return MeetingFinalizationService(

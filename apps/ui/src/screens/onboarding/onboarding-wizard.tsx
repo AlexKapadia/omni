@@ -99,7 +99,6 @@ export function OnboardingWizard({
   const vault = useMemo(() => vaultProp ?? createEngineApiKeyVault(), [vaultProp]);
 
   const step = useStore(flowStore, (s) => s.step);
-  const vaultConfigured = useStore(flowStore, (s) => s.vaultConfigured);
   const vaultPath = useStore(flowStore, (s) => s.vaultPath);
   const vaultBusy = useStore(flowStore, (s) => s.vaultBusy);
 

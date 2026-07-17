@@ -8,7 +8,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
-const sendEngineCommand = vi.hoisted(() => vi.fn(() => true));
+const sendEngineCommand = vi.hoisted(() => vi.fn((..._args: unknown[]) => true));
 
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({ hide: vi.fn().mockResolvedValue(undefined) }),

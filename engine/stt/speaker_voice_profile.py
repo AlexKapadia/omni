@@ -46,10 +46,10 @@ def extract_voice_embedding(audio: npt.NDArray[np.float32]) -> npt.NDArray[np.fl
         vectors.append(_frame_features(chunk))
     if not vectors:
         return np.zeros(_EMBEDDING_DIM, dtype=np.float32)
-    mean = np.mean(np.stack(vectors, axis=0), axis=0).astype(np.float32)
+    mean = np.asarray(np.mean(np.stack(vectors, axis=0), axis=0), dtype=np.float32)
     norm = float(np.linalg.norm(mean))
     if norm > 1e-8:
-        mean /= norm
+        mean = np.asarray(mean / norm, dtype=np.float32)
     return mean
 
 
@@ -99,7 +99,7 @@ def decode_wav_pcm16_mono_16k(wav_bytes: bytes) -> npt.NDArray[np.float32]:
     if sample_rate != PIPELINE_SAMPLE_RATE:
         # Simple linear resample for enrollment clips (short).
         ratio = PIPELINE_SAMPLE_RATE / sample_rate
-        new_len = max(1, int(math.floor(samples.size * ratio)))
+        new_len = max(1, math.floor(samples.size * ratio))
         x_old = np.linspace(0.0, 1.0, num=samples.size, endpoint=False)
         x_new = np.linspace(0.0, 1.0, num=new_len, endpoint=False)
         samples = np.interp(x_new, x_old, samples).astype(np.float32)
@@ -116,9 +116,11 @@ class LoopbackSpeakerDiarizer:
 
     def assign(self, audio: npt.NDArray[np.float32]) -> str:
         embedding = extract_voice_embedding(audio)
-        if self.enrollment is not None:
-            if cosine_similarity(embedding, self.enrollment) >= _MATCH_THRESHOLD:
-                return "me"
+        if (
+            self.enrollment is not None
+            and cosine_similarity(embedding, self.enrollment) >= _MATCH_THRESHOLD
+        ):
+            return "me"
         best_id: str | None = None
         best_score = -1.0
         for speaker_id, centroid in self._centroids.items():

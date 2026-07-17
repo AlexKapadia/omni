@@ -278,7 +278,7 @@ async def test_dictation_openai_compatible_fails_closed_without_key(
         openai_base_url="https://api.openai.com/v1",
         openai_api_key=None,
     )
-    with pytest.raises(DictationSessionError, match="openai_compatible|API key"):
+    with pytest.raises(DictationSessionError, match=r"openai_compatible|API key"):
         await service._ensure_models_loaded()
     assert service._models_ready is False
 

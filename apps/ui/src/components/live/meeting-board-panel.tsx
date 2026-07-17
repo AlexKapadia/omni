@@ -42,10 +42,12 @@ export function parseMeetingExtraction(value: unknown): MeetingExtractionBoard |
     const row = item as Record<string, unknown>;
     const title = asString(row["title"]);
     if (title === null || title.length === 0) return null;
+    const owner = asString(row["owner"]);
+    const dueHint = asString(row["due_hint"]);
     actions.push({
       title,
-      owner: asString(row["owner"]) ?? undefined,
-      dueHint: asString(row["due_hint"]) ?? undefined,
+      ...(owner !== null ? { owner } : {}),
+      ...(dueHint !== null ? { dueHint } : {}),
     });
   }
 
@@ -56,7 +58,12 @@ export function parseMeetingExtraction(value: unknown): MeetingExtractionBoard |
     const who = asString(row["who"]);
     const what = asString(row["what"]);
     if (who === null || what === null) return null;
-    commitments.push({ who, what, when: asString(row["when"]) ?? undefined });
+    const when = asString(row["when"]);
+    commitments.push({
+      who,
+      what,
+      ...(when !== null ? { when } : {}),
+    });
   }
 
   const openQuestions: string[] = [];

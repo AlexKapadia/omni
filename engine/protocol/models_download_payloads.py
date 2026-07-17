@@ -41,11 +41,12 @@ class ModelsDownloadCommandPayload(BaseModel):
 
     @model_validator(mode="after")
     def _whisper_needs_id(self) -> ModelsDownloadCommandPayload:
-        if self.bundle == "whisper":
-            if self.model_id is None or self.model_id not in _WHISPER_IDS:
-                raise ValueError(
-                    "whisper bundle requires model_id from the Meetily ggml catalog"
-                )
+        if self.bundle == "whisper" and (
+            self.model_id is None or self.model_id not in _WHISPER_IDS
+        ):
+            raise ValueError(
+                "whisper bundle requires model_id from the Meetily ggml catalog"
+            )
         return self
 
 

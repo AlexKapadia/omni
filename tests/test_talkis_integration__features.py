@@ -1,5 +1,7 @@
 """Tests for Talkis integration features (history, STT, cleanup styles, import, ask scope)."""
 
+from pathlib import Path
+
 import numpy as np
 import pytest
 from pydantic import ValidationError
@@ -16,6 +18,8 @@ from engine.dictation.dictation_history_repository import (
 )
 from engine.protocol.ask_query_payloads import AskQueryCommandPayload
 from engine.protocol.meeting_finalization_payloads import ImportMediaCommandPayload
+from engine.storage.sqlite_connection import open_sqlite_connection
+from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.stt.file_diarization_service import assign_speakers_to_segments
 from engine.stt.stt_backend_protocol import SttSegment
 from engine.stt.stt_backend_registry import (
@@ -23,8 +27,6 @@ from engine.stt.stt_backend_registry import (
     create_stt_backend,
     normalize_stt_engine,
 )
-from engine.storage.sqlite_connection import open_sqlite_connection
-from engine.storage.sqlite_migrations_runner import apply_migrations
 
 
 @pytest.mark.parametrize("style", sorted(CLEANUP_STYLES))
@@ -66,7 +68,9 @@ def test_ask_query_rejects_unknown_scope() -> None:
 
 
 @pytest.mark.asyncio
-async def test_dictation_history_round_trip(tmp_db_path, real_migrations_dir) -> None:
+async def test_dictation_history_round_trip(
+    tmp_db_path: Path, real_migrations_dir: Path
+) -> None:
     await apply_migrations(tmp_db_path, real_migrations_dir)
     connection = await open_sqlite_connection(tmp_db_path)
     try:

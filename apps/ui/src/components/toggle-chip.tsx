@@ -10,7 +10,7 @@
  * 5.88:1 — both comfortably clear the >=3:1 floor this component commits to
  * (and the >=4.5:1 AA text gate besides).
  */
-import type { ComponentType } from "react";
+import type { LucideIcon } from "lucide-react";
 
 interface ToggleChipProps {
   readonly pressed: boolean;
@@ -18,7 +18,7 @@ interface ToggleChipProps {
   readonly label: string;
   // The chip's own accessible name is the text label, so the icon is always
   // decorative — aria-hidden is part of the prop contract, not optional.
-  readonly icon?: ComponentType<{ className?: string; size?: number; "aria-hidden"?: boolean }>;
+  readonly icon?: LucideIcon;
   readonly disabled?: boolean;
 }
 

@@ -46,7 +46,12 @@ from engine.router.router_errors import (
     RouterUnavailableError,
 )
 from engine.router.router_ledger_repository import RouterLedgerEntry
-from engine.router.routing_table import ProviderModelSlot, ResolvedRoute, prefer_summary_model, resolve_route
+from engine.router.routing_table import (
+    ProviderModelSlot,
+    ResolvedRoute,
+    prefer_summary_model,
+    resolve_route,
+)
 from engine.security.kill_switch import kill_switch_engaged
 
 # Brief pause before the single ratelimit retry — long enough for burst

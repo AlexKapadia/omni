@@ -13,6 +13,7 @@ import {
   BrainCircuit,
   Activity,
   ArrowLeft,
+  type LucideIcon,
 } from "lucide-react";
 
 import { ApiKeysSection } from "../components/settings/api-keys-section";
@@ -69,7 +70,7 @@ type TabType = "general" | "audio" | "recordings" | "transcription" | "ai" | "ad
 interface SettingsTab {
   readonly id: TabType;
   readonly label: string;
-  readonly icon: React.ComponentType<{ size?: number; className?: string }>;
+  readonly icon: LucideIcon;
 }
 
 const SETTINGS_TABS: readonly SettingsTab[] = [

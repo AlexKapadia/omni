@@ -22,10 +22,7 @@ def assign_speakers_to_segments(
     for segment in segments:
         start = max(0, int(segment.t_start * PIPELINE_SAMPLE_RATE))
         end = min(samples.size, int(segment.t_end * PIPELINE_SAMPLE_RATE))
-        if end <= start:
-            speaker_id = "1"
-        else:
-            speaker_id = diarizer.assign(samples[start:end])
+        speaker_id = "1" if end <= start else diarizer.assign(samples[start:end])
         label = resolve_speaker_label(speaker_id, identity_name)
         labeled.append((segment, speaker_id, label))
     return labeled

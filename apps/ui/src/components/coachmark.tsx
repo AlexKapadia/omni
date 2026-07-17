@@ -34,7 +34,10 @@ interface CoachmarkProps {
   readonly store?: CoachmarkStore;
 }
 
-const SIDE_OFFSET: Readonly<Record<TooltipSide, React.CSSProperties>> = {
+// Concrete keys only — avoid CSSProperties optionals under exactOptionalPropertyTypes.
+const SIDE_OFFSET: Readonly<
+  Record<TooltipSide, { readonly [key: string]: string | number }>
+> = {
   top: { bottom: "100%", left: "50%", transform: "translateX(-50%)", marginBottom: 8 },
   bottom: { top: "100%", left: "50%", transform: "translateX(-50%)", marginTop: 8 },
   left: { right: "100%", top: "50%", transform: "translateY(-50%)", marginRight: 8 },
@@ -79,7 +82,7 @@ export function Coachmark({ id, title, children, anchor, side = "bottom", store 
             borderRadius: 14,
             maxWidth: 280,
             padding: 16,
-            ...(anchor ? SIDE_OFFSET[side] : undefined),
+            ...(anchor ? SIDE_OFFSET[side] : {}),
           }}
         >
           <p className="m-0 font-[family-name:var(--font-body)] font-semibold text-[var(--ink)]" style={{ fontSize: 14 }}>

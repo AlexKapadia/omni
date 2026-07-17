@@ -1,9 +1,9 @@
 import { useEffect, useState } from "react";
 import { useStore } from "zustand";
-import { Mic, AudioLines, MessageSquareText, FileAudio, HelpCircle, ArrowRight } from "lucide-react";
+import { Mic, AudioLines, MessageSquareText, FileAudio, ArrowRight } from "lucide-react";
 import { OmniButton } from "../components/button";
 import { appSettingsStore } from "../lib/settings-store";
-import { meetingsStore, loadMeetings, filterMeetings } from "../lib/meetings-store";
+import { meetingsStore, loadMeetings } from "../lib/meetings-store";
 import { createLiveMeetingsRepository } from "../lib/meetings-live-repository";
 import { pickMediaFile } from "../lib/pick-media-file";
 import { importMediaFile } from "../lib/meetings-live-repository";

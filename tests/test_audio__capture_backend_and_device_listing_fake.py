@@ -542,7 +542,9 @@ class _CapturingBackend:
         return self._spec
 
     def resolve_input_device(self, key: str) -> CaptureDeviceSpec:
-        return CaptureDeviceSpec(key, key.split(":", 1)[-1], self._spec.sample_rate, self._spec.channels)
+        return CaptureDeviceSpec(
+            key, key.split(":", 1)[-1], self._spec.sample_rate, self._spec.channels
+        )
 
     def open_capture_stream(self, spec: CaptureDeviceSpec, on_chunk: Any) -> Any:
         self.on_chunk = on_chunk

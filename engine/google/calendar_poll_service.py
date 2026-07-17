@@ -6,14 +6,15 @@ Runs only when Google is connected; fails closed silently when not.
 from __future__ import annotations
 
 import asyncio
+import contextlib
 import logging
-from collections.abc import Awaitable, Callable
+from collections.abc import Callable
 from datetime import UTC, datetime, timedelta
 
 from engine.google.google_api_gateway import UpcomingCalendarEvent, list_upcoming_calendar_events
 from engine.google.google_auth_errors import GoogleNotConnectedError
 from engine.google.google_session import DpapiGoogleSession, GoogleSession
-from engine.microsoft.graph_api_gateway import list_upcoming_outlook_events
+from engine.microsoft.graph_api_gateway import UpcomingOutlookEvent, list_upcoming_outlook_events
 from engine.microsoft.graph_session import DpapiMicrosoftSession, MicrosoftSession
 from engine.microsoft.microsoft_auth_errors import MicrosoftNotConnectedError
 from engine.protocol.calendar_event_payloads import (
@@ -63,10 +64,8 @@ class CalendarPollService:
         if task is None or task.done():
             return
         task.cancel()
-        try:
+        with contextlib.suppress(asyncio.CancelledError):
             await task
-        except asyncio.CancelledError:
-            pass
 
     async def _run_loop(self) -> None:
         while True:
@@ -110,7 +109,9 @@ class CalendarPollService:
         await self._broadcast_new(events, provider="outlook")
 
     async def _broadcast_new(
-        self, events: tuple[UpcomingCalendarEvent, ...] | tuple, provider: str
+        self,
+        events: tuple[UpcomingCalendarEvent, ...] | tuple[UpcomingOutlookEvent, ...],
+        provider: str,
     ) -> None:
         current_ids = frozenset(f"{provider}:{event.event_id}" for event in events)
         for event in events:

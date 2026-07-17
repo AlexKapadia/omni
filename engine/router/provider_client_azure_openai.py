@@ -38,7 +38,8 @@ class AzureOpenAICompletionClient(ProviderCompletionClient):
         self._api_key = api_key
         self._sdk_client: Any = None
         self._deployment = (
-            os.environ.get(AZURE_OPENAI_DEPLOYMENT_ENV, "").strip() or AZURE_OPENAI_DEFAULT_DEPLOYMENT
+            os.environ.get(AZURE_OPENAI_DEPLOYMENT_ENV, "").strip()
+            or AZURE_OPENAI_DEFAULT_DEPLOYMENT
         )
 
     def _client(self) -> Any:
@@ -85,4 +86,14 @@ class AzureOpenAICompletionClient(ProviderCompletionClient):
             for tc in (choice.message.tool_calls or [])
             if tc.function is not None
         )
-        return ProviderCompletion(text=text, tool_calls=tool_calls)
+        usage = getattr(response, "usage", None)
+        prompt_tokens = int(getattr(usage, "prompt_tokens", 0) or 0)
+        completion_tokens = int(getattr(usage, "completion_tokens", 0) or 0)
+        return ProviderCompletion(
+            text=text,
+            provider=self.provider,
+            model=model,
+            prompt_tokens=prompt_tokens,
+            completion_tokens=completion_tokens,
+            tool_calls=tool_calls,
+        )

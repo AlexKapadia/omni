@@ -27,7 +27,6 @@ import asyncio
 import logging
 from collections.abc import Callable
 
-from engine.detect.detection_settings_from_app import detection_rule_settings_from_effective
 from engine.detect import (
     AutoStart,
     AutoStartRulesEngine,
@@ -41,6 +40,7 @@ from engine.detect import (
     read_desktop_snapshot_via_ctypes,
     read_microphone_consent_store_via_winreg,
 )
+from engine.detect.detection_settings_from_app import detection_rule_settings_from_effective
 from engine.protocol import (
     EVENT_CAPTURE_DEVICE_CHANGED,
     EVENT_CAPTURE_SUGGEST_STOP,

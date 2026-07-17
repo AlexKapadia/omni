@@ -7,7 +7,9 @@ VAULT_SUGGESTION_EVENT_NAME = "vault.suggestion"
 TRANSLATION_UPDATED_EVENT_NAME = "translation.updated"
 
 
-def summary_updated_payload(meeting_id: str, summary_md: str, updated_at_ms: int) -> dict[str, object]:
+def summary_updated_payload(
+    meeting_id: str, summary_md: str, updated_at_ms: int
+) -> dict[str, object]:
     return {
         "meeting_id": meeting_id,
         "summary_md": summary_md,

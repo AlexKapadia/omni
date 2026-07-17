@@ -6,7 +6,8 @@
  * Copy contract: button labels say what they do, sentence case, no
  * exclamation marks — enforced by usage, carried by every call site.
  */
-import type { ButtonHTMLAttributes, ComponentType } from "react";
+import type { ButtonHTMLAttributes } from "react";
+import type { LucideIcon } from "lucide-react";
 
 export type ButtonVariant = "primary" | "secondary" | "ghost" | "ghost-dismiss";
 
@@ -14,7 +15,7 @@ interface OmniButtonProps extends ButtonHTMLAttributes<HTMLButtonElement> {
   readonly variant: ButtonVariant;
   readonly small?: boolean;
   readonly loading?: boolean;
-  readonly icon?: ComponentType<{ className?: string; size?: number }>;
+  readonly icon?: LucideIcon;
 }
 
 const VARIANT_CLASSES: Readonly<Record<ButtonVariant, string>> = {

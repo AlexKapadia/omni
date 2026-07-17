@@ -101,7 +101,15 @@ ROUTING_TABLE: dict[TaskType, RouteSpec] = {
     ),
     TaskType.ASK_SYNTHESIS: RouteSpec(
         primary=AnthropicIfKeyedSlot(otherwise=_GEMINI_FLASH),
-        fallbacks=(_GEMINI_FLASH, _GEMINI_PRO, _OPENAI_MINI, _OPENROUTER_DEFAULT, _AZURE_DEFAULT, _OLLAMA_DEFAULT, _LMSTUDIO_DEFAULT),
+        fallbacks=(
+            _GEMINI_FLASH,
+            _GEMINI_PRO,
+            _OPENAI_MINI,
+            _OPENROUTER_DEFAULT,
+            _AZURE_DEFAULT,
+            _OLLAMA_DEFAULT,
+            _LMSTUDIO_DEFAULT,
+        ),
         latency_budget_p95_ms=3_500,  # interactive Q&A
     ),
     TaskType.LONG_CONTEXT_BULK: RouteSpec(

@@ -160,7 +160,8 @@ function mapExtraction(value: unknown): MeetingExtractionData | null {
   const questionsRaw = record["open_questions"];
   if (!Array.isArray(actionsRaw) || !Array.isArray(commitmentsRaw)) return null;
   if (!Array.isArray(questionsRaw)) return null;
-  const actions: MeetingExtractionData["actions"] = [];
+  // Local mutable copies — MeetingExtractionData fields are readonly arrays.
+  const actions: { title: string; owner?: string }[] = [];
   for (const item of actionsRaw) {
     if (typeof item !== "object" || item === null) return null;
     const row = item as Record<string, unknown>;
@@ -169,7 +170,7 @@ function mapExtraction(value: unknown): MeetingExtractionData | null {
     const owner = asString(row["owner"]);
     actions.push(owner !== null ? { title, owner } : { title });
   }
-  const commitments: MeetingExtractionData["commitments"] = [];
+  const commitments: { who: string; what: string }[] = [];
   for (const item of commitmentsRaw) {
     if (typeof item !== "object" || item === null) return null;
     const row = item as Record<string, unknown>;

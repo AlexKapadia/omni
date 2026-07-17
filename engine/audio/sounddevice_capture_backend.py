@@ -2,11 +2,13 @@
 
 from __future__ import annotations
 
+import importlib
 import logging
 import queue
 import threading
 import time
 from collections.abc import Callable
+from typing import Any
 
 import numpy as np
 
@@ -18,8 +20,13 @@ logger = logging.getLogger(__name__)
 _CHUNK_SECONDS = 0.02
 
 
+def _sounddevice() -> Any:
+    """Lazy import so mypy does not require a sounddevice stub."""
+    return importlib.import_module("sounddevice")
+
+
 def _find_loopback_device_index() -> int | None:
-    import sounddevice as sd
+    sd = _sounddevice()
 
     devices = sd.query_devices()
     default_output = sd.default.device[1]
@@ -90,9 +97,13 @@ class _SoundDeviceStreamHandle:
         if self._closed:
             return
         self._closed = True
+        stop = getattr(self._stream, "stop", None)
+        close = getattr(self._stream, "close", None)
         try:
-            self._stream.stop()  # type: ignore[attr-defined]
-            self._stream.close()  # type: ignore[attr-defined]
+            if callable(stop):
+                stop()
+            if callable(close):
+                close()
         except Exception:
             logger.debug("sounddevice stream close failed", exc_info=True)
 
@@ -101,7 +112,7 @@ class SoundDeviceCaptureBackend:
     """Capture microphone + monitor/loopback devices on macOS and Linux."""
 
     def probe_default_device(self, stream: StreamLabel) -> CaptureDeviceSpec:
-        import sounddevice as sd
+        sd = _sounddevice()
 
         if stream is StreamLabel.ME:
             device_index = sd.default.device[0]
@@ -124,7 +135,7 @@ class SoundDeviceCaptureBackend:
 
     def resolve_input_device(self, key: str) -> CaptureDeviceSpec:
         """Look up an input by ``"{index}:{name}"`` — fail closed on miss."""
-        import sounddevice as sd
+        sd = _sounddevice()
 
         try:
             device_index = int(key.split(":", 1)[0])
@@ -148,13 +159,15 @@ class SoundDeviceCaptureBackend:
         spec: CaptureDeviceSpec,
         on_chunk: Callable[[bytes, float], None],
     ) -> CaptureStreamHandle:
-        import sounddevice as sd
+        sd = _sounddevice()
 
         device_index = int(spec.key.split(":", 1)[0])
         frames_per_buffer = max(128, int(spec.sample_rate * _CHUNK_SECONDS))
         frame_queue: queue.Queue[tuple[bytes, float]] = queue.Queue()
 
-        def callback(indata, _frames, _time_info, status) -> None:
+        def callback(
+            indata: Any, _frames: Any, _time_info: Any, status: Any
+        ) -> None:
             if status:
                 logger.warning("sounddevice capture status: %s", status)
             mono = indata[:, 0] if getattr(indata, "ndim", 1) > 1 else indata

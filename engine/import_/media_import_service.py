@@ -10,17 +10,15 @@ from collections.abc import Awaitable, Callable
 from datetime import UTC, datetime
 from pathlib import Path
 
-import aiosqlite
-
 from engine.index.vault_indexer_service import VaultIndexerService
-from engine.stt.file_diarization_service import assign_speakers_to_segments
-from engine.stt.offline_audio_transcriber import decode_media_to_mono_16k, new_segment_id
-from engine.stt.stt_backend_protocol import SttSegment
-from engine.stt.stt_settings_loader import load_stt_backend_from_settings
 from engine.storage.meetings_repository import insert_meeting, mark_meeting_ended
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.storage.transcript_segments_repository import insert_transcript_segment
+from engine.stt.file_diarization_service import assign_speakers_to_segments
+from engine.stt.offline_audio_transcriber import decode_media_to_mono_16k, new_segment_id
+from engine.stt.stt_backend_protocol import SttSegment
+from engine.stt.stt_settings_loader import load_stt_backend_from_settings
 from engine.vault import VaultWriteError, resolve_vault_root
 
 logger = logging.getLogger(__name__)

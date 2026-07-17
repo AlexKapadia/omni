@@ -124,7 +124,9 @@ def spawn_silence_auto_stop_tasks(
     if timeout_s is not None:
         if timeout_s <= 0:  # disabled — no task, zero overhead
             return []
-        getter: TimeoutGetter = lambda: float(timeout_s)
+
+        def getter() -> float:
+            return float(timeout_s)
     else:
         if resolve_silence_timeout_s() <= 0:
             return []

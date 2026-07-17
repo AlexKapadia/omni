@@ -14,7 +14,10 @@ Security invariants:
   a missing dependency refuses THAT action honestly, never engine boot.
 """
 
+from __future__ import annotations
+
 from pathlib import Path
+from typing import TYPE_CHECKING
 
 from engine.ask.ask_query_command_dispatcher import AskAnswerGateway
 from engine.enhance import MeetingFinalizationService
@@ -29,14 +32,18 @@ from engine.wiring.approval_cards_gateway import ApprovalCardsGateway
 from engine.wiring.detection_server_wiring import DetectionServerWiring
 from engine.wiring.dictation_command_dispatcher import DictationCommandGateway
 from engine.wiring.google_connect_command_dispatcher import GoogleConnectCommandGateway
-from engine.wiring.microsoft_connect_command_dispatcher import MicrosoftConnectCommandGateway
-from engine.wiring.speaker_enroll_command_dispatcher import SpeakerEnrollCommandGateway
 from engine.wiring.ledger_summary_command_dispatcher import LedgerSummaryCommandGateway
 from engine.wiring.live_answers_spotter_wiring import LiveAnswersSpotterWiring
+from engine.wiring.microsoft_connect_command_dispatcher import MicrosoftConnectCommandGateway
 from engine.wiring.models_download_command_dispatcher import ModelsDownloadCommandGateway
 from engine.wiring.ollama_command_dispatcher import OllamaCommandGateway
 from engine.wiring.provider_keys_command_dispatcher import ProviderKeysCommandGateway
+from engine.wiring.speaker_enroll_command_dispatcher import SpeakerEnrollCommandGateway
 from engine.wiring.vault_watchdog_server_wiring import VaultWatchdogServerWiring
+
+if TYPE_CHECKING:
+    from engine.google.calendar_poll_service import CalendarPollService
+    from engine.wiring.live_meeting_enrichment_wiring import LiveMeetingEnrichmentWiring
 
 # The repo's migrations directory (packaging bundles it next to the engine).
 # This module lives at engine/wiring/, so the repo root is THREE parents up
@@ -167,7 +174,9 @@ def default_spotter_wiring_factory(hub: EventBroadcastHub) -> LiveAnswersSpotter
     return LiveAnswersSpotterWiring(hub, db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
 
 
-def default_enrichment_wiring_factory(hub: EventBroadcastHub):
+def default_enrichment_wiring_factory(
+    hub: EventBroadcastHub,
+) -> LiveMeetingEnrichmentWiring:
     """Live summary + proactive vault poll; production only."""
     from engine.wiring.live_meeting_enrichment_wiring import LiveMeetingEnrichmentWiring
 
@@ -175,7 +184,7 @@ def default_enrichment_wiring_factory(hub: EventBroadcastHub):
     return LiveMeetingEnrichmentWiring(hub, db_path=settings.db_path, migrations_dir=MIGRATIONS_DIR)
 
 
-def default_calendar_poll_factory(hub: EventBroadcastHub):
+def default_calendar_poll_factory(hub: EventBroadcastHub) -> CalendarPollService:
     """Google Calendar poll for upcoming meetings; no-op when not connected."""
     from engine.google.calendar_poll_service import CalendarPollService
 

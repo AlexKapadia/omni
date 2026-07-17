@@ -19,7 +19,7 @@ from engine.stt.parakeet_nemo_transcriber import (
     ParakeetNemoTranscriber,
     stt_dependencies_available,
 )
-from engine.stt.stt_backend_registry import create_stt_backend, normalize_stt_engine
+from engine.stt.stt_backend_registry import normalize_stt_engine
 from engine.stt.word_token_types import WordToken
 
 
@@ -66,15 +66,15 @@ def build_live_transcriber(
         return WhisperSttBackend(models_dir=models_dir, model_id=mid)
 
     if selected == "openai_compatible":
-        try:
-            return create_stt_backend(
-                "openai_compatible",
-                model_id=model_id or None,
-                openai_base_url=openai_base_url,
-                openai_api_key=openai_api_key,
-            )
-        except ValueError:
-            raise
+        from engine.stt.openai_compatible_stt import OpenAiCompatibleSttBackend
+
+        if not openai_base_url or openai_api_key is None:
+            raise ValueError("openai_compatible STT requires endpoint and API key")
+        return OpenAiCompatibleSttBackend(
+            base_url=openai_base_url,
+            api_key=openai_api_key,
+            model_id=model_id or "whisper-1",
+        )
 
     if not stt_dependencies_available():
         raise ValueError("STT dependencies not installed (uv sync --extra stt)")

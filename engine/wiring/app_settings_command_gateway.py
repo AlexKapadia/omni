@@ -31,40 +31,40 @@ from engine.security.kill_switch import kill_switch_engaged, set_kill_switch_run
 from engine.security.provider_key_store import ProviderKeyStore
 from engine.storage.app_settings_repository import (
     SETTING_ACTIVE_TEMPLATE,
+    SETTING_AEC_ENABLED,
+    SETTING_AUTO_SUMMARY,
+    SETTING_AUTOSTOP_SILENCE_S,
+    SETTING_CARTESIA_VOICE_ID,
     SETTING_CUSTOM_TEMPLATES,
+    SETTING_DETECTION_AUTO_START_SOURCES,
+    SETTING_DICTATION_CLEANUP_STYLE,
     SETTING_DISCLOSURE_REMINDER,
     SETTING_INSTANT_EXECUTE_WHITELIST,
     SETTING_KEEP_AUDIO,
     SETTING_KILL_SWITCH,
+    SETTING_LIVE_CAPTIONS_OVERLAY,
+    SETTING_LIVE_TRANSLATION_LANG,
+    SETTING_MIC_DEVICE_ID,
+    SETTING_OLLAMA_BASE_URL,
     SETTING_ONBOARDING_COMPLETE,
     SETTING_PUSH_TO_TALK_HOTKEY,
-    SETTING_VAULT_DIR,
-    SETTING_DETECTION_AUTO_START_SOURCES,
-    SETTING_AUTOSTOP_SILENCE_S,
-    SETTING_LIVE_CAPTIONS_OVERLAY,
-    SETTING_AEC_ENABLED,
-    SETTING_LIVE_TRANSLATION_LANG,
-    SETTING_SUMMARY_LANGUAGE,
-    SETTING_SUMMARY_MODEL_ID,
+    SETTING_SELECTION_TRANSLATION_LANG,
     SETTING_SPEAKER_IDENTITY,
     SETTING_SPEAKER_VOICE_EMBEDDING,
-    SETTING_DICTATION_CLEANUP_STYLE,
     SETTING_STT_ENGINE,
     SETTING_STT_MODEL_ID,
     SETTING_STT_OPENAI_BASE_URL,
-    SETTING_SELECTION_TRANSLATION_LANG,
-    SETTING_OLLAMA_BASE_URL,
+    SETTING_SUMMARY_LANGUAGE,
+    SETTING_SUMMARY_MODEL_ID,
     SETTING_SUMMARY_PROVIDER,
-    SETTING_AUTO_SUMMARY,
-    SETTING_CARTESIA_VOICE_ID,
-    SETTING_MIC_DEVICE_ID,
+    SETTING_VAULT_DIR,
     read_all_settings,
     write_setting,
 )
-from engine.stt.silence_auto_stop_monitor import AUTOSTOP_SILENCE_ENV_VAR
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.stt.model_weights_downloader import MODEL_SPECS, models_directory
+from engine.stt.silence_auto_stop_monitor import AUTOSTOP_SILENCE_ENV_VAR
 from engine.vault.vault_paths import VAULT_DIR_ENV_VAR
 from engine.wiring.settings_value_validation import (
     SettingsValueError,
@@ -248,7 +248,9 @@ class AppSettingsCommandGateway:
         effective = await self._read_effective_settings()
         settings_out = dict(effective)
         embedding = settings_out.pop(SETTING_SPEAKER_VOICE_EMBEDDING, "")
-        settings_out["speaker_voice_enrolled"] = bool(str(embedding).strip()) if embedding else False
+        settings_out["speaker_voice_enrolled"] = (
+            bool(str(embedding).strip()) if embedding else False
+        )
         return {
             "settings": settings_out,
             # The LIVE truth (env + runtime override), not just the stored

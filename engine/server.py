@@ -33,18 +33,20 @@ from engine.ask.ask_query_command_dispatcher import AskAnswerGateway
 from engine.audio.audio_device_listing import list_audio_devices
 from engine.audio.devices_list_command_dispatcher import DeviceLister
 from engine.enhance import MeetingFinalizationService
+from engine.google.calendar_poll_service import CalendarPollService
 from engine.naomi.naomi_turn_command_dispatcher import NaomiTurnControl
 from engine.protocol import EventBroadcastHub
 from engine.runtime_settings import LOOPBACK_HOST, EngineSettings, load_engine_settings
 from engine.stt.live_capture_service import LiveCaptureService
+from engine.vault import VaultWriteError, resolve_vault_root
 from engine.voice import TtsPlaybackStreamer
 from engine.websocket_connection_handler import WebSocketConnectionHandler
 from engine.wiring.approval_card_build_server_wiring import ApprovalCardBuildWiring
 from engine.wiring.approval_cards_gateway import ApprovalCardsGateway
 from engine.wiring.detection_server_wiring import DetectionServerWiring
 from engine.wiring.dictation_command_dispatcher import DictationCommandGateway
-from engine.wiring.live_meeting_enrichment_wiring import LiveMeetingEnrichmentWiring
 from engine.wiring.live_answers_spotter_wiring import LiveAnswersSpotterWiring
+from engine.wiring.live_meeting_enrichment_wiring import LiveMeetingEnrichmentWiring
 
 # The M7 onboarding/settings command surface (5 gateways) is built and owned
 # as one unit so this file stays pure routing/lifecycle.
@@ -63,14 +65,12 @@ from engine.wiring.server_default_service_factories import (
     default_card_build_wiring_factory,
     default_detection_wiring_factory,
     default_dictation_gateway_factory,
+    default_enrichment_wiring_factory,
     default_finalization_service_factory,
     default_naomi_loop_factory,
     default_spotter_wiring_factory,
-    default_enrichment_wiring_factory,
     default_vault_watchdog_factory,
 )
-from engine.google.calendar_poll_service import CalendarPollService
-from engine.vault import VaultWriteError, resolve_vault_root
 from engine.wiring.vault_watchdog_server_wiring import VaultWatchdogServerWiring
 
 # Factory seams (a factory, not an instance, so services are built AFTER
@@ -171,11 +171,15 @@ def create_app(
         )
     # M3 live vault watching (OS-event-driven — same rule).
     vault_watchdog = vault_watchdog_factory() if vault_watchdog_factory else None
+    vault_rebind_tasks: list[asyncio.Task[None]] = []
     if vault_watchdog is not None:
         # Mid-session vault_dir change: stop the old observer and watch the new root.
         def _rebind_vault_watcher(vault_dir: str) -> None:
             loop = asyncio.get_running_loop()
-            loop.create_task(vault_watchdog.rebind(Path(vault_dir)))
+            # Keep a strong ref so the task is not GC'd mid-flight (RUF006).
+            vault_rebind_tasks.append(
+                loop.create_task(vault_watchdog.rebind(Path(vault_dir)))
+            )
 
         m7.settings_gateway.set_vault_dir_listener(_rebind_vault_watcher)
     calendar_poll = calendar_poll_factory(event_hub) if calendar_poll_factory else None

@@ -16,7 +16,7 @@ import {
   wireMeetingToastDesktop,
 } from "./wire-meeting-toast-desktop";
 
-const invoke = vi.fn(async () => undefined);
+const invoke = vi.fn(async (..._args: unknown[]) => undefined);
 vi.mock("@tauri-apps/api/core", () => ({
   invoke: (...args: unknown[]) => invoke(...args),
 }));

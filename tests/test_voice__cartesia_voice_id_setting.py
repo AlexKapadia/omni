@@ -7,6 +7,7 @@ from pathlib import Path
 
 import pytest
 
+from engine.storage import app_settings_repository as settings_repo
 from engine.voice.cartesia_credentials import (
     CARTESIA_API_KEY_ENV_VAR,
     CARTESIA_VOICE_ID_ENV_VAR,
@@ -16,7 +17,6 @@ from engine.wiring.app_settings_command_gateway import (
     SETTINGS_DEFAULTS,
     AppSettingsCommandGateway,
 )
-from engine.storage import app_settings_repository as settings_repo
 
 FAKE_KEY = "sk-cartesia-test-key-0000"
 SETTING_CARTESIA_VOICE_ID = "cartesia_voice_id"

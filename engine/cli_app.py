@@ -120,7 +120,9 @@ def main(argv: list[str] | None = None) -> int:
 
     export_p = sub.add_parser("export", help="Export transcript")
     export_p.add_argument("meeting_id")
-    export_p.add_argument("--format", choices=["srt", "vtt", "txt", "pdf", "docx", "md"], default="srt")
+    export_p.add_argument(
+        "--format", choices=["srt", "vtt", "txt", "pdf", "docx", "md"], default="srt"
+    )
     export_p.add_argument("-o", "--output")
     export_p.set_defaults(func=_cmd_export)
 
@@ -140,7 +142,8 @@ def main(argv: list[str] | None = None) -> int:
     record_p.set_defaults(func=_cmd_record)
 
     args = parser.parse_args(argv)
-    return asyncio.run(args.func(args))
+    result = asyncio.run(args.func(args))
+    return int(result)
 
 
 if __name__ == "__main__":

@@ -93,7 +93,7 @@ async def test_retranscribe_meeting_uses_mp3_when_wav_gone(
     # WAV deliberately absent — keep-audio deleted them after MP3 encode.
 
     monkeypatch.setenv("OMNI_AUDIO_DIR", str(audio_root))
-    async def fake_backend(*_a, **_k):
+    async def fake_backend(*_a: object, **_k: object) -> object:
         return object()
 
     monkeypatch.setattr(
@@ -111,7 +111,9 @@ async def test_retranscribe_meeting_uses_mp3_when_wav_gone(
         fake_decode,
     )
 
-    def fake_transcribe(_backend, _samples, *, stream: str = "them"):
+    def fake_transcribe(
+        _backend: object, _samples: object, *, stream: str = "them"
+    ) -> list[OfflineSegment]:
         return [
             OfflineSegment(stream=stream, text=f"said-{stream}", t_start=0.0, t_end=0.5),
         ]

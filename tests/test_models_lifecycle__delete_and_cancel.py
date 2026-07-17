@@ -192,7 +192,9 @@ async def test_dispatch_open_folder_replies_with_the_path(tmp_path: Path) -> Non
 async def test_dispatch_lifecycle_commands_refuse_when_gateway_unwired() -> None:
     sent, send = _collector()
     for name in ("models.cancel", "models.delete", "models.open_folder"):
-        payload = {"file": "x.bin"} if name == "models.delete" else {}
+        payload: dict[str, object] = (
+            {"file": "x.bin"} if name == "models.delete" else {}
+        )
         await dispatch_models_command(_cmd(name, payload), None, send)
     assert all(e.name == "error" for e in sent)
     assert all(e.payload["code"] == "unknown_command" for e in sent)

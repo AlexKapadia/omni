@@ -1,7 +1,6 @@
 """Tests for speaker.enroll command gateway."""
 
 import base64
-import struct
 import wave
 from io import BytesIO
 from pathlib import Path
@@ -9,7 +8,7 @@ from pathlib import Path
 import numpy as np
 import pytest
 
-from engine.protocol import Envelope, EnvelopeKind, PROTOCOL_VERSION
+from engine.protocol import PROTOCOL_VERSION, Envelope, EnvelopeKind
 from engine.storage.app_settings_repository import (
     SETTING_SPEAKER_IDENTITY,
     SETTING_SPEAKER_VOICE_EMBEDDING,

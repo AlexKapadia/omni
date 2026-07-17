@@ -5,7 +5,10 @@ from __future__ import annotations
 from collections.abc import Awaitable, Callable
 from pathlib import Path
 
-from engine.dictation.dictation_history_repository import list_dictation_entries, search_dictation_entries
+from engine.dictation.dictation_history_repository import (
+    list_dictation_entries,
+    search_dictation_entries,
+)
 from engine.dictation.dictation_protocol_names import (
     DICTATION_HISTORY_LIST_COMMAND_NAME,
     build_dictation_history_list_payload,

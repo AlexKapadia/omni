@@ -92,6 +92,8 @@ class _StubRouter(ProviderRouter):
         tools: tuple[ToolSpec, ...] = (),
         json_schema: dict[str, object] | None = None,
         max_tokens: int = 4096,
+        preferred_model: str | None = None,
+        preferred_provider: str | None = None,
     ) -> RoutedCompletion:
         self.calls.append((task_type, system_frame, messages))
         return self._routed

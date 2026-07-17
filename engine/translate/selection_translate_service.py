@@ -42,7 +42,7 @@ async def translate_selection(
         preferred_model=preferred_model,
         preferred_provider=preferred_provider,
     )
-    translated = routed.completion.text.strip()
+    translated = str(routed.completion.text).strip()
     if not translated:
         raise ValueError("Translation returned empty text")
     return translated

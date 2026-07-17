@@ -24,7 +24,7 @@ function FeatureRow({ icon: Icon, title, description }: FeatureRowProps) {
   );
 }
 
-export function StepFeaturesTour({ onContinue }: { readonly onContinue: () => void }) {
+export function StepFeaturesTour(_props: { readonly onContinue: () => void }) {
   return (
     <div className="flex flex-col gap-6 animate-fade-in">
       <div className="flex flex-col gap-2">

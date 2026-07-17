@@ -14,8 +14,8 @@ from tests.enhance_test_support import seed_meeting
 
 @pytest.mark.asyncio
 async def test_replace_meeting_text_updates_transcript_and_notes(
-    tmp_path,
-    real_migrations_dir,
+    tmp_path: Path,
+    real_migrations_dir: Path,
 ) -> None:
     db = tmp_path / "test.db"
     hub = EventBroadcastHub()

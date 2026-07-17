@@ -48,7 +48,7 @@ describe("SummaryModelSection Ollama URL", () => {
   it("does not call update on every keystroke for a partial URL", async () => {
     const store = createSettingsStore();
     store.setState({ settings: { ...BASE }, settingsPhase: "ready" });
-    const update = vi.fn(async () => undefined);
+    const update = vi.fn(async () => ({ ok: true, message: null }));
     render(<SummaryModelSection store={store} update={update} />);
     const input = screen.getByLabelText("Ollama endpoint");
     await act(async () => {
@@ -61,7 +61,7 @@ describe("SummaryModelSection Ollama URL", () => {
   it("persists a valid URL on blur", async () => {
     const store = createSettingsStore();
     store.setState({ settings: { ...BASE }, settingsPhase: "ready" });
-    const update = vi.fn(async () => undefined);
+    const update = vi.fn(async () => ({ ok: true, message: null }));
     render(<SummaryModelSection store={store} update={update} />);
     const input = screen.getByLabelText("Ollama endpoint");
     await act(async () => {

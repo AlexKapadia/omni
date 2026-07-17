@@ -19,7 +19,7 @@ import contextlib
 from pathlib import Path
 
 
-async def cancel_in_flight_task(task: "asyncio.Task[None] | None") -> bool:
+async def cancel_in_flight_task(task: asyncio.Task[None] | None) -> bool:
     """Cancel ``task`` if it is running; True iff a real cancellation happened."""
     if task is None or task.done():
         return False

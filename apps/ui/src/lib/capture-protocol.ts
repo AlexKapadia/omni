@@ -82,7 +82,15 @@ function parseTranscriptCore(payload: Record<string, unknown>): TranscriptPartia
   const speaker_id = typeof payload["speaker_id"] === "string" ? payload["speaker_id"] : undefined;
   const speaker_label =
     typeof payload["speaker_label"] === "string" ? payload["speaker_label"] : undefined;
-  return { stream, text, t_start, t_end, seq, speaker_id, speaker_label };
+  return {
+    stream,
+    text,
+    t_start,
+    t_end,
+    seq,
+    ...(speaker_id !== undefined ? { speaker_id } : {}),
+    ...(speaker_label !== undefined ? { speaker_label } : {}),
+  };
 }
 
 export function parseTranscriptPartialPayload(

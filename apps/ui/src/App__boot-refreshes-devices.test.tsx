@@ -6,8 +6,8 @@ import { cleanup, render, waitFor } from "@testing-library/react";
 import type { SetupStatus } from "./lib/setup-settings-payloads";
 import { installJsdomMatchMediaShim } from "./test-support/install-jsdom-match-media-shim";
 
-const refreshDevices = vi.fn(async () => undefined);
-const loadSettings = vi.fn(async () => undefined);
+const refreshDevices = vi.fn(async (..._args: unknown[]) => undefined);
+const loadSettings = vi.fn(async (..._args: unknown[]) => undefined);
 
 vi.mock("./lib/engine-devices", async (importOriginal) => {
   const actual = await importOriginal<typeof import("./lib/engine-devices")>();

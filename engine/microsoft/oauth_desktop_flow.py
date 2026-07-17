@@ -10,8 +10,8 @@ from collections.abc import Awaitable, Callable
 from urllib.parse import quote
 
 from engine.google.oauth_desktop_flow import (
-    _OneShotRedirectServer,
     _default_token_exchange,
+    _OneShotRedirectServer,
     build_pkce_pair,
     parse_redirect_request_target,
 )

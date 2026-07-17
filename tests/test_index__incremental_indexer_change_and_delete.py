@@ -304,7 +304,9 @@ async def test_index_meeting_transcript_skips_soft_deleted_meeting(
         cursor = await connection.execute(
             "SELECT COUNT(*) FROM notes_meta WHERE note_path = 'transcript://m-del'"
         )
-        assert (await cursor.fetchone())[0] == 0
+        _row = await cursor.fetchone()
+        assert _row is not None
+        assert _row[0] == 0
         await cursor.close()
     finally:
         await connection.close()

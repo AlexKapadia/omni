@@ -116,7 +116,7 @@ def export_transcript_pdf(segments: list[TranscriptSegmentRow], identity: str = 
         line = f"{speaker}: {segment.text}"
         _pdf_cell(pdf, line, unicode_ok=unicode_ok, line_height=6)
         pdf.ln(2)
-    return pdf.output()
+    return bytes(pdf.output())
 
 
 def export_transcript_docx(segments: list[TranscriptSegmentRow], identity: str = "Me") -> bytes:
@@ -181,7 +181,7 @@ def export_meeting_pdf(
                 line_height=6,
             )
             pdf.ln(2)
-    return pdf.output()
+    return bytes(pdf.output())
 
 
 def export_meeting_docx(

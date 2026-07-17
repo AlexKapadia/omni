@@ -27,29 +27,21 @@ from pathlib import Path
 
 import aiosqlite
 
+from engine.dictation.cleanup_styles import normalize_cleanup_style
 from engine.dictation.dictation_finalization import DictationFinalResult, DictationReleaseFinalizer
 from engine.dictation.dictation_protocol_names import (
     DICTATION_BEGIN_COMMAND_NAME,
     DICTATION_CANCEL_COMMAND_NAME,
     DICTATION_END_COMMAND_NAME,
-    DICTATION_HISTORY_LIST_COMMAND_NAME,
     DICTATION_ERROR_EVENT_NAME,
     DICTATION_FINAL_EVENT_NAME,
+    DICTATION_HISTORY_LIST_COMMAND_NAME,
     DICTATION_PARTIAL_EVENT_NAME,
     build_dictation_error_payload,
     build_dictation_final_payload,
     build_dictation_partial_payload,
 )
-from engine.dictation.cleanup_styles import normalize_cleanup_style
 from engine.dictation.dictation_session_service import DictationSessionService
-from engine.storage.app_settings_repository import (
-    SETTING_DICTATION_CLEANUP_STYLE,
-    SETTING_MIC_DEVICE_ID,
-    SETTING_STT_ENGINE,
-    SETTING_STT_MODEL_ID,
-    SETTING_STT_OPENAI_BASE_URL,
-    read_setting,
-)
 from engine.index import VaultIndexerService
 from engine.protocol import PROTOCOL_VERSION, Envelope, EnvelopeKind, EventBroadcastHub
 from engine.router import (
@@ -59,10 +51,17 @@ from engine.router import (
     insert_router_ledger_entry,
 )
 from engine.security import ProviderKeyStore
+from engine.storage.app_settings_repository import (
+    SETTING_DICTATION_CLEANUP_STYLE,
+    SETTING_MIC_DEVICE_ID,
+    SETTING_STT_ENGINE,
+    SETTING_STT_MODEL_ID,
+    SETTING_STT_OPENAI_BASE_URL,
+    read_setting,
+)
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.vault import VaultWriteError, resolve_vault_root
-
 from engine.wiring.dictation_history_command_dispatcher import (
     dispatch_dictation_history_command,
 )

@@ -2,12 +2,16 @@
 
 from __future__ import annotations
 
+from collections.abc import Callable
+
 from engine.audio.dual_stream_capture_controller import CaptureStreamHandle
 
 
 class MacosLoopbackCaptureBackend:
-  def probe_default_device(self) -> str:
-    raise RuntimeError("macOS loopback capture is not yet available on this build")
+    def probe_default_device(self) -> str:
+        raise RuntimeError("macOS loopback capture is not yet available on this build")
 
-  def open_capture_stream(self, device_name: str, on_frames) -> CaptureStreamHandle:
-    raise RuntimeError("macOS loopback capture is not yet available on this build")
+    def open_capture_stream(
+        self, device_name: str, on_frames: Callable[..., object]
+    ) -> CaptureStreamHandle:
+        raise RuntimeError("macOS loopback capture is not yet available on this build")

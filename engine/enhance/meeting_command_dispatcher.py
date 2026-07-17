@@ -16,6 +16,7 @@ Security invariants:
   the socket never crashes and no refusal is silent (fail closed, visibly).
 """
 
+import contextlib
 from collections.abc import Awaitable, Callable
 
 from pydantic import ValidationError
@@ -26,9 +27,6 @@ from engine.enhance.meeting_summary_presenter import (
     meeting_detail_payload,
     meeting_summary_payload,
 )
-from engine.storage.app_settings_repository import SETTING_SPEAKER_IDENTITY, read_setting
-from engine.storage.sqlite_connection import open_sqlite_connection
-from engine.storage.sqlite_migrations_runner import apply_migrations
 from engine.protocol import (
     COMMAND_IMPORT_MEDIA,
     COMMAND_MEETING_DELETE,
@@ -44,16 +42,19 @@ from engine.protocol import (
     EnvelopeKind,
     ImportMediaCommandPayload,
     MeetingDeleteCommandPayload,
-    MeetingRetranscribeCommandPayload,
-    MeetingTextReplacePayload,
     MeetingExportCommandPayload,
     MeetingFinalizeCommandPayload,
     MeetingGetCommandPayload,
+    MeetingRetranscribeCommandPayload,
     MeetingsListCommandPayload,
+    MeetingTextReplacePayload,
     ProtocolErrorCode,
     TranscriptSegmentUpdatePayload,
     error_reply,
 )
+from engine.storage.app_settings_repository import SETTING_SPEAKER_IDENTITY, read_setting
+from engine.storage.sqlite_connection import open_sqlite_connection
+from engine.storage.sqlite_migrations_runner import apply_migrations
 
 # The commands this dispatcher owns; the handler routes ONLY these here.
 MEETING_COMMAND_NAMES = frozenset(
@@ -227,7 +228,7 @@ async def _handle_get(
         return
     row, segments, extraction = found
     identity = "Me"
-    try:
+    with contextlib.suppress(Exception):
         await apply_migrations(service.db_path, service.migrations_dir)
         connection = await open_sqlite_connection(service.db_path)
         try:
@@ -236,8 +237,6 @@ async def _handle_get(
                 identity = raw.strip()
         finally:
             await connection.close()
-    except Exception:
-        pass
     from engine.enhance.meeting_kept_audio import meeting_has_kept_audio
 
     await send(
@@ -395,7 +394,8 @@ async def _handle_text_replace(
             )
         )
         return
-    await send(_ok_reply(command.id, result))
+    reply_payload: dict[str, object] = dict(result)
+    await send(_ok_reply(command.id, reply_payload))
 
 
 async def _handle_delete(

@@ -62,12 +62,16 @@ async def test_delete_meeting_removes_from_list_and_wipes_kept_audio(
             "SELECT COUNT(*) FROM transcript_segments WHERE meeting_id = ?",
             (meeting_id,),
         )
-        assert (await cursor.fetchone())[0] == 0
+        _row = await cursor.fetchone()
+        assert _row is not None
+        assert _row[0] == 0
         await cursor.close()
         cursor = await connection.execute(
             "SELECT deleted_at FROM meetings WHERE id = ?", (meeting_id,)
         )
-        deleted_at = (await cursor.fetchone())[0]
+        _row = await cursor.fetchone()
+        assert _row is not None
+        deleted_at = _row[0]
         await cursor.close()
         assert deleted_at is not None
     finally:
@@ -124,12 +128,16 @@ async def test_delete_meeting_purges_transcript_index_including_notes_meta(
         cursor = await connection.execute(
             "SELECT COUNT(*) FROM notes_meta WHERE note_path = 'transcript://m-idx'"
         )
-        assert (await cursor.fetchone())[0] == 1
+        _row = await cursor.fetchone()
+        assert _row is not None
+        assert _row[0] == 1
         await cursor.close()
         cursor = await connection.execute(
             "SELECT COUNT(*) FROM chunks WHERE note_path = 'transcript://m-idx'"
         )
-        assert (await cursor.fetchone())[0] >= 1
+        _row = await cursor.fetchone()
+        assert _row is not None
+        assert _row[0] >= 1
         await cursor.close()
     finally:
         await connection.close()
@@ -149,17 +157,23 @@ async def test_delete_meeting_purges_transcript_index_including_notes_meta(
         cursor = await connection.execute(
             "SELECT COUNT(*) FROM notes_meta WHERE note_path = 'transcript://m-idx'"
         )
-        assert (await cursor.fetchone())[0] == 0
+        _row = await cursor.fetchone()
+        assert _row is not None
+        assert _row[0] == 0
         await cursor.close()
         cursor = await connection.execute(
             "SELECT COUNT(*) FROM chunks WHERE note_path = 'transcript://m-idx'"
         )
-        assert (await cursor.fetchone())[0] == 0
+        _row = await cursor.fetchone()
+        assert _row is not None
+        assert _row[0] == 0
         await cursor.close()
         cursor = await connection.execute(
             "SELECT COUNT(*) FROM links WHERE src_note = 'transcript://m-idx'"
         )
-        assert (await cursor.fetchone())[0] == 0
+        _row = await cursor.fetchone()
+        assert _row is not None
+        assert _row[0] == 0
         await cursor.close()
     finally:
         await connection.close()

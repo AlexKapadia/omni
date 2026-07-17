@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import shutil
 import subprocess
 import uuid
 import wave
@@ -29,9 +30,15 @@ class OfflineSegment:
 
 def decode_media_to_mono_16k(media_path: Path) -> npt.NDArray[np.float32]:
     """Decode any ffmpeg-supported file to 16 kHz mono float32 samples."""
-    result = subprocess.run(
+    ffmpeg = shutil.which("ffmpeg")
+    if ffmpeg is None:
+        raise ValueError("ffmpeg not found on PATH")
+    if not media_path.is_file():
+        raise ValueError(f"media file not found: {media_path.name}")
+    # Fixed argv; ffmpeg is the absolute path from shutil.which; media_path is a file.
+    result = subprocess.run(  # noqa: S603
         [
-            "ffmpeg",
+            ffmpeg,
             "-nostdin",
             "-i",
             str(media_path),

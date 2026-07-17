@@ -5,6 +5,13 @@ from __future__ import annotations
 import pytest
 
 from engine.ask.live_summary_service import LiveSummaryService
+from engine.router.completion_contract import (
+    ChatMessage,
+    Provider,
+    ProviderCompletion,
+    RoutedCompletion,
+    ToolSpec,
+)
 
 
 class _FakeRouter:
@@ -13,17 +20,40 @@ class _FakeRouter:
         self.calls = 0
         self.kwargs: list[dict[str, object]] = []
 
-    async def route(self, task_type: str, system_frame: str, messages, **kwargs):
+    async def route(
+        self,
+        task_type: str,
+        system_frame: str,
+        messages: tuple[ChatMessage, ...],
+        *,
+        tools: tuple[ToolSpec, ...] = (),
+        json_schema: dict[str, object] | None = None,
+        max_tokens: int = 4096,
+        preferred_model: str | None = None,
+        preferred_provider: str | None = None,
+    ) -> RoutedCompletion:
         self.calls += 1
-        self.kwargs.append(kwargs)
-
-        class _Completion:
-            text = self._text
-
-        class _Routed:
-            completion = _Completion()
-
-        return _Routed()
+        self.kwargs.append(
+            {
+                "tools": tools,
+                "json_schema": json_schema,
+                "max_tokens": max_tokens,
+                "preferred_model": preferred_model,
+                "preferred_provider": preferred_provider,
+            }
+        )
+        return RoutedCompletion(
+            completion=ProviderCompletion(
+                text=self._text,
+                provider=Provider.GROQ,
+                model="stub",
+                prompt_tokens=1,
+                completion_tokens=1,
+            ),
+            provider=Provider.GROQ,
+            model="stub",
+            latency_ms=1,
+        )
 
 
 @pytest.mark.asyncio

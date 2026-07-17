@@ -25,7 +25,16 @@ class OpenAiCompatibleSttBackend:
         model_id: str,
     ) -> None:
         self._base_url = base_url.rstrip("/")
-        self._api_key_provider = (lambda: api_key) if isinstance(api_key, str) else api_key
+        provider: Callable[[], str]
+        if isinstance(api_key, str):
+            key_value = api_key
+
+            def provider() -> str:
+                return key_value
+
+        else:
+            provider = api_key
+        self._api_key_provider: Callable[[], str] = provider
         self._model_id = model_id
         self._loaded = False
 

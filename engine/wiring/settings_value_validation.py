@@ -18,46 +18,46 @@ Security invariants:
 - Boolean settings accept ONLY JSON booleans — no truthiness coercion.
 """
 
-from pathlib import Path
 import re
+from pathlib import Path
 
+from engine.detect.detection_settings_from_app import AUTOSTOP_SILENCE_CHOICES
+from engine.detect.detection_signal_types import KNOWN_DETECTION_SOURCES
+from engine.dictation.cleanup_styles import CLEANUP_STYLES
 from engine.enhance.note_templates import build_custom_template
 from engine.storage.app_settings_repository import (
     KNOWN_SETTINGS_KEYS,
     SETTING_ACTIVE_TEMPLATE,
+    SETTING_AEC_ENABLED,
+    SETTING_AUTO_SUMMARY,
+    SETTING_AUTOSTOP_SILENCE_S,
+    SETTING_CARTESIA_VOICE_ID,
     SETTING_CUSTOM_TEMPLATES,
+    SETTING_DETECTION_AUTO_START_SOURCES,
+    SETTING_DICTATION_CLEANUP_STYLE,
     SETTING_DISCLOSURE_REMINDER,
     SETTING_INSTANT_EXECUTE_WHITELIST,
     SETTING_KEEP_AUDIO,
     SETTING_KILL_SWITCH,
+    SETTING_LIVE_CAPTIONS_OVERLAY,
+    SETTING_LIVE_TRANSLATION_LANG,
+    SETTING_MIC_DEVICE_ID,
+    SETTING_OLLAMA_BASE_URL,
     SETTING_ONBOARDING_COMPLETE,
     SETTING_PUSH_TO_TALK_HOTKEY,
-    SETTING_VAULT_DIR,
-    SETTING_DETECTION_AUTO_START_SOURCES,
-    SETTING_AUTOSTOP_SILENCE_S,
-    SETTING_LIVE_CAPTIONS_OVERLAY,
-    SETTING_AEC_ENABLED,
-    SETTING_LIVE_TRANSLATION_LANG,
-    SETTING_SUMMARY_LANGUAGE,
-    SETTING_SUMMARY_MODEL_ID,
+    SETTING_SELECTION_TRANSLATION_LANG,
     SETTING_SPEAKER_IDENTITY,
     SETTING_SPEAKER_VOICE_EMBEDDING,
-    SETTING_DICTATION_CLEANUP_STYLE,
     SETTING_STT_ENGINE,
     SETTING_STT_MODEL_ID,
     SETTING_STT_OPENAI_BASE_URL,
-    SETTING_SELECTION_TRANSLATION_LANG,
-    SETTING_OLLAMA_BASE_URL,
+    SETTING_SUMMARY_LANGUAGE,
+    SETTING_SUMMARY_MODEL_ID,
     SETTING_SUMMARY_PROVIDER,
-    SETTING_AUTO_SUMMARY,
-    SETTING_CARTESIA_VOICE_ID,
-    SETTING_MIC_DEVICE_ID,
+    SETTING_VAULT_DIR,
     SUMMARY_PROVIDERS,
 )
-from engine.dictation.cleanup_styles import CLEANUP_STYLES
 from engine.stt.stt_backend_registry import STT_ENGINES
-from engine.detect.detection_settings_from_app import AUTOSTOP_SILENCE_CHOICES
-from engine.detect.detection_signal_types import KNOWN_DETECTION_SOURCES
 
 # Companion flag (NOT persisted): "create the vault folder if it is missing".
 # Lives beside vault_dir in the same update payload; consumed here.

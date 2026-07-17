@@ -28,12 +28,6 @@ from pathlib import Path
 import aiosqlite
 
 from engine.enhance.meeting_extraction_pipeline import run_meeting_extraction
-from engine.storage.app_settings_repository import (
-    SETTING_ACTIVE_TEMPLATE,
-    SETTING_SPEAKER_IDENTITY,
-    read_setting,
-)
-from engine.stt.speaker_voice_profile import resolve_speaker_label
 from engine.enhance.meeting_finalization_result_types import (
     FinalizationResult,
     FinalizeRefusedError,
@@ -53,6 +47,13 @@ from engine.enhance.note_templates import (
     resolve_template,
     select_template_for_transcript,
 )
+from engine.export.document_export import export_meeting_docx, export_meeting_pdf
+from engine.export.transcript_export import (
+    export_meeting_markdown,
+    export_transcript_srt,
+    export_transcript_txt,
+    export_transcript_vtt,
+)
 from engine.index import VaultIndexerService
 from engine.protocol import (
     EVENT_ENHANCE_FAILED,
@@ -62,6 +63,11 @@ from engine.protocol import (
     build_enhance_failed_payload,
     build_enhance_ready_payload,
     build_enhance_started_payload,
+)
+from engine.storage.app_settings_repository import (
+    SETTING_ACTIVE_TEMPLATE,
+    SETTING_SPEAKER_IDENTITY,
+    read_setting,
 )
 from engine.storage.extraction_results_repository import (
     insert_extraction_result,
@@ -82,18 +88,16 @@ from engine.storage.transcript_segments_repository import (
     list_transcript_segment_rows,
     update_transcript_segment_text,
 )
-from engine.export.document_export import export_meeting_docx, export_meeting_pdf
-from engine.export.transcript_export import (
-    export_meeting_markdown,
-    export_transcript_srt,
-    export_transcript_txt,
-    export_transcript_vtt,
-)
+from engine.stt.speaker_voice_profile import resolve_speaker_label
 from engine.vault import (
     VaultWriteError,
     create_meeting_note,
     resolve_vault_root,
+)
+from engine.vault import (
     update_meeting_enhanced_notes as update_vault_enhanced_notes,
+)
+from engine.vault import (
     update_meeting_transcript as update_vault_transcript,
 )
 
@@ -216,11 +220,14 @@ class MeetingFinalizationService:
                         connection, meeting_id, segment.segment_id, new_text
                     ):
                         transcript_hits += 1
-            if target in ("enhanced_notes", "both") and row.enhanced_notes_md:
-                if find in row.enhanced_notes_md:
-                    new_md = row.enhanced_notes_md.replace(find, replace)
-                    if await update_meeting_enhanced_notes(connection, meeting_id, new_md):
-                        notes_hits = 1
+            if (
+                target in ("enhanced_notes", "both")
+                and row.enhanced_notes_md
+                and find in row.enhanced_notes_md
+            ):
+                new_md = row.enhanced_notes_md.replace(find, replace)
+                if await update_meeting_enhanced_notes(connection, meeting_id, new_md):
+                    notes_hits = 1
             if transcript_hits or notes_hits:
                 await connection.commit()
                 # Fail-soft vault sync: DB is source of truth for the UI; a
@@ -279,7 +286,9 @@ class MeetingFinalizationService:
                 return None
             segments = await list_transcript_segment_rows(connection, meeting_id)
             identity_raw = await read_setting(connection, SETTING_SPEAKER_IDENTITY)
-            identity = identity_raw if isinstance(identity_raw, str) and identity_raw.strip() else "Me"
+            identity = (
+                identity_raw if isinstance(identity_raw, str) and identity_raw.strip() else "Me"
+            )
         finally:
             await connection.close()
         if fmt == "srt":
@@ -359,7 +368,9 @@ class MeetingFinalizationService:
             )
             segments = await list_transcript_segment_rows(connection, meeting_id)
             identity_raw = await read_setting(connection, SETTING_SPEAKER_IDENTITY)
-            identity = identity_raw if isinstance(identity_raw, str) and identity_raw.strip() else "Me"
+            identity = (
+                identity_raw if isinstance(identity_raw, str) and identity_raw.strip() else "Me"
+            )
             transcript_lines = [
                 f"{resolve_speaker_label(s.speaker_id, identity)}: {s.text}" for s in segments
             ]

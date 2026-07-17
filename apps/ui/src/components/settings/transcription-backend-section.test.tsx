@@ -109,6 +109,7 @@ describe("TranscriptionBackendSection", () => {
             ...s,
             settings: s.settings ? { ...s.settings, ...partial } : s.settings,
           }));
+          return { ok: true, message: null };
         }}
       />,
     );

@@ -57,7 +57,6 @@ from engine.storage.app_settings_repository import (
     read_setting,
     read_setting_bool,
 )
-from engine.stt.speaker_voice_profile import SpeakerSessionLabeler
 from engine.storage.meetings_repository import insert_meeting, mark_meeting_ended, utc_now_iso
 from engine.storage.sqlite_connection import open_sqlite_connection
 from engine.storage.sqlite_migrations_runner import apply_migrations
@@ -74,6 +73,7 @@ from engine.stt.keep_audio_recorder import (
 from engine.stt.loopback_vad_probability_tap import LoopbackVadTap, wrap_vad_with_loopback_tap
 from engine.stt.per_stream_transcription_pipeline import PerStreamTranscriptionPipeline
 from engine.stt.silence_auto_stop_monitor import spawn_silence_auto_stop_tasks
+from engine.stt.speaker_voice_profile import SpeakerSessionLabeler
 from engine.stt.transcript_event_emitter import TranscriptEventEmitter
 from engine.stt.transcription_latency_tracker import STATS_LOG_INTERVAL_S
 from engine.stt.word_token_types import WordToken
@@ -300,7 +300,11 @@ class LiveCaptureService:
         ) -> None:
             emitter = self._emitter
             pipeline = self._pipelines.get(label)
-            if label is StreamLabel.THEM and pipeline is not None and self._speaker_labeler is not None:
+            if (
+                label is StreamLabel.THEM
+                and pipeline is not None
+                and self._speaker_labeler is not None
+            ):
                 speaker_id, _ = self._speaker_labeler.assign_them(audio)
                 pipeline.set_active_speaker_id(speaker_id)
             elif pipeline is not None and label is StreamLabel.ME:

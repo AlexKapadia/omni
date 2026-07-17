@@ -116,8 +116,8 @@ async def test_rearm_for_ui_re_emits_active_meeting_immediately() -> None:
     desktop = ScriptedDesktop()
     desktop.titles = ["Zoom Meeting"]
     clock = FakeClock()
-    decisions: list[DetectionDecision] = []
-    service = build_service(desktop, clock, decisions, {"active": False})
+    rearm_decisions: list[DetectionDecision] = []
+    service = build_service(desktop, clock, rearm_decisions, {"active": False})
 
     baseline_tasks = len(asyncio.all_tasks())
     service.start()
@@ -126,13 +126,13 @@ async def test_rearm_for_ui_re_emits_active_meeting_immediately() -> None:
     running_after_start = service.is_running
     assert running_after_start
     await drain_event_loop()  # first tick runs immediately on start
-    assert len(decisions) == 1
-    assert isinstance(decisions[0], SuggestCapture)
-    assert decisions[0].source == SOURCE_ZOOM
+    assert len(rearm_decisions) == 1
+    assert isinstance(rearm_decisions[0], SuggestCapture)
+    assert rearm_decisions[0].source == SOURCE_ZOOM
 
     clock.allow_tick()
     await drain_event_loop()  # second tick: same session -> no duplicate
-    assert len(decisions) == 1
+    assert len(rearm_decisions) == 1
 
     await service.stop()
     running_after_stop = service.is_running

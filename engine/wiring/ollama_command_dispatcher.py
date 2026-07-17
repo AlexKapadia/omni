@@ -194,7 +194,9 @@ async def _dispatch_ping(command: Envelope, gateway: OllamaCommandGateway, send:
     except ValidationError:
         await send(
             error_reply(
-                command.id, ProtocolErrorCode.INVALID_PAYLOAD, "ollama.ping payload failed validation"
+                command.id,
+                ProtocolErrorCode.INVALID_PAYLOAD,
+                "ollama.ping payload failed validation",
             )
         )
         return

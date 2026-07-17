@@ -31,12 +31,15 @@ const BASE_SETTINGS = {
   speakerVoiceEnrolled: false,
   summaryModelId: "llama3.2",
   ollamaBaseUrl: "http://127.0.0.1:11434",
-  dictationCleanupStyle: "none" as const,
+  dictationCleanupStyle: "classic" as const,
   sttEngine: "parakeet" as const,
   sttModelId: "",
   sttOpenaiBaseUrl: "",
   selectionTranslationLang: "English",
   summaryProvider: "ollama" as const,
+  autoSummary: false,
+  cartesiaVoiceId: "",
+  micDeviceId: "",
 };
 
 function settingsStoreWith(autoSummary: boolean): SettingsStore {
@@ -51,12 +54,10 @@ function settingsStoreWith(autoSummary: boolean): SettingsStore {
     ledgerPhase: "loading",
     ledgerError: null,
     ledger: null,
-    devicesPhase: "pending",
-    devicesError: null,
-    devices: [],
     devicesSource: "pending",
-    selectedInputDeviceId: null,
-    selectedOutputDeviceId: null,
+    microphone: "",
+    microphoneOptions: [],
+    systemAudioDevice: "",
   });
   return store;
 }
@@ -106,8 +107,7 @@ describe("wireAutoSummary", () => {
     notepad.setState({ meetingId: "m-1", text: "rough notes" });
     const settingsStore = settingsStoreWith(true);
     settingsStore.setState({
-      settings: { ...BASE_SETTINGS, autoSummary: true,
-      cartesiaVoiceId: "", micDeviceId: "", activeTemplate: "sales" },
+      settings: { ...BASE_SETTINGS, autoSummary: true, activeTemplate: "sales" },
     });
 
     wireAutoSummary(settingsStore, finalizeStore, notepad, bus.subscribe, finalize);

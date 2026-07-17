@@ -11,7 +11,6 @@ import { Fragment } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import { AudioLines, Home, Library, MessageSquareText, Mic, Settings, Sparkles } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
-import { BreathingRing } from "./breathing-ring";
 import { OmniMark } from "./omni-mark";
 import { useTranscript } from "../lib/transcript-store";
 import { copy } from "../lib/copy";
@@ -23,7 +22,7 @@ export type SectionId = "home" | "library" | "live" | "ask" | "dictation" | "nao
 // Display labels are human-facing copy, sourced from the glossary
 // (redesign-brief-v2.md §6). Exclude 'live' from the navigation tab list
 // because it is rendered as a standalone primary CTA button at the top of
-// the rail (redesign brief §5.1).
+// the rail (redesign brief §5.1). Live capture status is shown on that CTA.
 const SECTIONS: ReadonlyArray<{ id: Exclude<SectionId, "live">; label: string; icon: LucideIcon }> = [
   { id: "home", label: "Home", icon: Home },
   { id: "library", label: copy.nav.library, icon: Library },
@@ -164,11 +163,6 @@ export function NavRail({ active, onSelect }: NavRailProps) {
                     }`}
                   />
                   <span>{section.label}</span>
-                  {section.id === "live" && captureLive && (
-                    <span className="ml-auto flex items-center">
-                      <BreathingRing size={8} breathing />
-                    </span>
-                  )}
                 </button>
               </li>
             </Fragment>

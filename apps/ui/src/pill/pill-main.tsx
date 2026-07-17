@@ -8,8 +8,7 @@ import { createRoot } from "react-dom/client";
 import "../styles/tokens.css";
 import "../styles/fonts.css"; // self-hosted webfonts — this window has its own Vite entry, so it needs its own import
 import "./pill.css";
-import { getSettings } from "../lib/setup-settings-repository";
-import { startDictationPillBridge } from "./dictation-engine-bridge";
+import { fetchPillSettings, startDictationPillBridge } from "./dictation-engine-bridge";
 import { dictationPillStore } from "./dictation-pill-store";
 import { DictationPillView } from "./dictation-pill-view";
 import { formatHoldLabel } from "./format-hold-label";
@@ -19,7 +18,8 @@ startDictationPillBridge(dictationPillStore);
 function PillRoot() {
   const [holdLabel, setHoldLabel] = useState("Hold F9");
   useEffect(() => {
-    void getSettings()
+    // Fetch over the pill's own socket (main-window getSettings always rejects here).
+    void fetchPillSettings()
       .then((result) => setHoldLabel(formatHoldLabel(result.settings.pushToTalkHotkey)))
       .catch(() => {
         // Non-fatal: keep the default F9 hint until settings are reachable.

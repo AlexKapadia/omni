@@ -8,14 +8,14 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 
-const sendEngineCommand = vi.hoisted(() => vi.fn((..._args: unknown[]) => true));
+const sendDictationCommand = vi.hoisted(() => vi.fn((..._args: unknown[]) => true));
 
 vi.mock("@tauri-apps/api/window", () => ({
   getCurrentWindow: () => ({ hide: vi.fn().mockResolvedValue(undefined) }),
 }));
 
-vi.mock("../lib/live-engine-socket", () => ({
-  sendEngineCommand: (...args: unknown[]) => sendEngineCommand(...args),
+vi.mock("./dictation-pill-command-channel", () => ({
+  sendDictationCommand: (...args: unknown[]) => sendDictationCommand(...args),
 }));
 
 import {
@@ -31,7 +31,7 @@ import { IDLE_PILL_STATE, type DictationPillEvent } from "./dictation-pill-state
 beforeEach(() => {
   dictationPillStore.setState(IDLE_PILL_STATE, true);
   clearApprovalCards(approvalCardsStore);
-  sendEngineCommand.mockClear();
+  sendDictationCommand.mockClear();
   try {
     window.localStorage.clear();
   } catch {
@@ -168,6 +168,6 @@ describe("command result Approve next to Dismiss", () => {
     ]);
     expect(screen.getByRole("button", { name: "Approve" })).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Approve" }));
-    expect(sendEngineCommand).toHaveBeenCalledWith("card.approve", { id: 42 });
+    expect(sendDictationCommand).toHaveBeenCalledWith("card.approve", { id: 42 });
   });
 });

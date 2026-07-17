@@ -1,5 +1,5 @@
 /**
- * Home "Record Inline" must start Live capture (not only open dictation history).
+ * Home "Record Inline" opens the dictation inline recorder (not Live capture).
  * "View Notes" stays on the dictation screen.
  */
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
@@ -9,18 +9,36 @@ import { HomeScreen } from "./home-screen";
 afterEach(cleanup);
 
 describe("HomeScreen Record Inline", () => {
-  it("starts capture via onStartCapture; View Notes navigates to dictation", () => {
+  it("triggers onRecordInline for the inline dictation flow; View Notes navigates", () => {
     const onNavigate = vi.fn();
     const onStartCapture = vi.fn();
-    render(<HomeScreen onNavigate={onNavigate} onStartCapture={onStartCapture} />);
+    const onRecordInline = vi.fn();
+    render(
+      <HomeScreen
+        onNavigate={onNavigate}
+        onStartCapture={onStartCapture}
+        onRecordInline={onRecordInline}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "View Notes" }));
     expect(onNavigate).toHaveBeenCalledExactlyOnceWith("dictation");
     expect(onStartCapture).not.toHaveBeenCalled();
+    expect(onRecordInline).not.toHaveBeenCalled();
 
     fireEvent.click(screen.getByRole("button", { name: "Record Inline" }));
-    expect(onStartCapture).toHaveBeenCalledOnce();
-    // Must not also dump the user on dictation history for the primary CTA.
-    expect(onNavigate).toHaveBeenCalledTimes(1);
+    expect(onRecordInline).toHaveBeenCalledOnce();
+    // Must not start a full meeting capture for the voice-replacement CTA.
+    expect(onStartCapture).not.toHaveBeenCalled();
+  });
+
+  it("falls back to navigating to dictation when onRecordInline is omitted", () => {
+    const onNavigate = vi.fn();
+    const onStartCapture = vi.fn();
+    render(<HomeScreen onNavigate={onNavigate} onStartCapture={onStartCapture} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Record Inline" }));
+    expect(onNavigate).toHaveBeenCalledWith("dictation");
+    expect(onStartCapture).not.toHaveBeenCalled();
   });
 });

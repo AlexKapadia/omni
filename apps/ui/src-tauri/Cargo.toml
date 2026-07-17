@@ -24,18 +24,21 @@ log = "0.4"
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 
-# Listed for M7 (auto-update) but deliberately NOT registered in the builder
-# yet — updater endpoints/signing are configured at the packaging milestone.
+# M7 auto-update: registered in lib.rs (plugin + updater_download_and_install /
+# updater_restart_app). Endpoint + minisign pubkey live in tauri.conf.json.
 tauri-plugin-updater = "2"
 tauri-plugin-process = "2"
 
 # M5 dictation text injection (clipboard-swap + SendInput Ctrl+V) and the
 # keydown foreground-window capture. Raw Win32 bindings, Windows-only.
+# JobObjects: engine sidecar KILL_ON_JOB_CLOSE so force-kill of the shell
+# also kills the engine (no orphaned port 8765 / mic).
 [target.'cfg(windows)'.dependencies]
 windows-sys = { version = "0.52", features = [
     "Win32_Foundation",
     "Win32_Security",
     "Win32_System_DataExchange",
+    "Win32_System_JobObjects",
     "Win32_System_Memory",
     "Win32_System_Threading",
     "Win32_UI_Input_KeyboardAndMouse",

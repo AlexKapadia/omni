@@ -142,7 +142,7 @@ code changed.
 ## 4. Auto-update (tauri-plugin-updater + GitHub Releases)
 
 - **Endpoint** (in `tauri.conf.json` → `plugins.updater.endpoints`):
-  `https://github.com/AlexKapadia/omni/releases/latest/download/latest.json`
+  `https://github.com/bhaskaraanjana/omni/releases/latest/download/latest.json`
 - **Signing:** every installer is minisign-signed at build time; the
   public key is pinned in `tauri.conf.json` and the app **refuses any
   unsigned/mis-signed update** (fail closed).
@@ -201,7 +201,7 @@ Create the repo secret `TAURI_SIGNING_PRIVATE_KEY` with the **contents**
 of `%LOCALAPPDATA%\Omni\updater-signing-key`:
 
 ```powershell
-gh secret set TAURI_SIGNING_PRIVATE_KEY --repo AlexKapadia/omni --body (Get-Content "$env:LOCALAPPDATA\Omni\updater-signing-key" -Raw)
+gh secret set TAURI_SIGNING_PRIVATE_KEY --repo bhaskaraanjana/omni --body (Get-Content "$env:LOCALAPPDATA\Omni\updater-signing-key" -Raw)
 ```
 
 The key has an empty password (generated with `--ci`), so

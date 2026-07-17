@@ -33,13 +33,28 @@ export async function pushDictationHotkey(keys: readonly string[]): Promise<void
   }
 }
 
-/** Read the persisted hotkey from the engine and push it to the shell (boot sync). */
-export async function syncConfiguredDictationHotkey(request?: SetupRequestFn): Promise<void> {
+/**
+ * Read the persisted hotkey from the engine and push it to the shell (boot sync).
+ * Retries with the same bounded loop as the setup.status probe — the first
+ * attempt often races the still-connecting WebSocket.
+ */
+export async function syncConfiguredDictationHotkey(
+  request?: SetupRequestFn,
+  budgetMs: number = 10_000,
+): Promise<void> {
   if (!inTauriShell()) return;
-  try {
-    const result = await getSettings(request);
-    await pushDictationHotkey(result.settings.pushToTalkHotkey);
-  } catch {
-    // Non-fatal: the default F9 binding stays until Settings is opened/changed.
+  const deadline = Date.now() + budgetMs;
+  while (true) {
+    try {
+      const result = await getSettings(request);
+      await pushDictationHotkey(result.settings.pushToTalkHotkey);
+      return;
+    } catch {
+      if (Date.now() >= deadline) {
+        // Non-fatal: the default F9 binding stays until Settings is opened/changed.
+        return;
+      }
+      await new Promise((resolve) => setTimeout(resolve, 400));
+    }
   }
 }

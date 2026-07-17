@@ -29,24 +29,102 @@ mod dictation_pill_window;
 mod meeting_toast_window;
 pub mod dictation_text_injection;
 mod engine_sidecar;
+#[cfg(windows)]
+mod engine_sidecar_job_object_win32;
 mod tray;
 mod updater_launch_check;
 
+use std::path::{Path, PathBuf};
 use tauri::{AppHandle, Manager, RunEvent};
+
+/// Validated reveal action — never pass a bare file path to explorer.exe.
+#[derive(Debug, Clone, PartialEq, Eq)]
+enum RevealAction {
+    /// Open the directory in Explorer.
+    OpenDirectory(PathBuf),
+    /// Select the file in its parent folder (`explorer /select,<path>`).
+    SelectFile(PathBuf),
+}
+
+/// Canonicalize, require existence, and decide open-dir vs select-file.
+/// Fail-closed: anything that is not an existing file or directory is rejected.
+fn prepare_reveal_path(path: &str) -> Result<RevealAction, String> {
+    let raw = Path::new(path);
+    // canonicalize fails for missing paths — fail closed.
+    let canonical = raw
+        .canonicalize()
+        .map_err(|e| format!("path does not exist or cannot be resolved: {e}"))?;
+    if canonical.is_dir() {
+        return Ok(RevealAction::OpenDirectory(canonical));
+    }
+    if canonical.is_file() {
+        return Ok(RevealAction::SelectFile(canonical));
+    }
+    Err("path is neither a file nor a directory".to_string())
+}
 
 /// Reveal a filesystem path in the OS file explorer. Best-effort UI
 /// convenience only — never touches audio, transcripts, or keys. On failure
 /// the caller falls back to copying the path to the clipboard.
+///
+/// Security: canonicalize + exist; directories open, files use `/select,` so a
+/// compromised webview cannot launch an arbitrary `.exe`/`.bat` via explorer.
 #[tauri::command]
 fn reveal_path_in_explorer(path: String) -> Result<(), String> {
-    #[cfg(target_os = "windows")]
-    let result = std::process::Command::new("explorer").arg(&path).spawn();
-    #[cfg(target_os = "macos")]
-    let result = std::process::Command::new("open").arg(&path).spawn();
-    #[cfg(all(unix, not(target_os = "macos")))]
-    let result = std::process::Command::new("xdg-open").arg(&path).spawn();
+    let action = prepare_reveal_path(&path)?;
 
-    result.map(|_| ()).map_err(|e| e.to_string())
+    #[cfg(target_os = "windows")]
+    {
+        let result = match action {
+            RevealAction::OpenDirectory(dir) => std::process::Command::new("explorer")
+                .arg(dir.as_os_str())
+                .spawn(),
+            RevealAction::SelectFile(file) => {
+                // /select,<path> — no space after comma; bare file paths would
+                // open by association (execute .exe/.bat) — never do that.
+                let arg = format!("/select,{}", file.display());
+                std::process::Command::new("explorer").arg(arg).spawn()
+            }
+        };
+        return result.map(|_| ()).map_err(|e| e.to_string());
+    }
+
+    #[cfg(target_os = "macos")]
+    {
+        // `open -R` reveals a file in Finder; for dirs plain `open` is fine.
+        let result = match action {
+            RevealAction::OpenDirectory(dir) => {
+                std::process::Command::new("open").arg(dir.as_os_str()).spawn()
+            }
+            RevealAction::SelectFile(file) => std::process::Command::new("open")
+                .args(["-R"])
+                .arg(file.as_os_str())
+                .spawn(),
+        };
+        return result.map(|_| ()).map_err(|e| e.to_string());
+    }
+
+    #[cfg(all(unix, not(target_os = "macos")))]
+    {
+        let target = match action {
+            RevealAction::OpenDirectory(p) => p,
+            RevealAction::SelectFile(p) => p
+                .parent()
+                .map(|parent| parent.to_path_buf())
+                .unwrap_or(p),
+        };
+        return std::process::Command::new("xdg-open")
+            .arg(target.as_os_str())
+            .spawn()
+            .map(|_| ())
+            .map_err(|e| e.to_string());
+    }
+
+    #[cfg(not(any(target_os = "windows", target_os = "macos", unix)))]
+    {
+        let _ = action;
+        Err("reveal in explorer is not supported on this platform".to_string())
+    }
 }
 
 /// Bring the main window to the foreground (used by the tray and by a second
@@ -91,6 +169,7 @@ pub fn run() {
             meeting_toast_window::meeting_toast_start_capture,
             meeting_toast_window::meeting_toast_dismiss,
             meeting_toast_window::meeting_toast_stop_capture,
+            meeting_toast_window::meeting_toast_keep_going,
             updater_launch_check::updater_download_and_install,
             updater_launch_check::updater_restart_app,
             reveal_path_in_explorer
@@ -133,7 +212,7 @@ pub fn run() {
             // Start supervising the engine sidecar immediately; the supervisor
             // tolerates the engine being absent (retry loop, never a crash)
             // and its own thread-spawn failure is non-fatal (see the module).
-            let sidecar = engine_sidecar::EngineSidecar::spawn_supervised();
+            let sidecar = engine_sidecar::EngineSidecar::spawn_supervised(app.handle().clone());
             app.manage(sidecar);
             Ok(())
         })
@@ -152,4 +231,47 @@ pub fn run() {
             dictation_pill_window::unregister_hold_shortcut(app_handle);
         }
     });
+}
+
+#[cfg(test)]
+mod reveal_path_tests {
+    use super::{prepare_reveal_path, RevealAction};
+    use std::fs;
+
+    #[test]
+    fn rejects_missing_path() {
+        let err = prepare_reveal_path("C:\\definitely\\missing\\omni-path-xyz")
+            .expect_err("missing path must fail closed");
+        assert!(err.contains("does not exist") || err.contains("cannot be resolved"));
+    }
+
+    #[test]
+    fn opens_existing_directory() {
+        let dir = std::env::temp_dir().join("omni_reveal_dir_test");
+        let _ = fs::create_dir_all(&dir);
+        let action = prepare_reveal_path(dir.to_str().expect("utf8 temp path"))
+            .expect("existing dir must be accepted");
+        match action {
+            RevealAction::OpenDirectory(p) => {
+                assert!(p.is_dir());
+            }
+            RevealAction::SelectFile(_) => panic!("directory must not use select"),
+        }
+        let _ = fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn selects_existing_file() {
+        let file = std::env::temp_dir().join("omni_reveal_file_test.txt");
+        fs::write(&file, b"ok").expect("write temp file");
+        let action = prepare_reveal_path(file.to_str().expect("utf8 temp path"))
+            .expect("existing file must be accepted");
+        match action {
+            RevealAction::SelectFile(p) => {
+                assert!(p.is_file());
+            }
+            RevealAction::OpenDirectory(_) => panic!("file must not open as directory"),
+        }
+        let _ = fs::remove_file(&file);
+    }
 }

@@ -2,7 +2,7 @@
  * Live-screen tests for the reconciliation surfaces: the post-stop
  * "Finalize meeting" flow (verbatim notepad hand-off, honest
  * pending/ready/failed states). Detection toast lives on the App shell —
- * see App__meeting-detected-toast-global and meeting-detected-toast.test.
+ * see App__meeting-detected-toast-global and wire-meeting-toast-desktop tests.
  */
 import { afterEach, beforeAll, beforeEach, describe, expect, it } from "vitest";
 import { act, cleanup, render, screen } from "@testing-library/react";

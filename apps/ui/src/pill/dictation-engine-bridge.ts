@@ -1,11 +1,19 @@
 /**
  * The pill window's wiring: Tauri hold events + its own engine WebSocket.
+ * Routes card.updated into the pill-local approval store; command channel
+ * (settings + Approve) lives in dictation-pill-command-channel.ts.
  */
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
 
+import {
+  applyCardUpdated,
+  approvalCardsStore,
+  CARD_UPDATED_EVENT_NAME,
+  type ApprovalCardsStore,
+} from "../lib/approval-cards-store";
 import { EngineConnection, type WebSocketLike } from "../lib/engine-connection";
-import { makeCommand, parseInboundMessage } from "../lib/protocol";
+import { parseInboundMessage } from "../lib/protocol";
 import {
   evaluateHotkeyFsm,
   INITIAL_HOTKEY_FSM_STATE,
@@ -24,6 +32,17 @@ import {
 } from "./dictation-events-protocol";
 import type { DictationPillState } from "./dictation-pill-state";
 import { dispatchPillEvent, type DictationPillStore } from "./dictation-pill-store";
+import {
+  sendDictationCommand,
+  setPillActiveSocket,
+  settlePendingReply,
+} from "./dictation-pill-command-channel";
+
+export {
+  fetchPillSettings,
+  requestPillCommand,
+  sendDictationCommand,
+} from "./dictation-pill-command-channel";
 
 export const HOLD_PRESSED_TAURI_EVENT = "dictation-hold-pressed";
 export const HOLD_RELEASED_TAURI_EVENT = "dictation-hold-released";
@@ -68,10 +87,17 @@ export function createDictationEventDispatcher(
   performInjection: (text: string, targetHwnd: number) => Promise<InjectionOutcome> =
     invokeInjection,
   getActiveSession: () => ActiveSession | null = () => activeSession,
+  cardsStore: ApprovalCardsStore = approvalCardsStore,
 ): (data: unknown) => void {
   return (data: unknown) => {
     const result = parseInboundMessage(data);
-    if (!result.ok || result.envelope.kind !== "event") return;
+    if (!result.ok) return;
+    // Correlate command replies (settings.get, etc.) before event handling.
+    if (result.envelope.kind === "reply") {
+      settlePendingReply(result.envelope.id, result.envelope.name, result.envelope.payload);
+      return;
+    }
+    if (result.envelope.kind !== "event") return;
     const { name, payload } = result.envelope;
     if (name === DICTATION_PARTIAL_EVENT_NAME) {
       const parsed = parseDictationPartialPayload(payload);
@@ -106,6 +132,9 @@ export function createDictationEventDispatcher(
       const parsed = parseDictationErrorPayload(payload);
       if (parsed !== null) dispatchPillEvent(store, { type: "error", reason: parsed.reason });
       activeSession = null;
+    } else if (name === CARD_UPDATED_EVENT_NAME) {
+      // Pill-local store (separate JS heap from main) — Approve needs this.
+      applyCardUpdated(cardsStore, payload);
     }
   };
 }
@@ -114,7 +143,6 @@ function invokeInjection(text: string, targetHwnd: number): Promise<InjectionOut
   return invoke<InjectionOutcome>("inject_dictation_text", { text, targetHwnd });
 }
 
-let activeSocket: WebSocket | null = null;
 let pillConnection: EngineConnection | null = null;
 let activeSession: ActiveSession | null = null;
 let releasedAtMs: number | null = null;
@@ -127,16 +155,6 @@ function clearReleaseStopTimer(): void {
   if (releaseStopTimer !== null) {
     clearTimeout(releaseStopTimer);
     releaseStopTimer = null;
-  }
-}
-
-function sendDictationCommand(name: string, payload: Record<string, unknown> = {}): boolean {
-  if (activeSocket === null || activeSocket.readyState !== WebSocket.OPEN) return false;
-  try {
-    activeSocket.send(JSON.stringify(makeCommand(name, payload)));
-    return true;
-  } catch {
-    return false;
   }
 }
 
@@ -245,7 +263,7 @@ function createTeeSocket(url: string, onFrame: (data: unknown) => void): WebSock
     close: () => inner.close(),
   };
   inner.onopen = () => {
-    activeSocket = inner;
+    setPillActiveSocket(inner);
     tee.onopen?.();
   };
   inner.onmessage = (event) => {
@@ -253,11 +271,11 @@ function createTeeSocket(url: string, onFrame: (data: unknown) => void): WebSock
     tee.onmessage?.({ data: event.data });
   };
   inner.onclose = () => {
-    if (activeSocket === inner) activeSocket = null;
+    setPillActiveSocket(null);
     tee.onclose?.();
   };
   inner.onerror = () => {
-    if (activeSocket === inner) activeSocket = null;
+    setPillActiveSocket(null);
     tee.onerror?.();
   };
   return tee;

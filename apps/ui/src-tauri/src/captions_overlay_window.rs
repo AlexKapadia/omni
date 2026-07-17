@@ -40,16 +40,21 @@ pub fn setup_captions_overlay(app: &AppHandle) -> tauri::Result<()> {
     Ok(())
 }
 
-fn position_bottom_center(window: &tauri::WebviewWindow) {
-    if let Ok(Some(monitor)) = window.current_monitor() {
-        let size = monitor.size();
-        let scale = monitor.scale_factor();
-        let screen_w = size.width as f64 / scale;
-        let screen_h = size.height as f64 / scale;
-        let x = ((screen_w - CAPTIONS_WIDTH) / 2.0).max(0.0);
-        let y = (screen_h - CAPTIONS_HEIGHT - CAPTIONS_BOTTOM_MARGIN).max(0.0);
-        let _ = window.set_position(PhysicalPosition::new(x, y));
-    }
+/// Bottom-center of the primary monitor, DPI-aware (matches dictation pill math).
+fn position_bottom_center(app: &AppHandle, window: &tauri::WebviewWindow) {
+    // Explicit primary_monitor() — current_monitor() of a hidden window is unreliable.
+    let Ok(Some(monitor)) = app.primary_monitor() else {
+        return;
+    };
+    let scale = monitor.scale_factor();
+    let monitor_size = monitor.size();
+    let width = (CAPTIONS_WIDTH * scale) as i32;
+    let height = (CAPTIONS_HEIGHT * scale) as i32;
+    let x = monitor.position().x + (monitor_size.width as i32 - width) / 2;
+    let y = monitor.position().y + monitor_size.height as i32
+        - height
+        - (CAPTIONS_BOTTOM_MARGIN * scale) as i32;
+    let _ = window.set_position(PhysicalPosition::new(x, y));
 }
 
 /// Show or hide the captions overlay. Repositions on show so multi-monitor
@@ -65,7 +70,7 @@ pub fn set_captions_overlay_visible(app: AppHandle, visible: bool) -> tauri::Res
         }
     };
     if visible {
-        position_bottom_center(&window);
+        position_bottom_center(&app, &window);
         window.show()?;
     } else {
         window.hide()?;

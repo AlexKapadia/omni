@@ -1,20 +1,18 @@
 /**
  * Desktop meeting toast UI — rendered in the always-on-top overlay window.
- * Start / Not now / Stop go through Tauri shell commands so the main app acts.
+ * Content is pushed from the main window; Start / Not now / Stop / Keep going
+ * go through Tauri shell commands so the main app acts.
  */
 import { invoke } from "@tauri-apps/api/core";
 import { Mic } from "lucide-react";
 import { useStore } from "zustand";
 import { humanMeetingTitleFromSource } from "../lib/auto-start-reaction";
 import { meetingSourceToastLabel } from "../lib/detection-source-options";
-import {
-  clearStopHint,
-  type MeetingDetectionStore,
-} from "../lib/meeting-detection-store";
-import { meetingToastDetectionStore } from "./meeting-toast-engine-bridge";
+import type { MeetingDetectionStore } from "../lib/meeting-detection-store";
+import { meetingToastContentStore } from "./meeting-toast-content-store";
 
 export function MeetingToastView({
-  store = meetingToastDetectionStore,
+  store = meetingToastContentStore,
 }: {
   readonly store?: MeetingDetectionStore;
 }) {
@@ -82,7 +80,6 @@ export function MeetingToastView({
             type="button"
             className="meeting-toast-primary"
             onClick={() => {
-              clearStopHint(store);
               void invoke("meeting_toast_stop_capture");
             }}
           >
@@ -92,8 +89,8 @@ export function MeetingToastView({
             type="button"
             className="meeting-toast-ghost"
             onClick={() => {
-              clearStopHint(store);
-              void invoke("set_meeting_toast_visible", { visible: false });
+              // Notify main window to clear stopHintReason (single source of truth).
+              void invoke("meeting_toast_keep_going");
             }}
           >
             Keep going

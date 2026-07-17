@@ -20,7 +20,13 @@ export interface DictationHistoryEntry {
   readonly note_title: string | null;
 }
 
-export function DictationHistoryScreen() {
+export function DictationHistoryScreen({
+  autoStartRecording = false,
+  onAutoStartConsumed,
+}: {
+  readonly autoStartRecording?: boolean;
+  readonly onAutoStartConsumed?: () => void;
+} = {}) {
   const [query, setQuery] = useState("");
   const [entries, setEntries] = useState<readonly DictationHistoryEntry[]>([]);
   const [error, setError] = useState<string | null>(null);
@@ -122,7 +128,14 @@ export function DictationHistoryScreen() {
     try {
       const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
       streamRef.current = stream;
-      const AudioContextClass = window.AudioContext || (window as any).webkitAudioContext;
+      const AudioContextClass =
+        window.AudioContext ||
+        (window as unknown as { webkitAudioContext?: typeof AudioContext }).webkitAudioContext;
+      if (AudioContextClass === undefined) {
+        setWaveHeights([10, 10, 10, 10, 10, 10, 10, 10]);
+        setRecordingError((prev) => prev ?? "Microphone unavailable for the waveform preview.");
+        return;
+      }
       const ctx = new AudioContextClass();
       audioContextRef.current = ctx;
 
@@ -151,6 +164,15 @@ export function DictationHistoryScreen() {
       setRecordingError((prev) => prev ?? "Microphone unavailable for the waveform preview.");
     }
   };
+
+  // Home "Record Inline" navigates here and asks us to start the recorder once.
+  const autoStartDoneRef = useRef(false);
+  useEffect(() => {
+    if (!autoStartRecording || autoStartDoneRef.current || isRecording) return;
+    autoStartDoneRef.current = true;
+    void startRecording();
+    onAutoStartConsumed?.();
+  }, [autoStartRecording, isRecording, onAutoStartConsumed]);
 
   const stopRecordingState = () => {
     setIsRecording(false);

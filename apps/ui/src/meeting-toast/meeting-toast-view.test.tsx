@@ -1,11 +1,12 @@
 /**
- * Meeting toast view — Start / Not now invoke desktop shell commands.
+ * Meeting toast view — Start / Not now / Keep going invoke desktop shell commands.
  */
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { MeetingToastView } from "./meeting-toast-view";
 import {
   applyMeetingDetected,
+  applyCaptureSuggestStop,
   createMeetingDetectionStore,
   INITIAL_MEETING_DETECTION_STATE,
 } from "../lib/meeting-detection-store";
@@ -56,5 +57,15 @@ describe("MeetingToastView", () => {
     render(<MeetingToastView store={store} />);
     fireEvent.click(screen.getByRole("button", { name: "Not now" }));
     expect(invoke).toHaveBeenCalledWith("meeting_toast_dismiss");
+  });
+
+  it("Keep going invokes meeting_toast_keep_going (main window clears stopHint)", () => {
+    const store = createMeetingDetectionStore();
+    act(() => {
+      applyCaptureSuggestStop(store, { reason: "silence for 45s" });
+    });
+    render(<MeetingToastView store={store} />);
+    fireEvent.click(screen.getByRole("button", { name: "Keep going" }));
+    expect(invoke).toHaveBeenCalledWith("meeting_toast_keep_going");
   });
 });

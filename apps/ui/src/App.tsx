@@ -37,6 +37,7 @@ import { DictationHistoryScreen } from "./screens/dictation-history-screen";
 import { SettingsScreen } from "./screens/settings-screen";
 import { requestCaptureStart } from "./lib/capture-commands";
 import { apiKeysStore, hydrateApiKeysFromSetupStatus } from "./lib/api-keys-store";
+import { showToast } from "./lib/toast-store";
 
 /** Boot gate: first-run onboarding vs the main shell, from real setup.status. */
 type Gate = "checking" | "onboarding" | "app" | "offline";
@@ -61,7 +62,6 @@ export default function App({
 
   useEffect(() => {
     startLiveEngineConnection(); // idempotent; safe under StrictMode double-mount
-    void syncConfiguredDictationHotkey();
     const savedTheme = localStorage.getItem("omni-theme") || "evergreen";
     document.documentElement.setAttribute("data-theme", savedTheme);
     let cancelled = false;
@@ -72,6 +72,8 @@ export default function App({
           if (cancelled) return;
           hydrateApiKeysFromSetupStatus(apiKeysStore, status.keys);
           setGate(status.onboardingComplete ? "app" : "onboarding");
+          // Hotkey sync after first successful engine status (WS is up).
+          void syncConfiguredDictationHotkey(undefined, bootRetryBudgetMs);
         })
         .catch(() => {
           if (cancelled) return;
@@ -137,6 +139,7 @@ export default function App({
 
 function MainShell() {
   const [activeSection, setActiveSection] = useState<SectionId>("home");
+  const [dictationAutoRecord, setDictationAutoRecord] = useState(false);
   const reducedMotion = useReducedMotion();
   const { showNaomi } = useNaomiVisibility();
 
@@ -151,9 +154,11 @@ function MainShell() {
     void refreshDevicesIntoSettings(appSettingsStore);
     const goLive = (): void => setActiveSection("live");
     setAutoStartNavigateLive(goLive);
+    let cancelled = false;
     let unwireCaptions: (() => void) | undefined;
     let unwireMeetingToast: (() => void) | undefined;
     let unlistenTray: (() => void) | undefined;
+    let unlistenEngineUnhealthy: (() => void) | undefined;
     try {
       unwireCaptions = wireCaptionsOverlay(appSettingsStore);
     } catch {
@@ -162,23 +167,51 @@ function MainShell() {
     void (async () => {
       try {
         const { listen } = await import("@tauri-apps/api/event");
+        if (cancelled) return;
         unlistenTray = await wireTrayStartCapture(
           (event, handler) => listen(event, handler).then((fn) => fn),
           goLive,
         );
+        if (cancelled) {
+          unlistenTray();
+          return;
+        }
         unwireMeetingToast = wireMeetingToastDesktop(goLive, undefined, undefined, (event, handler) =>
           listen(event, handler).then((fn) => fn),
         );
+        if (cancelled) {
+          unwireMeetingToast();
+          return;
+        }
+        unlistenEngineUnhealthy = await listen(
+          "engine:unhealthy",
+          (event: { payload: unknown }) => {
+            const payload = event.payload;
+            const message =
+              typeof payload === "object" &&
+              payload !== null &&
+              "reason" in payload &&
+              typeof (payload as { reason: unknown }).reason === "string"
+                ? (payload as { reason: string }).reason
+                : "The local engine is not staying running.";
+            showToast(message, "error", undefined, 8_000);
+          },
+        );
+        if (cancelled) {
+          unlistenEngineUnhealthy();
+        }
       } catch {
         // Web build / tests: no Tauri shell — tray / desktop toast unavailable.
       }
     })();
     const unwireAutoSummary = wireAutoSummary();
     return () => {
+      cancelled = true;
       setAutoStartNavigateLive(undefined);
       unwireCaptions?.();
       unwireMeetingToast?.();
       unlistenTray?.();
+      unlistenEngineUnhealthy?.();
       unwireAutoSummary();
     };
   }, []);
@@ -214,6 +247,10 @@ function MainShell() {
                       mic ? { micDeviceId: mic } : undefined,
                     );
                   }}
+                  onRecordInline={() => {
+                    setDictationAutoRecord(true);
+                    setActiveSection("dictation");
+                  }}
                 />
               )}
               {activeSection === "library" && (
@@ -228,7 +265,12 @@ function MainShell() {
               )}
               {activeSection === "live" && <LiveMeetingScreen />}
               {activeSection === "ask" && <AskScreen />}
-              {activeSection === "dictation" && <DictationHistoryScreen />}
+              {activeSection === "dictation" && (
+                <DictationHistoryScreen
+                  autoStartRecording={dictationAutoRecord}
+                  onAutoStartConsumed={() => setDictationAutoRecord(false)}
+                />
+              )}
               {activeSection === "naomi" && <NaomiView />}
               {activeSection === "settings" && <SettingsScreen />}
             </motion.div>

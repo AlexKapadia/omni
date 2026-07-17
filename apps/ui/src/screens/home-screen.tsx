@@ -16,6 +16,8 @@ import { localPrivacyCopy } from "./home-privacy-copy";
 interface HomeScreenProps {
   readonly onNavigate: (sectionId: "library" | "live" | "ask" | "dictation" | "settings") => void;
   readonly onStartCapture: () => void;
+  /** Keyboard Voice Replacement → open dictation and start the inline recorder. */
+  readonly onRecordInline?: () => void;
 }
 
 interface DictationHistoryEntry {
@@ -27,7 +29,7 @@ interface DictationHistoryEntry {
   readonly note_title: string | null;
 }
 
-export function HomeScreen({ onNavigate, onStartCapture }: HomeScreenProps) {
+export function HomeScreen({ onNavigate, onStartCapture, onRecordInline }: HomeScreenProps) {
   const settings = useStore(appSettingsStore, (s) => s.settings);
   const meetings = useStore(meetingsStore, (s) => s.meetings);
 
@@ -164,7 +166,18 @@ export function HomeScreen({ onNavigate, onStartCapture }: HomeScreenProps) {
             <OmniButton variant="secondary" className="flex-1" onClick={() => onNavigate("dictation")}>
               View Notes
             </OmniButton>
-            <OmniButton variant="primary" className="flex-1" onClick={onStartCapture}>
+            <OmniButton
+              variant="primary"
+              className="flex-1"
+              onClick={() => {
+                if (onRecordInline !== undefined) {
+                  onRecordInline();
+                  return;
+                }
+                // Fallback when App does not wire auto-start: open dictation.
+                onNavigate("dictation");
+              }}
+            >
               Record Inline
             </OmniButton>
           </div>

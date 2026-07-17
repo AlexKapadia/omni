@@ -12,6 +12,7 @@ import { useEffect, useState } from "react";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import { OmniMark } from "../components/omni-mark";
 import { approveCard, useApprovalCards } from "../lib/approval-cards-store";
+import { sendDictationCommand } from "./dictation-pill-command-channel";
 
 import type { DictationFinalPayload } from "./dictation-events-protocol";
 import {
@@ -230,7 +231,8 @@ function ResultPopover({
             type="button"
             className="pill-button-primary"
             onClick={() => {
-              approveCard(pendingCardId);
+              // Pill webview has no main-window live-engine-socket — use pill WS.
+              approveCard(pendingCardId, undefined, undefined, sendDictationCommand);
               dismiss();
             }}
           >

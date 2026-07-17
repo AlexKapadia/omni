@@ -7,6 +7,10 @@
 //! process tree is killed so no orphaned engine keeps recording anything
 //! (local-only invariant: no capture without a live, visible app).
 //!
+//! On Windows the child is placed in a Job Object with
+//! `JOB_OBJECT_LIMIT_KILL_ON_JOB_CLOSE` so a force-killed shell also kills the
+//! engine (no orphaned port 8765 / mic capture).
+//!
 //! Exactly ONE function decides what to launch (`resolve_engine_command`), so
 //! swapping the dev interpreter for the PyInstaller binary at packaging time
 //! is a one-place change.
@@ -18,34 +22,64 @@ use std::sync::atomic::{AtomicBool, Ordering};
 use std::sync::{Arc, Mutex};
 use std::time::{Duration, Instant};
 
+use serde::Serialize;
+use tauri::{AppHandle, Emitter};
+
+#[cfg(windows)]
+use crate::engine_sidecar_job_object_win32::{
+    assign_child_to_job, create_kill_on_close_job, WindowsJob,
+};
+
 const BACKOFF_START: Duration = Duration::from_secs(1);
 const BACKOFF_MAX: Duration = Duration::from_secs(30);
-/// A run this long counts as "healthy", so the next crash restarts fast again.
-const BACKOFF_RESET_AFTER: Duration = Duration::from_secs(30);
-/// Poll granularity for child exit / shutdown checks.
+const BACKOFF_RESET_AFTER: Duration = Duration::from_secs(30); // healthy run resets backoff
 const POLL_INTERVAL: Duration = Duration::from_millis(200);
+const FAST_EXIT_THRESHOLD: Duration = Duration::from_secs(3); // bind/crash-loop detection
+const FAST_EXIT_STREAK_FOR_UNHEALTHY: u32 = 3; // emit engine:unhealthy after N
+
+#[derive(Clone, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct EngineUnhealthyPayload {
+    reason: String,
+    consecutive_fast_exits: u32,
+}
 
 /// Handle owned by the Tauri app; dropping the app calls `shutdown()`.
 pub struct EngineSidecar {
     shutting_down: Arc<AtomicBool>,
     child_slot: Arc<Mutex<Option<Child>>>,
+    /// Windows Job Object handle — held open for the shell lifetime so
+    /// force-kill of the shell closes the job and kills the engine tree.
+    #[cfg(windows)]
+    _job: Option<WindowsJob>,
 }
 
 impl EngineSidecar {
     /// Start the supervisor thread and return the control handle.
-    pub fn spawn_supervised() -> Self {
+    pub fn spawn_supervised(app: AppHandle) -> Self {
         let shutting_down = Arc::new(AtomicBool::new(false));
         let child_slot: Arc<Mutex<Option<Child>>> = Arc::new(Mutex::new(None));
+
+        #[cfg(windows)]
+        let job = create_kill_on_close_job();
+        #[cfg(windows)]
+        let job_handle = job.as_ref().map(|j| j.handle());
+
         {
             let shutting_down = Arc::clone(&shutting_down);
             let child_slot = Arc::clone(&child_slot);
-            // Non-fatal: on the rare event the OS refuses a new thread (resource
-            // exhaustion), the shell must still launch. We log and continue with
-            // no supervisor — the app is usable offline; `shutdown()` stays a
-            // safe no-op (the child slot never fills).
+            // Non-fatal: thread spawn failure → app still launches (offline-usable).
             if let Err(error) = std::thread::Builder::new()
                 .name("engine-sidecar-supervisor".into())
-                .spawn(move || run_supervisor(&shutting_down, &child_slot))
+                .spawn(move || {
+                    run_supervisor(
+                        &shutting_down,
+                        &child_slot,
+                        app,
+                        #[cfg(windows)]
+                        job_handle,
+                    )
+                })
             {
                 log::warn!(
                     target: "engine",
@@ -56,6 +90,8 @@ impl EngineSidecar {
         Self {
             shutting_down,
             child_slot,
+            #[cfg(windows)]
+            _job: job,
         }
     }
 
@@ -71,13 +107,8 @@ impl EngineSidecar {
 }
 
 /// THE one place that decides how the engine is launched.
-///
-/// Dev builds run the checked-out Python source via uv; release builds will
-/// run the PyInstaller binary shipped next to the shell executable (M7 —
-/// packaging swaps only this function's release arm).
 fn resolve_engine_command() -> Command {
     if cfg!(debug_assertions) {
-        // Repo root is three levels above src-tauri (apps/ui/src-tauri).
         let repo_root = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
             .join("../../..")
             .canonicalize()
@@ -88,26 +119,32 @@ fn resolve_engine_command() -> Command {
             .current_dir(repo_root);
         command
     } else {
-        // Packaged engine (PyInstaller onedir) ships as a bundle resource at
-        // <install dir>/omni-engine/omni-engine.exe, next to the shell exe
-        // (see tauri.conf.json bundle.resources). If resolution fails we
-        // still return a spawnable-looking command; the retry loop reports
-        // the miss instead of the shell crashing.
-        let engine_binary = if cfg!(windows) { "omni-engine.exe" } else { "omni-engine" };
-        let engine_path = std::env::current_exe()
+        let bin = if cfg!(windows) {
+            "omni-engine.exe"
+        } else {
+            "omni-engine"
+        };
+        let path = std::env::current_exe()
             .ok()
-            .and_then(|exe| {
-                exe.parent()
-                    .map(|dir| dir.join("omni-engine").join(engine_binary))
-            })
-            .unwrap_or_else(|| PathBuf::from(engine_binary));
-        Command::new(engine_path)
+            .and_then(|exe| exe.parent().map(|d| d.join("omni-engine").join(bin)))
+            .unwrap_or_else(|| PathBuf::from(bin));
+        Command::new(path)
     }
 }
 
+fn emit_unhealthy(app: &AppHandle, reason: String, consecutive_fast_exits: u32) {
+    let _ = app.emit("engine:unhealthy", EngineUnhealthyPayload { reason, consecutive_fast_exits });
+}
+
 /// Supervisor loop: spawn → pipe logs → wait for exit → backoff → respawn.
-fn run_supervisor(shutting_down: &AtomicBool, child_slot: &Mutex<Option<Child>>) {
+fn run_supervisor(
+    shutting_down: &AtomicBool,
+    child_slot: &Mutex<Option<Child>>,
+    app: AppHandle,
+    #[cfg(windows)] job_handle: Option<isize>,
+) {
     let mut backoff = BACKOFF_START;
+    let mut consecutive_fast_exits: u32 = 0;
     while !shutting_down.load(Ordering::SeqCst) {
         let mut command = resolve_engine_command();
         command
@@ -125,6 +162,10 @@ fn run_supervisor(shutting_down: &AtomicBool, child_slot: &Mutex<Option<Child>>)
             Ok(mut child) => {
                 let pid = child.id();
                 log::info!(target: "engine", "engine sidecar started (pid {pid})");
+                #[cfg(windows)]
+                if let Some(job) = job_handle {
+                    assign_child_to_job(job, &child);
+                }
                 pipe_child_output(&mut child);
                 if let Ok(mut slot) = child_slot.lock() {
                     *slot = Some(child);
@@ -134,25 +175,51 @@ fn run_supervisor(shutting_down: &AtomicBool, child_slot: &Mutex<Option<Child>>)
                 if shutting_down.load(Ordering::SeqCst) {
                     break;
                 }
+                let lived = started_at.elapsed();
                 match status {
                     Some(status) => log::warn!(
                         target: "engine",
                         "engine exited ({status}) after {:.0}s — restarting in {:?}",
-                        started_at.elapsed().as_secs_f64(),
+                        lived.as_secs_f64(),
                         backoff
                     ),
-                    None => log::warn!(target: "engine", "engine wait failed — restarting in {backoff:?}"),
+                    None => log::warn!(
+                        target: "engine",
+                        "engine wait failed — restarting in {backoff:?}"
+                    ),
                 }
-                if started_at.elapsed() >= BACKOFF_RESET_AFTER {
-                    backoff = BACKOFF_START; // it ran healthily; crash was fresh
+                if lived < FAST_EXIT_THRESHOLD {
+                    consecutive_fast_exits = consecutive_fast_exits.saturating_add(1);
+                    if consecutive_fast_exits >= FAST_EXIT_STREAK_FOR_UNHEALTHY {
+                        emit_unhealthy(
+                            &app,
+                            "The local engine keeps exiting immediately. \
+                             Another process may be using port 8765, or the \
+                             engine failed to start."
+                                .to_string(),
+                            consecutive_fast_exits,
+                        );
+                    }
+                } else {
+                    consecutive_fast_exits = 0;
+                }
+                if lived >= BACKOFF_RESET_AFTER {
+                    backoff = BACKOFF_START;
                 }
             }
             Err(error) => {
-                // Engine absent / uv missing: expected in early milestones.
                 log::warn!(
                     target: "engine",
                     "cannot start engine sidecar ({error}) — retrying in {backoff:?}"
                 );
+                consecutive_fast_exits = consecutive_fast_exits.saturating_add(1);
+                if consecutive_fast_exits >= FAST_EXIT_STREAK_FOR_UNHEALTHY {
+                    emit_unhealthy(
+                        &app,
+                        format!("The local engine could not be started ({error})."),
+                        consecutive_fast_exits,
+                    );
+                }
             }
         }
 
@@ -162,8 +229,6 @@ fn run_supervisor(shutting_down: &AtomicBool, child_slot: &Mutex<Option<Child>>)
     log::info!(target: "engine", "engine sidecar supervisor stopped");
 }
 
-/// Forward the child's stdout/stderr line-by-line into the app log so engine
-/// tracebacks are visible in one place.
 fn pipe_child_output(child: &mut Child) {
     if let Some(stdout) = child.stdout.take() {
         std::thread::spawn(move || {
@@ -175,16 +240,12 @@ fn pipe_child_output(child: &mut Child) {
     if let Some(stderr) = child.stderr.take() {
         std::thread::spawn(move || {
             for line in BufReader::new(stderr).lines().map_while(Result::ok) {
-                // Python logs to stderr by default — warn keeps it visible
-                // without implying every line is an error.
                 log::warn!(target: "engine", "{line}");
             }
         });
     }
 }
 
-/// Block until the child exits or shutdown is requested. Returns the exit
-/// status when the child ended on its own.
 fn wait_for_exit(
     shutting_down: &AtomicBool,
     child_slot: &Mutex<Option<Child>>,
@@ -204,7 +265,7 @@ fn wait_for_exit(
                     *slot = None;
                     return Some(status);
                 }
-                Some(Ok(None)) => {} // still running
+                Some(Ok(None)) => {}
                 Some(Err(_)) | None => {
                     *slot = None;
                     return None;
@@ -215,9 +276,6 @@ fn wait_for_exit(
     }
 }
 
-/// Kill the child AND its descendants. `uv run` wraps the real python
-/// process, so a plain kill() would orphan the engine — on Windows we use
-/// taskkill /T to take down the whole tree.
 fn kill_process_tree(mut child: Child) {
     #[cfg(windows)]
     {
@@ -227,11 +285,10 @@ fn kill_process_tree(mut child: Child) {
             .stderr(Stdio::null())
             .status();
     }
-    let _ = child.kill(); // no-op if taskkill already got it; authoritative elsewhere
-    let _ = child.wait(); // reap — never leave a zombie
+    let _ = child.kill();
+    let _ = child.wait();
 }
 
-/// Sleep for `duration` but wake early if shutdown is requested.
 fn sleep_interruptible(shutting_down: &AtomicBool, duration: Duration) {
     let deadline = Instant::now() + duration;
     while Instant::now() < deadline {

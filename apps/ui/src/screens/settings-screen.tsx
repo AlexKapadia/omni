@@ -34,6 +34,7 @@ import { SpeakerIdentitySection } from "../components/settings/speaker-identity-
 import { SummaryModelSection } from "../components/settings/summary-model-section";
 import { TranscriptionBackendSection } from "../components/settings/transcription-backend-section";
 import { ModelsDownloadSection } from "../components/settings/models-download-section";
+import { UpdaterSection } from "../components/settings/updater-section";
 import { SkeletonShimmer } from "../components/skeleton-shimmer";
 import { SettingsGroupCard, SettingsRow } from "../components/settings/settings-group-card";
 import { ToggleSwitch } from "../components/toggle-switch";
@@ -423,6 +424,7 @@ function ProTab({
       <InstantExecuteWhitelistSection store={store} update={update} />
       <DictationCleanupStyleSection store={store} update={update} />
       <CostLatencyLedgerSection store={store} />
+      <UpdaterSection />
       <DiagnosticsSection />
     </div>
   );

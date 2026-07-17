@@ -60,11 +60,22 @@ Refuted by first pass: vite inputs complete (incl. meeting-toast.html); lib.rs r
 | fable sweep UI | deep UI defect hunt | returned → docs/progress/sweep-ui.md (7 MAJOR, 4 MINOR) |
 | fable sweep Rust/pkg | deep Rust+packaging hunt | returned → docs/progress/sweep-rust-packaging.md (6 MAJOR, 3 MINOR) |
 | fable sweep engine | deep engine defect hunt | returned → docs/progress/sweep-engine.md (1 BLOCKER, 7 MAJOR, 5 MINOR) |
-| grok batch D1 (UI+Rust) | fix all sweep-ui + sweep-rust items per grok-brief-ui-rust-fixes.md | running → grok-run-ui-rust.log |
-| grok batch D2 (engine) | fix all 13 sweep-engine items per grok-brief-engine-fixes.md | running → grok-run-engine-fixes.log |
+| grok batch D1 (UI+Rust) | fix all sweep-ui + sweep-rust items per grok-brief-ui-rust-fixes.md | done, verified, committed ea97c8d |
+| grok batch D2 (engine) | fix all 13 sweep-engine items per grok-brief-engine-fixes.md | done, verified, committed 3825e7d |
 
-## Resume here (updated)
-Both grok fix runs in flight (D1: apps/ui + src-tauri + pyproject; D2: engine/ + tests/ — disjoint scopes, safe in parallel). When they exit: re-verify ALL gates independently (tsc, vitest, cargo check, vite build, pytest, ruff, mypy), spot-check the security fixes (kill-switch in Graph gateway, reveal_path_in_explorer validation), then commit.
+## Verified gate state after fixes
+tsc 0 · vitest 1019 green · cargo check + 25 unit tests green · vite build green · pytest green · ruff clean · mypy clean (467 files) · uv lock consistent. Security spot-checks passed: Graph kill-switch refusal in source + regression test; reveal_path_in_explorer canonicalize/fail-closed + unit tests.
+
+## Sidecar
+Rebuilt 2026-07-17 01:16 (packaging/dist/omni-engine/, git-ignored build artifact). Smoke test: /health → 200 {"status":"ok","version":"0.1.0"} in 3 s on OMNI_ENGINE_PORT=8799. The frozen exe logs expected first-run warnings (STT extra + watchdog not bundled — models/deps install at first run per packaging/README.md).
+
+## Environment note (user-visible)
+An UNRELATED dev server (`python -m services.api.dev_server`, PID 7824, different project) is holding 127.0.0.1:8765 — the engine's default port. The packaged app cannot bind while it runs; the new `engine:unhealthy` crash-loop event (batch D1 fix) now surfaces this in the UI instead of failing silently. Not killed — it is not this repo's process.
+
+## Status: COMPLETE (code work)
+All discovered code defects fixed, verified, committed: 8b89675 (gates), 3825e7d (engine defects incl. kill-switch BLOCKER), ea97c8d (UI/Rust defects incl. explorer-launch hardening). Final verified gate state: tsc 0 · vitest 1019 · cargo check + 25 tests · vite build · pytest · ruff · mypy · uv lock — all green. Sidecar rebuilt + health-checked.
+
+Remaining ship logistics requiring the user (NOT code): updater signing key for release builds; Google OAuth client credentials; Playwright E2E lane + M7 ship checklist (docs/progress/omni-build.md); meeting-toast branch merge policy (work sits on feature/ui-rehaul-v2).
 
 ## Resume here
 If picking this up cold: check gate state table vs reality (`npx tsc --noEmit` in apps/ui; `uv run ruff check .`; `uv run mypy`), then continue with the first non-green batch. Verify after every batch: the fixing agent's word is not evidence.

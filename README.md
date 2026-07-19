@@ -1,136 +1,216 @@
+<!-- ─────────────────────────── HERO ─────────────────────────── -->
+![header](https://capsule-render.vercel.app/api?type=waving&color=0A0A0A&height=220&section=header&text=Omni%20Steroid&fontSize=56&fontColor=ffffff&fontAlignY=40&desc=Meeting%20notes%20that%20stay%20yours.&descAlignY=60&descSize=20&animation=fadeIn)
+
 <div align="center">
 
-# Omni
+### Local-first, bot-free meeting intelligence for Windows, macOS, and Linux.
 
-### Local-first, bot-free meeting intelligence — Windows, macOS, and Linux.
-
-Omni sits quietly on your machine, captures your meetings without a bot, transcribes them on-device (with pluggable accuracy tiers), turns your rough notes into clean enhanced notes, answers questions from your Obsidian vault and past dictations, and drafts follow-up actions you approve with one click. Global dictation, a searchable dictation history, and Naomi voice mode sit on the same engine. Nothing leaves your machine unless you send it. Featuring a high-performance visual redesign with premium organic wave branding, real-time Web Audio API sound visualization, and an elegant 5-step onboarding and home dashboard system.
+Capture meetings without a bot. Transcribe on-device. Enhance your notes. Ask your vault with real citations. Approve every action — or nothing leaves the machine.
 
 <br/>
 
-![Omni in use — Library, a meeting note, an Ask answer with citations, the router, and Naomi](media/omni-demo.gif)
+![License](https://img.shields.io/badge/license-MIT-22c55e?style=for-the-badge)
+![Platform](https://img.shields.io/badge/platform-Win%20%7C%20macOS%20%7C%20Linux-0ea5e9?style=for-the-badge&logo=windows&logoColor=white)
+![Local-first](https://img.shields.io/badge/local--first-yes-0A0A0A?style=for-the-badge)
+![Telemetry](https://img.shields.io/badge/telemetry-zero-22c55e?style=for-the-badge)
+![Tests](https://img.shields.io/badge/tests-2%2C853-6366f1?style=for-the-badge)
+[![CI](https://img.shields.io/github/actions/workflow/status/bhaskaraanjana/omni-steroid/ci.yml?style=for-the-badge&label=CI)](https://github.com/bhaskaraanjana/omni-steroid/actions/workflows/ci.yml)
 
 <br/>
 
-[![License: MIT](https://img.shields.io/badge/license-MIT-0A0A0A.svg)](LICENSE)
-[![Platform](https://img.shields.io/badge/platform-Win%20%7C%20macOS%20%7C%20Linux-0A0A0A.svg)](#quick-start)
-[![Local-first](https://img.shields.io/badge/local--first-yes-0A0A0A.svg)](#privacy--security)
-[![Telemetry](https://img.shields.io/badge/telemetry-zero-0A0A0A.svg)](#privacy--security)
-[![Tests](https://img.shields.io/badge/tests-2%2C853-0A0A0A.svg)](#proof-its-good)
-[![CI](https://github.com/AlexKapadia/omni/actions/workflows/ci.yml/badge.svg)](https://github.com/AlexKapadia/omni/actions/workflows/ci.yml)
+<a href="#-see-it-in-action">
+  <img src="https://img.shields.io/badge/▶_Product_Tour-Watch_Now-0ea5e9?style=for-the-badge" alt="Product tour"/>
+</a>
+&nbsp;
+<a href="#-quick-start">
+  <img src="https://img.shields.io/badge/⚡_Quick_Start-Build_from_source-0A0A0A?style=for-the-badge" alt="Quick start"/>
+</a>
+&nbsp;
+<a href="https://github.com/bhaskaraanjana/omni-steroid/releases">
+  <img src="https://img.shields.io/badge/⬇_Releases-Installers-6366f1?style=for-the-badge" alt="Releases"/>
+</a>
 
 </div>
 
 ---
 
-## What it is
+## Table of contents
 
-Meeting tools today make you choose: let a bot join your call and upload everything to someone else's cloud, or take notes by hand. Omni refuses that trade. It runs on your machine, joins nothing, uploads nothing, and treats your Obsidian vault as the single source of truth. **Windows is first-class** for full dual-stream capture; **macOS and Linux** ship as installable apps with mic capture and monitor-based loopback when you configure BlackHole or PipeWire.
-
-- **Invisible, bot-free capture.** On Windows, Omni records two clean, labelled streams — system audio via WASAPI loopback (the other participants, `them`) and your microphone (`me`) — so there is no bot in the call and it still works **through headphones**, where naive single-stream capture hears nothing.
-- **On-device transcription.** Silero VAD gates streaming STT — **Parakeet-TDT** for live capture by default, with **Whisper** and **BYOK cloud STT** for import and retranscribe via Settings accuracy tiers. The audio is **kept on-device as MP3** alongside the transcript by default — discarding it after transcription is an explicit opt-out in Privacy.
-- **Enhanced notes, Granola-style.** Your rough in-meeting notes are fused with the transcript into structured notes. Your own words stay primary and untouched; the AI settles its lines *around* yours, inside clearly-marked managed regions.
-- **Ask anything, live.** A local RAG index over your vault and every past transcript answers questions during and after a call — with **inline citations** that point at an exact note and line range, never at nothing.
-- **Approval-carded actions.** Omni proposes calendar events, contact upserts, and **Gmail drafts — it never sends.** Nothing executes without your explicit approval, and every executed action lands in an append-only audit log.
-- **Dictation, everywhere.** Global push-to-talk with a floating pill, **locked recording** (re-press to lock), cleanup style presets, an in-app **dictation history**, and Windows inject into any app. Raw text is **retained** so a bad cleanup can never silently rewrite what you said.
-- **Meeting tools.** Chat with a meeting, search-and-replace in transcript/summary, copy/export as Markdown, PDF, or DOCX, and import audio with optional **speaker identification**.
-- **Naomi — a voice agent.** A Jarvis-style voice mode with a reactive black-water visual that answers from your vault and dispatches the same approval-carded actions, hands-free.
-
-Every capability above maps to a real screen below — real data, real citations, real cost ledger. Full catalog: [`docs/features.md`](docs/features.md).
+- [See it in action](#-see-it-in-action)
+- [Features](#-features)
+- [Built with](#️-built-with)
+- [How it works](#-how-it-works)
+- [Quick start](#-quick-start)
+- [Privacy & security](#-privacy--security)
+- [Proof it's good](#-proof-its-good)
+- [Contributing & license](#-contributing--license)
 
 ---
 
-## Screenshots
+## ✨ See it in action
 
-> These are the **real app running end-to-end against the real Python engine** — real retrieval, real Gemini synthesis, real router ledger — not mock-ups. The one honest boundary: they are captured from the production web build in headless Chromium with a thin shim over the OS-native Tauri seams (folder picker, tray), so native window chrome isn't shown. Full capture notes: [`media/README.md`](media/README.md).
+> [!NOTE]
+> Every image and the demo GIF below is the **real app running end-to-end against the real Python engine** — real retrieval, real Gemini synthesis, real router ledger — not mock-ups. Captured from the production web build with a thin shim over OS-native Tauri seams only. Full notes: [`media/README.md`](media/README.md).
+
+<p align="center">
+  <img src="media/omni-demo.gif" width="880" alt="Omni Steroid product tour — Library, meeting note, Ask with citations, router settings, and Naomi voice mode"/>
+</p>
+
+<p align="center">
+  <sub>Recorded tour · Library → meeting detail → Ask with citations → Settings → Naomi<br/>
+  Also available as <a href="media/omni-demo.mp4"><code>media/omni-demo.mp4</code></a> (~0.5 MB)</sub>
+</p>
 
 ### Ask your vault — answers with exact citations
 
-![Ask Omni answering a question about a renewal agreement, with inline superscript citations and a source list showing note paths and line ranges](media/screenshots/03-ask-answer.png)
+<p align="center">
+  <img src="media/screenshots/03-ask-answer.png" width="880" alt="Omni Steroid Ask answering a question with inline superscript citations and source chips showing note paths and line ranges"/>
+</p>
 
-A real synthesized answer over the indexed vault. Every claim carries an inline citation; each source chip resolves to an exact note path and line range (`Meetings/Northwind Renewal.md · L11–13`). The footer shows engine-measured latency — retrieval in single-digit milliseconds.
+A real synthesized answer over the indexed vault. Every claim carries an inline citation; each source chip resolves to an exact note path and line range. The footer shows engine-measured latency — retrieval in single-digit milliseconds.
 
 ### Your meetings, enhanced
 
 <table>
-<tr>
-<td width="50%"><img src="media/screenshots/01-library.png" alt="Library home showing seeded meetings grouped by day with a live engine heartbeat in the footer"/></td>
-<td width="50%"><img src="media/screenshots/02-meeting-detail.png" alt="Meeting detail with enhanced notes, verbatim user notes, real transcript segments, and an honest empty approvals state"/></td>
-</tr>
-<tr>
-<td><b>Library</b> — every meeting grouped by day, with a live engine heartbeat in the footer.</td>
-<td><b>Meeting detail</b> — enhanced notes woven around your verbatim notes, real transcript segments, and an honest "Nothing to approve" state.</td>
-</tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="media/screenshots/01-library.png" width="100%" alt="Library home showing meetings grouped by day with a live engine heartbeat"/>
+    </td>
+    <td width="50%" align="center">
+      <img src="media/screenshots/02-meeting-detail.png" width="100%" alt="Meeting detail with enhanced notes, verbatim user notes, and transcript segments"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><b>Library</b><br/><sub>Meetings grouped by day · live engine heartbeat</sub></td>
+    <td align="center"><b>Meeting detail</b><br/><sub>Enhanced notes around your words · honest empty approvals</sub></td>
+  </tr>
 </table>
 
 ### The AI router — bring your own keys, see every cent
 
 <table>
-<tr>
-<td width="50%"><img src="media/screenshots/04-settings-router.png" alt="Settings router matrix showing per-task provider fallback chains across Groq and Gemini"/></td>
-<td width="50%"><img src="media/screenshots/05-settings-ledger-keys.png" alt="Settings showing privacy toggles, deny-by-default instant execute, a real cost and latency ledger, and DPAPI-masked keys"/></td>
-</tr>
-<tr>
-<td><b>Router matrix</b> — real device enumeration, hotkey, and per-task provider fallback chains (Groq → Gemini) with per-task budgets.</td>
-<td><b>Cost ledger + keys</b> — privacy toggles, deny-by-default instant-execute, a real per-call cost/latency ledger, and DPAPI-masked keys.</td>
-</tr>
+  <tr>
+    <td width="50%" align="center">
+      <img src="media/screenshots/04-settings-router.png" width="100%" alt="Settings router matrix with per-task provider fallback chains"/>
+    </td>
+    <td width="50%" align="center">
+      <img src="media/screenshots/05-settings-ledger-keys.png" width="100%" alt="Settings privacy toggles, cost ledger, and DPAPI-masked keys"/>
+    </td>
+  </tr>
+  <tr>
+    <td align="center"><b>Router matrix</b><br/><sub>Per-task provider chains · budgets · devices</sub></td>
+    <td align="center"><b>Cost ledger + keys</b><br/><sub>Privacy toggles · real cost/latency · DPAPI keys</sub></td>
+  </tr>
 </table>
 
 ### Naomi — voice, hands-free
 
-![Naomi's living-water WebGL pool with conversation and tuning panels](media/screenshots/06-naomi-pool.png)
+<p align="center">
+  <img src="media/screenshots/06-naomi-pool.png" width="880" alt="Naomi living-water WebGL pool with conversation and tuning panels"/>
+</p>
 
-The real living-water pool (WebGL, 60 fps) with the conversation and tuning panels. The pool renders its real idle water here; voice and affect are driven live in use.
+The real living-water pool (WebGL, 60 fps) with conversation and tuning panels. Same approval-carded actions as the rest of the app — hands-free.
 
 ### A two-minute first run
 
 <table>
-<tr>
-<td width="25%"><img src="media/screenshots/07-onboarding-welcome.png" alt="Onboarding welcome step"/></td>
-<td width="25%"><img src="media/screenshots/08-onboarding-vault.png" alt="Onboarding vault selection step"/></td>
-<td width="25%"><img src="media/screenshots/09-onboarding-keys.png" alt="Onboarding API keys step"/></td>
-<td width="25%"><img src="media/screenshots/10-onboarding-models.png" alt="Onboarding model download step"/></td>
-</tr>
-<tr>
-<td align="center">Welcome</td>
-<td align="center">Pick your vault</td>
-<td align="center">Your keys</td>
-<td align="center">Model download</td>
-</tr>
+  <tr>
+    <td width="25%" align="center"><img src="media/screenshots/07-onboarding-welcome.png" width="100%" alt="Onboarding welcome step"/></td>
+    <td width="25%" align="center"><img src="media/screenshots/08-onboarding-vault.png" width="100%" alt="Onboarding vault selection step"/></td>
+    <td width="25%" align="center"><img src="media/screenshots/09-onboarding-keys.png" width="100%" alt="Onboarding API keys step"/></td>
+    <td width="25%" align="center"><img src="media/screenshots/10-onboarding-models.png" width="100%" alt="Onboarding model download step"/></td>
+  </tr>
+  <tr>
+    <td align="center"><sub>Welcome</sub></td>
+    <td align="center"><sub>Pick your vault</sub></td>
+    <td align="center"><sub>Your keys</sub></td>
+    <td align="center"><sub>Model download</sub></td>
+  </tr>
 </table>
 
 ---
 
-## How it works
+## 🚀 Features
+
+Meeting tools today force a trade: let a bot join your call and upload everything, or take notes by hand. Omni Steroid refuses that. It runs on your machine, joins nothing, and treats your Obsidian vault as the source of truth.
+
+| | Feature | What you get |
+|--|---------|--------------|
+| 🎧 | **Bot-free dual-stream capture** | WASAPI loopback (`them`) + mic (`me`) on Windows — works through headphones. macOS/Linux with BlackHole / PipeWire monitor. |
+| 🧠 | **On-device transcription** | Silero VAD gates streaming STT — Parakeet-TDT live by default; Whisper & BYOK cloud STT for import/retranscribe. Audio kept on-device as MP3. |
+| 📝 | **Enhanced notes** | Your rough notes fused with the transcript. Your words stay primary; AI settles around them in managed regions. |
+| 🔍 | **Ask with citations** | Local RAG over vault + past transcripts. Inline citations to exact note path and line range. |
+| ✅ | **Approval-carded actions** | Calendar events, contact upserts, **Gmail drafts — never send**. Nothing runs without your OK. Append-only audit log. |
+| 🎙️ | **Global dictation** | Push-to-talk pill, locked recording, cleanup presets, inject into any app (Windows), searchable history. Raw text always retained. |
+| 📦 | **Meeting tools** | Chat with a meeting, search-replace, export MD/PDF/DOCX/SRT/VTT, import audio with optional speaker ID. |
+| 🌊 | **Naomi voice mode** | Hands-free voice agent over the same vault + approval cards — living-water visual. |
+
+> [!TIP]
+> **Windows is first-class** for full dual-stream capture. **macOS and Linux** ship as installable apps with mic capture and monitor-based loopback when you configure BlackHole or PipeWire.
+
+Full catalog: [`docs/features.md`](docs/features.md).
+
+---
+
+## 🛠️ Built with
+
+<p align="center">
+  <img src="https://skillicons.dev/icons?i=react,ts,rust,python,fastapi,sqlite,tailwind" alt="Tech stack icons"/>
+</p>
+
+<p align="center">
+
+![Tauri](https://img.shields.io/badge/Tauri_2-FFC131?style=for-the-badge&logo=tauri&logoColor=black)
+![React](https://img.shields.io/badge/React_18-61DAFB?style=for-the-badge&logo=react&logoColor=black)
+![Python](https://img.shields.io/badge/Python_3.11-3776AB?style=for-the-badge&logo=python&logoColor=white)
+![FastAPI](https://img.shields.io/badge/FastAPI-009688?style=for-the-badge&logo=fastapi&logoColor=white)
+![SQLite](https://img.shields.io/badge/sqlite--vec-003B57?style=for-the-badge&logo=sqlite&logoColor=white)
+![Rust](https://img.shields.io/badge/Rust-000000?style=for-the-badge&logo=rust&logoColor=white)
+
+</p>
+
+**AI & speech:** Silero VAD · Parakeet-TDT / Whisper · bge-small embeddings · Groq · Gemini Flash · Claude (optional) · BYOK (OpenAI, Ollama, OpenRouter, …)
+
+---
+
+## 🏗️ How it works
 
 <div align="center">
 
-![Omni system architecture — a Tauri 2 React shell talking over a localhost WebSocket to a Python engine sidecar; the engine holds capture+STT, index/RAG, the AI router, agents, notes enhance and dictation, over a deterministic local core of DPAPI keys and SQLite/vault storage, with model calls as the only egress behind a kill-switch](evidence/diagrams/diagram_system_architecture.png)
+<img src="evidence/diagrams/diagram_system_architecture.png" width="880" alt="Omni Steroid system architecture — Tauri React shell over localhost WebSocket to a Python engine sidecar with capture, STT, RAG, router, agents, and vault"/>
 
 </div>
 
 A **deterministic local core** (capture, storage, approval, audit) with **learned layers on top** (STT, retrieval, synthesis):
 
 - **Tauri 2 shell + React front end** renders state and relays commands. It never holds keys or does AI work.
-- **Python engine sidecar** (PyInstaller-packed) does everything real, over a pinned WebSocket protocol on `127.0.0.1` only. `GET /health` reports liveness. Heartbeats expose `stt_engine` / `stt_device` when the STT stack is ready.
-- **Pluggable STT** — Parakeet (fast), Whisper (enhanced accuracy), or OpenAI-compatible cloud STT; tier presets in Settings. Live capture stays Parakeet-first; import and retranscribe honor the selected backend.
-- **Tri-provider AI router** — **Groq** for instant work, **Gemini Flash** for long-context bulk, **Claude** *(optional)* for agentic tool use and synthesis, plus BYOK paths (OpenAI, Ollama, OpenRouter, and others). The router sends the minimum excerpt each task needs and records cost + latency for every call.
-- **Local RAG** — Markdown is chunked and indexed with **BM25 + a dense `bge-small` tier**, fused with reciprocal-rank fusion, stored in `sqlite-vec`. All retrieval is on-device.
-- **Keys via Windows DPAPI**, held only by the engine. Storage is SQLite plus your Obsidian vault. Model calls are the **only** egress, and a kill-switch halts them.
+- **Python engine sidecar** (PyInstaller-packed) does the real work over a pinned WebSocket on `127.0.0.1` only. `GET /health` reports liveness.
+- **Pluggable STT** — Parakeet (fast), Whisper (accuracy), or OpenAI-compatible cloud STT; tier presets in Settings.
+- **Tri-provider AI router** — Groq for instant work, Gemini Flash for long-context bulk, Claude *(optional)* for agentic tool use — plus BYOK paths. Minimum excerpts only; cost + latency recorded every call.
+- **Local RAG** — Markdown chunked and indexed with BM25 + dense `bge-small`, fused with RRF, stored in `sqlite-vec`. All retrieval on-device.
+- **Keys via Windows DPAPI**, held only by the engine. Model calls are the **only** egress; a kill-switch halts them.
+
+Deeper dive: [`docs/architecture.md`](docs/architecture.md).
 
 ---
 
-## Quick start
+## ⚡ Quick start
 
-Omni is **bring-your-own-keys** — no backend, no accounts. It runs on your own API keys, and the keys you skip simply disable those features.
+Omni Steroid is **bring-your-own-keys** — no backend accounts. Keys you skip simply disable those features.
+
+### Prerequisites
+
+| Tool | Why |
+|------|-----|
+| **[uv](https://docs.astral.sh/uv/)** | Python toolchain (provisions 3.11) |
+| **[pnpm](https://pnpm.io/)** | Front-end packages |
+| **Rust** + platform toolchains | Tauri shell — [prerequisites](https://tauri.app/start/prerequisites/) (MSVC on Windows) |
 
 ### Build from source
 
-Prerequisites: **[uv](https://docs.astral.sh/uv/)** (Python toolchain — provisions Python 3.11 itself), **[pnpm](https://pnpm.io/)**, and the **Rust** toolchain Tauri needs. On Windows use **MSVC** ([portable MSVC](https://tauri.app/start/prerequisites/) works if you can't run the full Visual Studio installer). On macOS/Linux follow [Tauri prerequisites](https://tauri.app/start/prerequisites/) for your platform.
-
 ```bash
-git clone https://github.com/AlexKapadia/omni
-cd omni
+git clone https://github.com/bhaskaraanjana/omni-steroid
+cd omni-steroid
 
 # Engine — install deps (uv provisions Python 3.11)
 uv sync
@@ -142,14 +222,23 @@ cd apps/ui && pnpm install
 pnpm tauri dev
 ```
 
-Prefer to run the pieces separately? `uv run python -m engine.server` starts just the engine (`GET http://127.0.0.1:8765/health` → `{"status":"ok"}`), and `pnpm dev` runs the UI against it.
+Prefer separate processes?
+
+```bash
+# Terminal 1 — engine only
+uv run python -m engine.server
+# GET http://127.0.0.1:8765/health → {"status":"ok"}
+
+# Terminal 2 — UI
+cd apps/ui && pnpm dev
+```
 
 <details>
 <summary><b>Installer (from Releases)</b></summary>
 
 <br/>
 
-Tagged releases build **Windows** (NSIS + MSI), **macOS** (DMG + `.app`), and **Linux** (deb + AppImage) via CI, with signature-verified auto-update. When a release exists it appears on the [Releases page](https://github.com/AlexKapadia/omni/releases). Until then, build from source. Packaging details: [`packaging/README.md`](packaging/README.md).
+Tagged releases build **Windows** (NSIS + MSI), **macOS** (DMG + `.app`), and **Linux** (deb + AppImage) via CI, with signature-verified auto-update. When a release exists it appears on the [Releases page](https://github.com/bhaskaraanjana/omni-steroid/releases). Until then, build from source. Packaging details: [`packaging/README.md`](packaging/README.md).
 
 **macOS/Linux loopback:** configure a virtual monitor device (e.g. BlackHole on macOS, PipeWire monitor on Linux) for full meeting capture — see [`docs/architecture.md`](docs/architecture.md#cross-platform-status).
 
@@ -159,7 +248,7 @@ Tagged releases build **Windows** (NSIS + MSI), **macOS** (DMG + `.app`), and **
 
 A two-minute wizard walks you through it:
 
-1. **Pick your Obsidian vault** — the folder Omni reads and writes.
+1. **Pick your Obsidian vault** — the folder Omni Steroid reads and writes.
 2. **Enter your keys** (DPAPI-encrypted on the spot):
 
    | Provider | Unlocks | Required? | Free tier |
@@ -171,29 +260,32 @@ A two-minute wizard walks you through it:
 
 3. **Download the on-device models** (VAD + transcription + embeddings).
 
-With no keys at all, capture, transcription, and vault features still work fully offline.
+> [!IMPORTANT]
+> With **no keys at all**, capture, transcription, and vault features still work fully offline. Cloud features simply stay disabled.
 
 ---
 
-## Privacy & security
+## 🔒 Privacy & security
 
-This is the whole point, so it is stated plainly and enforced in code, not by convention:
+This is the whole point — stated plainly and enforced in code, not by convention:
 
 - **Local-first.** Transcripts, embeddings, notes, and keys never leave your machine — except the minimum excerpts inside the model calls you configured.
 - **Audio is never uploaded.** Recordings are **kept on-device as MP3** with the transcript by default; you can opt out (discard after transcription) in Privacy. Either way, audio never leaves your machine.
 - **Zero telemetry.** None. No phone-home, ever.
-- **Your keys, DPAPI-encrypted.** Entered at onboarding, encrypted per Windows user, never written in plaintext, never logged. The UI process never holds them — only the engine does.
-- **Gmail is draft-only.** Omni drafts; it never sends.
-- **Approval-before-execute.** No calendar event, contact upsert, vault write, or draft happens without an approved card or a rule you explicitly whitelisted. Deny by default.
-- **Kill-switch.** One flag halts all external calls; capture, transcription, and vault features keep working offline. It fails closed on egress, never on your own data.
-- **Append-only audit log** of every executed action and every external model call: what, when, which provider, what data left the machine.
-- **Untrusted input everywhere.** All transcript and document content is treated as untrusted at every model boundary (prompt-injection defence).
+- **Your keys, DPAPI-encrypted.** Entered at onboarding, encrypted per Windows user, never plaintext, never logged. The UI process never holds them — only the engine does.
+- **Gmail is draft-only.** Omni Steroid drafts; it never sends.
+- **Approval-before-execute.** No calendar event, contact upsert, vault write, or draft without an approved card or a rule you explicitly whitelisted. Deny by default.
+- **Kill-switch.** One flag halts all external calls; capture, transcription, and vault keep working offline. Fails closed on egress, never on your own data.
+- **Append-only audit log** of every executed action and every external model call.
+- **Untrusted input everywhere.** Transcript and document content treated as untrusted at every model boundary (prompt-injection defence).
+
+Threat model: [`docs/threat-model.md`](docs/threat-model.md).
 
 ---
 
-## Proof it's good
+## 📊 Proof it's good
 
-Omni ships with an [`evidence/`](evidence/) showcase — every number is a **real measurement of the real engine**, produced by a committed harness and regenerable from committed data.
+Omni Steroid ships with an [`evidence/`](evidence/) showcase — every number is a **real measurement of the real engine**, regenerable from committed data.
 
 | What | Measured result |
 | --- | --- |
@@ -204,24 +296,45 @@ Omni ships with an [`evidence/`](evidence/) showcase — every number is a **rea
 | **Router cost** | Decimal-exact — 0 mismatches vs an independent rational cross-check |
 | **Router, live** | 15 real provider calls, **$0.00080723** total, 0 fallbacks |
 | **Determinism** | all 5 deterministic paths yield exactly 1 distinct output over repeated runs |
-| **Test suite** | **2,853** cases (2,028 Python + 825 TypeScript); coverage gates line ≥ 90% / branch ≥ 85% on engine (see [`evidence/coverage-report.md`](evidence/coverage-report.md)) |
+| **Test suite** | **2,853** cases (2,028 Python + 825 TypeScript); coverage gates line ≥ 90% / branch ≥ 85% on engine |
 
-Tests are written to be **adversarial** — property-based, fuzzed, boundary-exact, determinism-checked — not happy-path. The suite is the evidence, not a rubber stamp.
+Tests are **adversarial** — property-based, fuzzed, boundary-exact, determinism-checked. The suite is the evidence, not a rubber stamp.
 
-**Honest caveats** (the full list is in [`evidence/README.md`](evidence/README.md)):
+**Honest caveats** (full list in [`evidence/README.md`](evidence/README.md)):
 
-- **Dense retrieval isn't active on the measurement machine** — the `bge-small` weights are absent, so by the engine's fail-closed design retrieval collapses to **BM25 only**. Results are labelled accordingly; the paraphrase-query gap quantifies exactly what the dense tier recovers.
-- **Engine coverage is 98.87% line / 94.74% branch** — measured with branch coverage, clearing the 90/85 gate. UI branch coverage clears 85%; UI line coverage is lower where WebGL/Canvas/Web-Audio rendering can only be exercised by the browser-driven E2E suite (jsdom can't run it), documented in [`evidence/coverage-report.md`](evidence/coverage-report.md).
-- **All test data is synthetic** (no real PII, no private conversations), per the project's data rules.
+- **Dense retrieval isn't active on the measurement machine** — `bge-small` weights absent, so retrieval collapses to **BM25 only** by fail-closed design.
+- **Engine coverage is 98.87% line / 94.74% branch** — clears the 90/85 gate. UI branch ≥ 85%; UI line lower where WebGL/Canvas needs browser E2E.
+- **All test data is synthetic** — no real PII, no private conversations.
 
 ---
 
-## Contributing & license
+## 🤝 Contributing & license
 
-Omni is open source under the [**MIT License**](LICENSE).
+Omni Steroid is open source under the [**MIT License**](LICENSE).
 
-**Stack:** Tauri 2 (Rust) · React 18 · Python 3.11 (FastAPI + WebSocket) · SQLite + `sqlite-vec` · Silero VAD + Parakeet / Whisper · Groq / Gemini / Claude.
+Issues and PRs welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for the full gate:
 
-The layout mirrors the data flow — `apps/ui/` (shell + front end), `engine/` (capture · stt · index · router · agents · vault · naomi · dictation · enhance · export), `evidence/` (the measured showcase), `docs/` ([index](docs/README.md)). Issues and PRs welcome; see [CONTRIBUTING.md](CONTRIBUTING.md) for the full gate (`uv run ruff check .`, `uv run mypy`, `uv run pytest`, `pnpm test` in `apps/ui`).
+```bash
+uv run ruff check .
+uv run mypy
+uv run pytest
+cd apps/ui && pnpm test
+```
 
-<sub>Built largely autonomously with Claude, under a strict test-, evidence-, and security-first operating contract. Every screenshot, number, and claim in this README is real and traceable to committed artifacts.</sub>
+**Layout** mirrors the data flow:
+
+| Path | Role |
+|------|------|
+| `apps/ui/` | Tauri shell + React front end |
+| `engine/` | Capture · STT · index · router · agents · vault · Naomi · dictation · enhance · export |
+| `evidence/` | Measured showcase (numbers, diagrams, figures) |
+| `docs/` | [Architecture](docs/architecture.md) · [features](docs/features.md) · [design](docs/design/) · [threat model](docs/threat-model.md) |
+| `media/` | Real product screenshots + demo recording |
+
+Also: [CODE_OF_CONDUCT.md](CODE_OF_CONDUCT.md) · [SECURITY.md](SECURITY.md)
+
+---
+
+<sub>Built largely autonomously under a strict test-, evidence-, and security-first operating contract. Every screenshot, number, and claim in this README is real and traceable to committed artifacts.</sub>
+
+![footer](https://capsule-render.vercel.app/api?type=waving&color=0A0A0A&height=120&section=footer)
